@@ -1,0 +1,68 @@
+<div class="row-fluid margin0">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Account Setup</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-8 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate("profile_type_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <?php
+                                    $allvalues = getUserType();
+                                    $dropdown = new Zend_Form_Element_Select('type',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','width200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getType()); 
+                                    echo $dropdown->render();
+                                ?><div id="type_error"></div>
+                                <input type="hidden" name="type_old" id="type_old" value="<?php echo $user->getType(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_email_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?>
+                            <span class="pagedescription blocked nobolded">To be used as Login</span>
+                            </label>
+                            <div class="col-md-8">
+                                <?php if($user->isUserActive()){ ?>
+                                    <?php echo $user->getEmail(); ?>
+                                    <input type="hidden" name="email" id="email" value="<?php echo $user->getEmail(); ?>" />
+                                <?php } else { ?>
+                                        <input type="hidden" name="oldemail" id="oldemail" value="<?php echo $user->getEmail(); ?>" />
+                                        <input type="text" class="form-control input-sm width225 inline clearnew" id="email" name="email" value="<?php echo $user->getEmail(); ?>" />
+                                        <a class="btn btn-sm btn-default gonowhere" id='check_email_availability' title="Check Availability">Check</a>
+                                        <div class="divider2"></div>
+                                        <div id="email_availability_result"></div>
+                                        <?php if($user->isUserInActive()){ ?>
+                                            <label class="checkbox-inline"><input type="checkbox" name="isinvited" id="isinvited" value="1" <?php echo !isEmptyString($user->getID()) ? '' : 'checked="checked"'; ?> /> <?php echo isEmptyString($user->getID()) ? 'Send' : 'Resend' ?> activation Email:</label>
+                                        <?php } ?>
+                                        <div id="email_error"></div>
+                                <?php } ?>
+                            </div>
+                        </div>
+                        <?php if($user->isUserActive()){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate("profile_username_label"); ?>: <?php echo isEmptyString($user->getID()) ? '' : $this->translate("global_required_field_marker"); ?>
+                                    <span class="pagedescription blocked nobolded">To be used as Login</span>
+                                </label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control input-sm width225 inline clearnew" id="username" name="username" value="<?php echo $user->getUserName(); ?>" /> <a class="btn btn-sm btn-default gonowhere" id='check_username_availability' style="margin-top:2px;" title="Check Availability">Check</a>
+                                    
+                                    <div id="username_availability_result" style="margin-top:4px"></div>
+                                    <div id="username_error"></div>
+                                </div>
+                            </div>
+                        <?php } ?>
+                    </div>   
+                </div>
+                
+            </div>
+        </fieldset>
+        <div class="divider10"></div>
+    </div>
+</div>

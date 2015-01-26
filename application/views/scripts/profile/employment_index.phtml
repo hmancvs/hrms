@@ -1,0 +1,251 @@
+<div class="row-fluid margin0">	
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Employee Details</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-6 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_position_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getDatavariables('EMPLOYEE_POSITIONS');
+                                    $dropdown = new Zend_Form_Element_Select('position',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getPosition()); 
+                                    echo $dropdown->render();
+                                ?><div id="position_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_empstatus_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getDatavariables('EMPLOYEE_STATUS');
+                                    $dropdown = new Zend_Form_Element_Select('empstatus',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getEmpStatus()); 
+                                    echo $dropdown->render();
+                                ?><div id="empstatus_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_department_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getDepartments();
+                                    $dropdown = new Zend_Form_Element_Select('departmentid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getDepartmentID()); 
+                                    echo $dropdown->render();
+                                ?><div id="departmentid_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_manager_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getUsers('','','',$user->getID());
+                                    $dropdown = new Zend_Form_Element_Select('managerid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getManagerID()); 
+                                    echo $dropdown->render();
+                                ?><div id="managerid_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_empidno_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="idno" id="idno" class="form-control width100" value="<?php echo $user->getIDNo(); ?>" />
+                                <div id="idno_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_startdate_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?>" />
+                                <div id="startdate_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_probationdate_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="probationend" id="probationend" value="<?php echo changeMySQLDateToPageFormat($user->getProbationEnd()); ?>" />
+                                <div id="probationend_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_enddate_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($user->getEndDate()); ?>" />
+                                <div id="enddate_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="divider20"></div>
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-10 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-12 control-label"><?php echo $this->translate('profile_qualification_label'); ?>:</label>
+                            <div class="col-md-12">
+                                <textarea name="qualifications" id="qualifications" class="form-control expanding"><?php echo $user->getQualifications(); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-12 control-label"><?php echo $this->translate('profile_skills_label'); ?>:</label>
+                            <div class="col-md-12">
+                                <textarea name="skills" id="skills" class="form-control expanding"><?php echo $user->getSkills(); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-12 control-label"><?php echo $this->translate('profile_education_label'); ?>:</label>
+                            <div class="col-md-12">
+                                <textarea name="education" id="education" class="form-control expanding"><?php echo $user->getEducation(); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-12 control-label"><?php echo $this->translate('profile_workexperience_label'); ?>:</label>
+                            <div class="col-md-12">
+                                <textarea name="experience" id="experience" class="form-control expanding"><?php echo $user->getExperience(); ?></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0">	
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Attendance Configuration</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-12 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-12 control-label"><?php echo $this->translate('profile_workingdays_label'); ?>:</label>
+                            <div class="col-md-12">
+                                <?php
+                                    $workshifts = getDaysOfWeek();
+                                    $existing_values = $user->getDaysOfWeekArray();
+                                    foreach($workshifts as $key => $value){
+                                ?>
+                                    <label class="checkbox-inline notbolded">
+                                      <input type="checkbox" id="workingdaysids_<?php echo $key; ?>" name="workingdaysids[]" class="disableoutsidesection" value="<?php echo $key; ?>" <?php echo in_array($key, $existing_values) ? 'checked data-waschecked="true"' : 1; ?>> <?php echo $value; ?>
+                                    </label>
+                                <?php } ?>
+                                <input type="hidden" name="workingdays_old" id="workingdays_old" value="<?php echo $user->getWorkingDays(); ?>" />
+                                <div id="workingdays_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_shift_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getWorkShifts();
+                                    $dropdown = new Zend_Form_Element_Select('shift',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','width250')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getShift()); 
+                                    echo $dropdown->render();
+                                ?><div id="shift_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="maxhoursperday" id="maxhoursperday" class="form-control isnumber input-sm width100" value="<?php echo $user->getMaxHoursPerDay(); ?>" />
+                                <div id="maxhoursperday_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="maxhoursperweek" id="maxhoursperweek" class="form-control isnumber input-sm width100" value="<?php echo $user->getMaxHoursPerWeek(); ?>" />
+                                <div id="maxhoursperweek_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0">	
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Banking Details</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_bankname_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="bankname" id="bankname" class="form-control input-sm" value="<?php echo $user->getBankName(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_branch_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="branchname" id="branchname" class="form-control input-sm" value="<?php echo $user->getBranchName(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_accname_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="accname" id="accname" class="form-control input-sm" value="<?php echo $user->getAccName(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_accno_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="accno" id="accno" class="form-control input-sm" value="<?php echo $user->getAccNo(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_swift_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="swiftcode" id="swiftcode" class="form-control input-sm" value="<?php echo $user->getSwiftCode(); ?>" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="divider15"></div>

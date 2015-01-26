@@ -1,0 +1,297 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$lookuptype = new LookupType();
+	
+	$listurl = $this->baseUrl('config/variables');
+	$title = $columnheading = $breadcrumbtitle = "System Variables";
+	$listitems = "Categories";
+	$description = 'Application variable data';
+	$lookupid = $request->type;
+	$nextindex = ''; $columnheading = 'Values';
+	$widthstyle = 'width:600px;';
+	$aliasedtypes = array(14,15,41,42,44,46);
+	$listabletypes = array(43,45);
+	$islistable = false;
+	$step = $request->step;
+	if(isEmptyString($step)){
+		$step = 'list';
+	}
+	
+	if(!isEmptyString($lookupid)){
+		$lookuptype->populate($lookupid);
+		$nextindex = $lookuptype->getNextInsertIndex();
+		$columnheading = $title = $breadcrumbtitle = $lookuptype->getDisplayName();
+		$description = $lookuptype->getDescription(); 
+		if(in_array($lookupid, $aliasedtypes)){
+			$widthstyle = 'width:95%;';
+		}
+	}
+	// debugMessage($nextindex);
+	
+	$subcat = '';
+	if(!isEmptyString($request->parentid)){
+		$category = new Category();
+		$category->populate($request->parentid);
+		$subcat = ' - '.$category->getName();
+		$columnheading = $subcat;
+	}
+
+	
+	$this->headTitle($title.$browserappend);
+	$showsearch = true;
+	
+?>
+<script>
+$(document).ready(function(){
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Variables / '.$breadcrumbtitle; ?>');
+	$('.titlelabel').html("<?php echo $title; ?>");
+	$('.desclabel').html("<?php echo $description; ?>");
+	$('.pageicon').html('<span class="glyphicon glyphicon-list-alt"></span>');
+	
+	$(".updatevalue").click(function(){
+		var rowid = $(this).attr('rowid');
+		$("#html_"+rowid+", #html_alias_"+rowid+", #newalias_"+rowid).css({'display':'block'}).show();
+		$("#text_"+rowid+", #text_alias_"+rowid).css({'display':'none'});
+		$("tr#lookup_"+rowid).removeClass('editable');
+		
+		$('#newvalue_'+rowid+', #newalias_'+rowid).bind('keypress', function(e) {
+			var keyCode = e.keyCode || e.which;
+			if(e.keyCode==13){
+				$("#save_"+rowid).click();
+			}
+		});
+	});
+	$(".cancel_edit").click(function(){
+		var rowid = $(this).attr('rowid');
+		$("#html_"+rowid+", #html_alias_"+rowid+", #newalias_"+rowid).css({'display':'none'});
+		$("#text_"+rowid+", #text_alias_"+rowid).css({'display':'block'});
+		$("tr#lookup_"+rowid).addClass('editable');
+	});
+	
+	// adding new items
+	$("#save, .save").click(function(){
+		// alert('adding new');
+		var id = '';
+		var lookupid = $(this).attr('theid');
+		var value = $("#newvalue").val();
+		var alias = $("#newalias").val();
+		var index = '<?php echo $nextindex; ?>';
+		var hasalias = '<?php echo in_array($lookuptype->getID(), $aliasedtypes) ? '1' : '0'; ?>';
+		if(isEmptyString(value) || (hasalias == 1 && isEmptyString(alias))) {
+			if(isEmptyString(value)) {
+				$("div#add_error").html('<div class="alert alert-danger">Please enter value</div>');
+			}
+			<?php if(in_array($lookuptype->getID(), $aliasedtypes)){ ?>
+				if(isEmptyString(alias)) {
+					$("div#code_error").html('<div class="alert alert-danger">Please enter Code</div>');
+				}
+			<?php } ?>
+			return false;
+		} else {
+			$(this).hide();
+			$("#wait_0").show();
+			var url = '<?php echo $this->baseUrl("config/processvariables"); ?>/id/'+id+'/lookupid/'+lookupid+'/value/'+base64_encode(value)+'/index/'+index+'/alias/'+alias;
+			// alert(url);
+			window.location.href = url;
+			$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+		}
+	});
+	$('#newvalue, #newalias').bind('keypress', function(e) {
+		var keyCode = e.keyCode || e.which;
+		if(e.keyCode==13){
+			$("#save").click();
+		}
+	});
+	
+	// updating item
+	$(".update").click(function(){
+		// alert('adding new');
+		var id = $(this).attr('theid');
+		var lookupid = '<?php echo $lookuptype->getID(); ?>';
+		var value = $("#newvalue_"+id).val();
+		var index = $(this).attr('index');
+		var alias = $("#newalias_"+id).val();
+		var hasalias = '<?php echo in_array($lookuptype->getID(), $aliasedtypes) ? '1' : '0'; ?>';
+		if(isEmptyString(value) || (hasalias == 1 && isEmptyString(alias))) {
+			if(isEmptyString(value)) {
+				$("div#add_error_"+id).html('<div class="alert alert-danger">Please enter value</div>');
+			}
+			<?php if(in_array($lookuptype->getID(), $aliasedtypes)){ ?>
+				if(isEmptyString(alias)) {
+					$("div#code_error_"+id).html('<div class="alert alert-danger">Please enter Code</div>');
+				}
+			<?php } ?>
+			return false;
+		} else {
+			$(this).hide(); $('#cancel_'+id).hide();
+			$("#wait_"+id).show();
+			var url = '<?php echo $this->baseUrl("config/processvariables"); ?>/id/'+id+'/lookupid/'+lookupid+'/value/'+base64_encode(value)+'/index/'+index+'/alias/'+alias;
+			$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+			window.location.href = url;
+		}
+	});
+	
+	$("#type").change(function(){
+		var type = $(this).val();
+		var url = "<?php echo $this->baseUrl("config/variables/type/"); ?>"+type;
+		$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+		window.location.href = url;
+	});
+});
+</script>
+<div class="row-fluid margin0">
+	<div class="col-md-12 padding0">
+    	<div class="headerbox">
+            <table class="table border0 nohover margin0">                       
+                <tr>		                    
+                    <td class="padding2">
+                        
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <?php if ($sessionhaserror) { ?>
+        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+    <?php } ?>
+    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+    <?php } ?>
+    <form class="form margin0 listform" action="<?php echo $this->baseUrl("config/variablessearch"); ?>" method="get" id="listform">
+    	<div class="row-fluid margin0">
+            <div class="col-md-12 paddingleft0">
+                <div class="divider5"></div>
+                <ul class="listfilter maxwidth" style="margin-left:10px;">
+                    <li>
+                        <?php
+                            $dropdown = new Zend_Form_Element_Select('type',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select Variable Type'), getListableLookupTypes()),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("form-control", 'chosen-select'),
+                                                    'style' => 'width:350px;'
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('type')); 
+                            echo $dropdown->render();
+                        ?>                    
+                    </li>
+                    <?php if($islistable){ ?>
+                    <li class="col-md-3">
+                  		<div class="padding0">
+                        	<input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><span class="glyphicon glyphicon-search glyphicon-list-search"></span>
+                        	<button type="submit" class="hidden"></button>
+                        </div>
+                    </li>
+                    <?php } ?>
+                </ul>
+            </div>
+        </div>
+    </form>
+    <div class="contentcontainer clearfix">
+	<table class="table list table-hover table-bordered" style="margin:5px; <?php echo $widthstyle; ?>">
+		<thead>
+			<tr>
+				<th style="width:20px;" class="centeralign">#</th>
+				<?php if(in_array($lookuptype->getID(), $aliasedtypes)){ ?>
+					<th style="width:130px;">Code</th>
+				<?php } ?>
+				<th>Variable Name</th>
+				<!--<th style="width:125px;">System Value</th>-->
+			</tr>
+		</thead>
+		<?php if(isEmptyString($lookuptype->getID())){ ?>
+			<tbody><tr><td colspan="3"><div class="alert alert-info clear padding10 margin10">Select a Variable Type</div></td></tr></tbody>
+		<?php } ?>
+		<?php if(!isEmptyString($request->type)){ ?>
+			<tbody id="global">
+				<?php 
+					$itemvalues = $lookuptype->getAllDataValues();
+					// debugMessage($itemvalues);
+					$x = 1;
+					foreach($itemvalues as $value){
+				?>
+				<tr id="lookup_<?php echo $value['id']; ?>" class="editable">
+					<td class="centeralign"><?php echo $x; ?></td>
+					<?php if(in_array($lookuptype->getID(), $aliasedtypes)){ ?>
+						<td>
+							<div style="position:relative;">
+								<span class="display" id="text_alias_<?php echo $value['id']; ?>"><?php echo $value['alias']; ?></span>
+								<span class="edit" id="html_alias_<?php echo $value['id']; ?>">
+									<input type="text" name="newalias_<?php echo $value['id']; ?>" id="newalias_<?php echo $value['id']; ?>" class="form-control inline updatevariable centeralign" rowid="<?php echo $value['id']; ?>" style="width:90%; padding:4px;" value="<?php echo $value['alias']; ?>" />
+								</span>
+							</div>
+						</td>
+					<?php } ?>
+					<td>
+						<div style="position:relative;">
+							<span class="display" id="text_<?php echo $value['id']; ?>"><?php echo stripcslashes($value['lookupvaluedescription']); ?></span>
+							<span class="edit" id="html_<?php echo $value['id']; ?>">
+								<input type="text" name="newvalue_<?php echo $value['id']; ?>" id="newvalue_<?php echo $value['id']; ?>" class="form-control inline updatevariable" rowid="<?php echo $value['id']; ?>" style="width:65%; padding:4px;" value="<?php echo $value['lookupvaluedescription']; ?>" />
+								<label class="pull-right">
+									<a href="javascript:void(0)" id="save_<?php echo $value['id']; ?>" theid="<?php echo $value['id']; ?>" index="<?php echo $value['lookuptypevalue']; ?>" class="btn btn-success btn-sm lineblocked update" title="Update Item" ><i class="glyphicon glyphicon-ok"></i> Save</a>&nbsp;
+									<a href="javascript:void(0)" style="font-size:10px;" class="cancel_edit" id="cancel_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>">Cancel</a>
+									<label class="hidden margin0 padding0" id="wait_<?php echo $value['id']; ?>" style="position:absolute; right:0; top:0;">
+										<span class="pagedescription">wait...</span>
+										<img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/farmisloader.gif'); ?>" />
+									</label>
+								</label>
+								<div class="divider5"></div>
+								<div id="add_error_<?php echo $value['id']; ?>" class="margin0" style=""></div>
+								<div id="code_error_<?php echo $value['id']; ?>" class="margin0" style=""></div>
+							</span>
+							
+							<div class="buttons" id="buttons_<?php echo $value['id']; ?>" style="position:absolute; right:0; top:-3px;">
+								<?php if($lookuptype->updatesAllowed()){ ?>
+									<a href="javascript:void(0)" id="updatevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="updatevalue btn btn-info btn-sm" title="Update Value"><i class="glyphicon glyphicon-pencil"></i></a>
+								<?php } ?>    
+								<?php if($lookuptype->addNoDeleteAllowed()){ 
+									$classname = "LookupTypeValue";
+									$deleteline = $value['id'];
+									
+								?>
+									<a id="deletevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="xdeletevalue btn btn-sm deleteline xremoveline gonowhere" title="Delete Value" action="<?php echo $this->baseUrl('config/delete/id/'.$deleteline."/entityname/".$classname."/successurl/".encode($this->baseUrl('config/variables/type/'.$request->type))); ?>"><i class="glyphicon glyphicon-remove"></i></a>
+								<?php } else { ?>
+									<a class="gonowhere alert-dialog" title="Delete disabled" message="<div class='alert alert-danger'>Delete on this resource is disabled. Contact super Admin</div>">--</a>
+								<?php } ?>
+							</div>
+						</div>
+					</td>
+					<!--<td class="centeralign" style="color:#999999;"><?php //echo $value['lookuptypevalue']; ?></td>-->
+				</tr>
+				<?php $x++;} ?>
+				<?php if($lookuptype->updatesAllowed() && !isEmptyString($lookuptype->getID())){ ?>
+					<tr>
+						<td class="centeralign"><?php echo $x; ?></td>
+						<?php if(in_array($lookuptype->getID(), $aliasedtypes)){ ?>
+							<td><input type="text" name="newalias" id="newalias" class="form-control centeralign inline" style="width:90%; padding:4px;" />&nbsp;</td>
+						<?php } ?>
+						<td>
+							<div style="position:relative;">
+								<input type="text" name="newvalue" id="newvalue" class="form-control inline" style="width:70%; padding:4px;" />&nbsp;
+								<label class="pull-right">
+									<a href="javascript:void(0)" id="save" theid="<?php echo $lookuptype->getID(); ?>" class="btn btn-success btn-sm lineblocked" title="Save New Item" ><i class="glyphicon glyphicon-ok"></i> Add</a>
+									<label class="margin0 padding0 hidden" id="wait_0" style="position:absolute; right:0; top:0;">
+										<span class="pagedescription">wait...</span>
+										<img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/farmisloader.gif'); ?>" />
+									</label>
+								</label>
+								<div class="divider5"></div>
+								<div id="add_error" class="margin0" style=""></div><div id="code_error" class="margin0" style=""></div>
+							</div>
+						</td>
+					</tr>
+				<?php } ?>
+			</tbody>
+		<?php } ?>    
+	</table>
+	<?php if(!$lookuptype->updatesAllowed()){ ?>
+		<div class="alert alert-info" style="margin:10px;">Updates to this variable are currently disabled. <br />Contact Super Admin</div>
+	<?php } ?>
+    </div>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

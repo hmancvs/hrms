@@ -1,0 +1,145 @@
+<div class="row-fluid margin0">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer minheight200" style="margin-bottom:0;">
+            <legend>Benefit Information</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-10 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_rate_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <label class="control-label">Currency:</label>
+                                    <input type="text" name="ratecurrency" id="ratecurrency" class="form-control input-sm width75 readonly" value="<?php echo $user->getCurrencyName(); ?>" />
+                                </div>
+                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <label class="control-label">Amount:</label>
+                                    <input type="text" name="rate" id="rate" class="form-control input-sm isnumber width75" value="<?php echo $user->getRate(); ?>" />
+                                </div>
+                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <label class="control-label">Frequency:</label>
+                                    <?php
+                                        $allvalues = getDatavariables('EMPLOYEE_RATE_TYPES');
+                                        $dropdown = new Zend_Form_Element_Select('ratetype',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width100')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($user->getRateType()); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </div>
+                            </div>
+                            <div id="ratetype_error"></div><div id="rate_error"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer minheight200" style="margin-bottom:0;">
+            <legend>Holidays and Leave Benefits</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-10 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_leavetype_label'); ?>:</label>
+                            <div class="col-md-8">
+                            	<label class="radio radio-inline"><input type="radio" name="accrualtype" id="accrualtype_1" class="<?php echo $user->getaccrualtype() == '1' ? 1 : 0; ?>" value="1" <?php echo $user->getaccrualtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="accrualtype" id="accrualtype_2" class="<?php echo $user->getaccrualtype() == '2' ? 1 : 0; ?>" value="2" <?php echo $user->getaccrualtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+                                <div id="leavetype_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group ashours">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleave_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<input type="text" name="regularleavehrs" id="regularleavehrs" class="form-control width100 isnumber centeralign" value="<?php echo $user->getregularleavehrs(); ?>" style="display:inline;" />
+                                <div id="regularleavehrs_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group asdays">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
+                            <div class="col-md-8">
+                            	<div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <input type="text" name="regularleavedays" id="regularleavedays" class="form-control width100 isnumber centeralign" value="<?php echo $user->getregularleavedays(); ?>" style="display:inline;" />
+                                </div>
+                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <?php
+                                        $allvalues = array('1'=>'Per Year', '2'=>'Per Month');
+                                        $dropdown = new Zend_Form_Element_Select('regularleavetype',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width100')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($user->getregularleavetype()); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </div>
+                                <div id="regularleavetype_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group ashours">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleave_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<input type="text" name="sickleavehrs" id="sickleavehrs" class="form-control width100 isnumber centeralign" value="<?php echo $user->getsickleavehrs(); ?>" style="display:inline;" />
+                                <div id="sickleavehrs_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group asdays">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleavedays_label'); ?>:</label>
+                            <div class="col-md-8">
+                            	<div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <input type="text" name="sickleavedays" id="sickleavedays" class="form-control width100 isnumber centeralign" value="<?php echo $user->getsickleavedays(); ?>" style="display:inline;" />
+                                </div>
+                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
+                                    <?php
+                                        $allvalues = array('1'=>'Per Year', '2'=>'Per Month');
+                                        $dropdown = new Zend_Form_Element_Select('sickleavetype',
+                                                            array(
+                                                                'multiOptions' => $allvalues,
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width100')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($user->getsickleavetype()); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </div>
+                                <div id="sickleavetype_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group ashours">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_accrualfrequency_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+									$allvalues = array('1'=>'End of Day', '2'=>'End of Week', '3'=>'End of Month','4'=>'Timesheet Approval');
+									$dropdown = new Zend_Form_Element_Select('accrualfrequency',
+														array(
+															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+															'view' => new Zend_View(),
+															'decorators' => array('ViewHelper'),
+															'class' => array('form-control','input-sm','width200')
+														)
+									);  
+									$dropdown->setValue($user->getaccrualfrequency()); 
+									echo $dropdown->render();
+								?>
+                            </div>
+                        </div>
+                    </div>
+               	</div>
+          	</div>
+     	</fieldset>
+  	</div>
+</div>
+<div class="divider15"></div>

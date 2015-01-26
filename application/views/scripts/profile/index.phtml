@@ -1,0 +1,533 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$loggedinuser = new UserAccount();
+	$loggedinuser->populate($userid); 
+	
+	$user = new UserAccount();
+	
+	if (isEmptyString($request->id)) {
+		$title = $navtitle= "New Empioyee";
+		$posturl = $this->baseUrl("profile/create");
+		$button_title = $this->translate("global_button_save").' Profile';
+		$successmessage = $this->translate('global_save_success');
+		$failureurl =  encode($this->viewurl);
+		$successurl = encode($this->baseUrl('profile/view'));
+		$description = '';
+	} else {
+		$title = $navtitle = "Update Profile"; 
+		$user->populate(decode($request->id));		
+		$posturl = $this->baseUrl("profile/edit"); 
+		$button_title = $this->translate('global_button_save_changes'); 
+		$successmessage = $this->translate('global_update_success');
+		$failureurl =  encode($this->viewurl);
+		$successurl = encode($this->baseUrl('profile/view'));
+		$description = '';
+	}
+	$postuserurl = $this->baseUrl("profile/inviteuser");
+	
+	$tab = $request->tab;
+	if(isEmptyString($tab)){
+		$tab = 'overview';
+	}
+	
+	if($tab == 'picture'){
+		$posturl = $this->baseUrl("profile/uploadpicture");
+		$button_title = "Upload Picture";
+		$successurl = encode($this->baseUrl("profile//index/id/".encode($user->getID())."/tab/picture/crop/1"));
+		$failureurl =  encode($this->baseUrl("profile/index/id/".encode($user->getID())."/tab/picture"));
+		
+		if($request->crop == 1){
+			$posturl = $this->baseUrl("profile/croppicture");
+			$button_title = "Crop Photo";
+			$successurl = encode($this->baseUrl('profile/view/id/'.encode($user->getID())));
+			$failureurl =  encode($this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/picture/crop/1'));
+		}
+	}
+	
+	$gotosuccess = false; 
+	if(!isEmptyString($request->successurl)){
+		$successurl = $request->successurl;
+		$gotosuccess = true; 
+	}
+	
+	if($tab == 'employment'){
+		$successurl = encode($this->baseUrl('profile/view/id/'.encode($user->getID()).'/tab/employment'));
+		$gotosuccess = true; 
+	}
+	if($tab == 'benefits'){
+		$successurl = encode($this->baseUrl('profile/view/id/'.encode($user->getID()).'/tab/benefits'));
+		$gotosuccess = true; 
+	}
+	if($tab == 'account'){
+		$successurl = encode($this->baseUrl('profile/view/id/'.encode($user->getID()).'/tab/account'));
+		$gotosuccess = true; 
+	}
+	
+	$isme = true;
+	if($user->getID() != $userid){
+		$isme = false;
+	}
+	
+	#in case of errors in session, populate the fields from session
+	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+		$user->processPost($session->getVar(FORM_VALUES));
+	}
+	
+	$resourcename = 'User Account';
+	$entityname = "UserAccount";
+	$listitems = "Employees";
+	$listurl = $this->baseUrl('profile/list');
+	$icon = 'glyphicon glyphicon-user';
+	$title = $navtitle = "New Employee";
+	if(!isEmptyString($request->id)){
+		$title = $navtitle = "Update Profile";
+		if($tab == 'picture'){
+			$title = $navtitle = "Upload Profile Photo";
+		}
+	}
+	
+	$allowedit = false;
+	if($acl->checkPermission($resourcename, ACTION_EDIT)){
+		$allowedit = true;
+	}
+	
+	$this->headTitle($title.$browserappend);
+?>
+<?php if($tab == 'picture'){ ?>
+	<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery.imgareaselect.min.js')); ?>"></script>
+<?php } ?>
+<?php if(isEmptyString($user->getID())){ ?>
+	<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery.stepy.js')); ?>"></script>
+<?php } ?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.$listitems.' / '.$navtitle; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="icon-large <?php echo $icon; ?>"></span>');
+	
+	<?php if(isEmptyString($user->getID())){ ?>
+		$('#indexform').stepy({
+			block: true,
+			validate: true,
+			errorImage:	false,
+			titleClick:	true,
+			backLabel: '<span class="glyphicon glyphicon-arrow-left"></span> Back',
+			nextLabel: 'Next <span class="glyphicon glyphicon-arrow-right"></span>'
+		});
+		
+		$(".button-back").addClass('btn btn-default btn-lg');
+		$(".button-next").addClass('btn btn-primary btn-lg'); 
+		$(".finish").html('').prepend('<span class="glyphicon glyphicon-ok"></span> Finish').addClass('btn btn-success btn-lg');
+		$(".step legend").hide();
+	<?php } ?>
+	
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			gender: "required",
+			firstname: "required",
+			lastname: "required",
+			phone: {
+				required: true,
+				validnumber: true,
+				validate_ug: true,				
+				minlength: "<?php echo $config->country->phoneminlength; ?>"
+			},
+			username: {
+				required: <?php echo $user->isUserActive() ? 'true' : 'false' ; ?>, 
+				minlength: <?php echo $config->profile->usernameminlength; ?>,
+				maxlength: <?php echo $config->profile->usernamemaxlength; ?>
+			},
+			email: {
+				required: true, 
+				email: true
+			},
+			email_auto: {
+				required: true, 
+				email: true
+			},
+			oldpassword: {
+				required: function(element) {
+					return !isEmptyString($("#newpassword").val());
+				}
+			},
+			newpassword: {
+				<?php if(isEmptyString($user->getID())) { ?>
+					required: true,
+				<?php } else { ?>
+					required: function(element) {
+						return !isEmptyString($("#oldpassword").val());
+					},
+				<?php } ?>	
+				maxlength: <?php echo $config->profile->passwordmaxlength; ?>,
+				minlength: <?php echo $config->profile->passwordminlength; ?>
+			},			
+			confirmpassword: {
+				<?php if(isEmptyString($user->getID())) { ?>
+					required: true,
+				<?php } else { ?>
+					required: function(element) {
+						return !isEmptyString($("#oldpassword").val()) && !isEmptyString($("#newpassword").val());
+					},
+				<?php } ?>	
+				equalTo: "#newpassword"
+			},
+			type: "required",
+			profileimage: "required",
+			position: "required",
+			empstatus: "required",
+			departmentid: "required",
+			startdate: "required",
+			rate: {
+				required: true
+			},
+			ratetype: "required"			
+		}, 
+		// the messages for each of the fields being validated
+		messages: {		
+			gender: "<?php echo $this->translate("profile_gender_error"); ?>", 
+			firstname: "<?php echo $this->translate("profile_firstname_error"); ?>",
+			lastname: "<?php echo $this->translate("profile_lastname_error"); ?>",
+			username: {
+				required: "<?php echo $this->translate("useraccount_username_error"); ?>",
+				minlength: "<?php echo sprintf($this->translate("profile_username_error_minlength"), $config->profile->usernameminlength); ?>",
+				maxlength: "<?php echo sprintf($this->translate("profile_username_error_maxlength"), $config->profile->usernamemaxlength); ?>"
+			},
+			email: {
+				"required": "<?php echo $this->translate("profile_email_error"); ?>", 
+				"email": "<?php echo $this->translate("profile_email_invalid_error"); ?>"
+			},
+			email_auto: {
+				"required": "<?php echo $this->translate("profile_email_error"); ?>", 
+				"email": "<?php echo $this->translate("profile_email_invalid_error"); ?>"
+			},
+			phone: {
+				required: "<?php echo $this->translate("profile_phonenumber_error"); ?>",
+				minlength: "<?php echo sprintf($this->translate("profile_phone_maxlength_error"), $config->country->phoneminlength); ?>"
+			},
+			oldpassword: {
+				required: "<?php echo $this->translate("profile_oldpassword_error"); ?>"
+			},
+			newpassword: {
+				required: "<?php echo $this->translate("useraccount_password_error"); ?>",
+				maxlength: "<?php echo sprintf($this->translate("useraccount_password_error_maxlength"), $config->profile->passwordmaxlength); ?>",
+				minlength: "<?php echo sprintf($this->translate("useraccount_password_error_minlength"), $config->profile->passwordminlength); ?>"
+			},
+			confirmpassword: {
+				required: "<?php echo $this->translate("profile_confirmpassword_error"); ?>",
+				equalTo: "<?php echo $this->translate("profile_confirmpassword_error_equalto"); ?>"
+			},
+			type: "<?php echo $this->translate("profile_role_error"); ?>",
+			profileimage: "Please browse for image on computer",
+			position: "Please select a Position",
+			empstatus: "Please select current Employment Status",
+			departmentid: "Please select a Department",
+			startdate: "Please select a Start Date",
+			rate: {
+				required: "Please enter Employee Rate"
+			},
+			ratetype: "Please select a Type"
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					if(element.hasClass("useid_error")){
+						error.appendTo("#"+element.attr("id")+"_error");
+					} else {
+						error.appendTo("#"+element.attr("name")+"_error");
+					}
+					break;
+			}			
+		}
+	});
+	
+	$("ul.nav.nav-tabs li:not(.active) a").click(function(){
+		var url = $(this).attr('goto');
+		var id = $(this).attr('theid');
+		if(!isEmptyString(url) && url != 'undefined'){
+			$(".tab-content #"+id).html("<a id='loading' class='xhidden' style='text-align:center; display:block; margin-top:75px;'><span style='display:block; margin-bottom:15px; font-weight:bold;'>Loading...</span><img style='margin-left:-10px;' src='<?php echo $this->baseUrl('images/ui-anim_basic_16x16.gif'); ?>' /></a>").css({'display':'block'});
+			window.location.href = url;
+		}
+	}); 
+	
+	$(".screentrigger").change(function() {
+		$("#displayname").html('');
+		var first = $("#firstname").val(); 
+		var last = $("#lastname").val();
+		var other = $("#othername").val();
+		var opt1 = first+" "+last;
+		var opt2 = last+" "+first;
+		$("#displayname").append("<option value='"+opt1+"'>"+opt1+"</option>");
+		$("#displayname").append("<option value='"+opt2+"'>"+opt2+"</option>");
+		
+		if(!isEmptyString(other)){
+			var opt3 = first+" "+last+" "+other;
+			var opt4 = last+" "+first+" "+other;
+			var opt5 = first+" "+other+" "+last;
+			var opt6 = last+" "+other+" "+first;
+			$("#displayname").append("<option value='"+opt3+"'>"+opt3+"</option>");
+			$("#displayname").append("<option value='"+opt4+"'>"+opt4+"</option>");
+			$("#displayname").append("<option value='"+opt5+"'>"+opt5+"</option>");
+			$("#displayname").append("<option value='"+opt6+"'>"+opt6+"</option>");
+		}
+		
+		// alert('result is '+$("#displayname option").eq(10));
+		<?php if(!isEmptyString($user->getDisplayName())) { ?>
+			var curval = '<?php echo $user->getDisplayName(); ?>';
+			$("#displayname").val(curval).attr('selected', true);
+		<?php } ?>
+	});
+	 
+	$(".screentrigger").change();
+	
+	// prevent copy and paste in password fields
+	$('input.password').bind('copy paste', function (e) {
+	   e.preventDefault();
+	});
+		
+	<?php if(!isEmptyString($user->getID())) { ?>
+		$('.password').attr('placeholder', 'Leave empty if no password change'); 
+		$('.disableonedit').attr('readonly', true).attr('disabled', true);
+	<?php } ?>
+	
+	//when button is clicked  
+	$('#check_username_availability').click(function(){ 
+		check_user_availability();  
+	});
+	$('#username').change(function(){ 
+		check_user_availability();  
+	});  
+	$('#username').keyup(function(){
+		this.value = this.value.toLowerCase();
+	});
+	
+	//function to check username availability  
+	function check_user_availability(){  
+		//get the username
+		var checking_html = 'Checking availability...';   
+		var username = $('#username').val();  
+		if(!isEmptyString(username) && username.length >= 4 && username.length <= 15 && isAlpha(username)){
+			// alert('passed');
+			$('#username_availability_result').html(checking_html); 
+			var userid = '<?php echo $user->getID(); ?>';
+			//use ajax to run the check  
+			$.post("<?php echo $this->baseUrl('signup/checkusername'); ?>", { username: username, userid: userid },  
+				function(result){  
+					//if the result is 1  
+					// alert(result); // return false;
+					if(result == 1){  
+						//show that the username is available
+						$('#username_availability_result').html(username + ' already exists!').addClass('alert').addClass('alert-danger').removeClass('alert-success'); 
+					} else {  
+						//show that the username already exists  
+						$('#username_availability_result').html(username + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-danger');
+					}  
+			});   
+		}
+	}
+	
+	//when button is clicked  
+	$('#check_email_availability').click(function(){ 
+		check_email_availability();  
+	});
+	$('#email').change(function(){ 
+		check_email_availability();  
+	});  
+	
+	//function to check email availability  
+	function check_email_availability(){  
+		//get the username
+		var checking_html = 'Checking availability...';   
+		var email = $('#email').val();  
+		if(!isEmptyString(email) && validateEmail(email)){
+			$('#email_availability_result').html(checking_html);  
+			var userid = '<?php echo $user->getID(); ?>';
+			//use ajax to run the check  
+			$.post("<?php echo $this->baseUrl('signup/checkemail'); ?>", { email: email, userid: userid},  
+				function(result){  
+					//if the result is 1  
+					// alert(result); // return false;
+					if(result == 1){  
+						//show that the email is available
+						$('#email_availability_result').html(email + ' already exists!').addClass('alert').addClass('alert-danger').removeClass('alert-success fade in'); 
+					} else {  
+						//show that the email already exists  
+						$('#email_availability_result').html(email + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-danger fade in');
+					}  
+			});  
+		}
+	}
+	
+	// auto fill out email field if entering new user and member at same time
+	$('#email').keyup(function() {
+		var email = $(this).val();
+		$("#email_auto").val(email);
+	});
+	$('#email').change(function() {
+		var email = $(this).val();
+		$("#email_auto").val(email);
+	});
+	
+	$(".triggerprofile").click(function(){
+		var current = $(this).val();
+		triggerUserAddition(current);
+	});
+	
+	$("#accrualtype_1").click(function(){
+		enableContainerByClass('ashours');
+		disableContainerByClass('asdays');
+	});
+	$("#accrualtype_2").click(function(){
+		enableContainerByClass('asdays');
+		disableContainerByClass('ashours');
+	});
+	<?php if($user->getaccrualtype() == '1'){ ?>
+		enableContainerByClass('ashours');
+		disableContainerByClass('asdays');
+	<?php } ?>
+	<?php if($user->getaccrualtype() == '2'){ ?>
+		enableContainerByClass('asdays');
+		disableContainerByClass('ashours');
+	<?php } ?>
+	
+	$("#email_auto").keyup(function(){
+		$("#email").val($(this).val());
+	});
+	$("#email_auto").change(function(){
+		$("#email").val($(this).val());
+	});
+});
+</script>
+<div class="row-fluid margin0 view">
+    <?php if ($sessionhaserror) { ?>
+    	<div class="alert alert-danger fade in"><i class="icon-remove close" data-dismiss="alert"></i><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+	<?php } ?>
+    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+        <div class="alert alert-success fade in"><i class="icon-remove close" data-dismiss="alert"></i><?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+    <?php } ?>
+    <div class="contentcontainer clearfix padding10">
+        <div class="row margin0">
+            <div class="col-md-12">
+                <!-- Tabs-->
+                <div class="tabbable tabbable-custom tabbable-full-width">
+                    <ul class="nav nav-tabs">
+                        <?php if ($acl->checkPermission($resourcename, ACTION_VIEW) && !isEmptyString($user->getID())) { ?>
+                            <li class="gonowhere"><a href="#overview" class="blockanchor" goto="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID())); ?>" theid="overview" data-toggle="tab">Overview</a></li>
+                        <?php } ?>
+                        <?php if ($acl->checkPermission($resourcename, ACTION_EDIT) && !isEmptyString($user->getID()) && $tab == 'overview') { ?>
+                            <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a href="#updateaccount" goto="<?php echo $tab == 'overview' ? '' : $this->baseUrl('profile/index/id/'.encode($user->getID())); ?>" class="<?php echo $tab != 'overview' ? 'blockanchor' : 'gonowhere'; ?>" theid="updateaccount" data-toggle="tab">Update Profile</a></li>
+                            <?php if(!isEmptyString($user->getID()) && false) { 
+                                $title = "Upload Photo";
+                                if(!isEmptyString($request->crop)){
+                                    $title = "Crop Profile Photo"; 
+                                }
+                            ?>
+                                <li class="<?php echo $tab == 'picture' ? 'active gonowhere' : ''; ?>"><a href="#uploadpicture" goto="<?php echo $tab == 'picture' ? '' : $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>" class="<?php echo $tab != 'picture' ? 'blockanchor' : 'gonowhere'; ?>" theid="uploadpicture" data-toggle="tab"><?php echo $title; ?></a></li>
+                            <?php } ?>
+                        <?php } ?>
+                        <?php if($tab == 'employment'){ ?>
+                            <li class="<?php echo $tab == 'employment' ? 'active gonowhere' : ''; ?>"><a>Update Employment Details</a></li>
+                        <?php } ?>
+                        <?php if($tab == 'benefits'){ ?>
+                            <li class="<?php echo $tab == 'benefits' ? 'active gonowhere' : ''; ?>"><a>Update Benefits</a></li>
+                        <?php } ?>
+                        <?php if($tab == 'account'){ ?>
+                            <li class="<?php echo $tab == 'account' ? 'active gonowhere' : ''; ?>"><a>Account</a></li>
+                        <?php } ?>
+                    </ul>
+                    <div class="divider5"></div>
+                    <div class="tab-content row">
+                        <div class="tab-pane active" id="overview">
+                            <div class="row">
+                            	<?php if(!isEmptyString($user->getID()) && $tab != 'picture'){ ?>
+                                    <div class="col-md-3">
+                                        <div class="list-group">
+                                            <li class="list-group-item no-padding" style="padding-left:15px; padding-right:15px; padding-bottom:10px;">
+                                                <div class="divider5"></div>
+                                                <img id="profileimage" class="imagecontainer" src="<?php echo $user->getMediumPicturePath(); ?>" style="width:100%; height:auto;" />
+                                            </li>
+                                            <a class="list-group-item <?php echo $tab == 'overview' || $tab == 'picture' ? 'gonowhere active' : 'blockanchor'; ?>" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID())); ?>">Profile</a>
+                                            
+                                            <a class="list-group-item <?php echo $tab == 'employment' ? 'gonowhere active' : 'blockanchor'; ?>" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment'); ?>">Employment Details</a>
+                                            <a class="list-group-item <?php echo $tab == 'benefits' ? 'gonowhere active' : 'blockanchor'; ?>" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/benefits'); ?>">Employee Benefits</a>
+                                            <a class="list-group-item <?php echo $tab == 'account' ? 'gonowhere active' : 'blockanchor'; ?>" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/account'); ?>">Account</a>
+                                        </div>
+                                    </div>
+                                <?php } ?>
+                                
+                                <div class="<?php echo !isEmptyString($user->getID()) ? 'col-md-9' : 'col-md-12'; ?>  paddingleft0">
+                                    <div class="row-fluid margin0 newuserdetails">                                        	
+                                        <div class="divider2"></div>
+                                        <form id="indexform" class="form-horizontal profile" role="form" action="<?php echo $posturl; ?>" method="post" enctype="multipart/form-data">
+                                            <?php if($tab == 'overview' || $tab == 'employment' || $tab == 'benefits' || $tab == 'account' ){ ?>
+                                                <div class="formactions" id="topactions" <?php echo isEmptyString($user->getID()) ? '' : ''; ?> style="float:right; position:relative; display:block; margin-right:10px;">
+                                                    <?php if(!isEmptyString($user->getID())){ ?>
+                                                        <a class="btn button-previous cancel" href="<?php echo $this->referer; ?>"><i class="icon-remove"></i> <?php echo $this->translate('global_button_cancel'); ?></a> &nbsp;
+                                                        <button type="submit" class="btn btn-success button-submit"><i class="glyphicon glyphicon-ok"></i> <?php echo $button_title; ?></button>
+                                                    <?php } ?>
+                                               	</div>
+                                                <input type="hidden" name="entityname" value="<?php echo $entityname; ?>" />
+                                                <input type="hidden" id="id" name="id" value="<?php echo encode($user->getID()); ?>" />
+                                                <input type="hidden" id="status" name="status" value="<?php echo $user->getStatus(); ?>" />
+                                                <input type="hidden" class="successurl" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo $successurl; ?>" />
+                                                <input type="hidden" class="failureurl" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo $failureurl; ?>" />
+                                                <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" />
+                                                <?php if($gotosuccess){ ?>
+                                                    <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" />
+                                                <?php } ?>
+                                            <?php } ?>
+                                            <?php if(isEmptyString($user->getID())){ ?>
+                                                <fieldset title="Profile Summary" id="step1summary">
+                                                    <legend>Step 1</legend>
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/overview_index.phtml"; ?>
+                                                </fieldset>
+                                                <fieldset title="Employment Details" id="step2employeement">
+                                                    <legend>Step 2</legend>
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/employment_index.phtml"; ?>
+                                                </fieldset>
+                                                <fieldset title="Employee Benefits" id="step3benefits">
+                                                    <legend>Step 3</legend>
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/benefits_index.phtml"; ?>
+                                                </fieldset>
+                                                <fieldset title="Account Setup" id="step4account">
+                                                    <legend>Step 4</legend>
+                                                     <?php require APPLICATION_PATH."/views/scripts/profile/account_index.phtml"; ?>
+                                                </fieldset>
+                                                <button type="submit" class="btn btn-primary finish" id="complete"><i class="glyphicon glyphicon-arrow-right"></i> Complete</button>  								
+                                            <?php } ?>
+                                            <?php if(!isEmptyString($user->getID())){ ?>
+                                                <?php if($tab == 'overview'){ ?>			
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/overview_index.phtml"; ?>
+                                                <?php } ?>
+                                                <?php if($tab == 'employment'){ ?>										
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/employment_index.phtml"; ?>
+                                                <?php } ?>
+                                                <?php if($tab == 'benefits'){ ?>
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/benefits_index.phtml"; ?>
+                                                <?php } ?>
+                                                <?php if($tab == 'account'){ ?>
+                                                    <?php require APPLICATION_PATH."/views/scripts/profile/account_index.phtml"; ?>
+                                                <?php } ?>
+                                            <?php } ?>	
+                                            <div class="divider15"></div>
+                                            <div class="formactions clearfix" id="bottomactions" <?php echo isEmptyString($user->getID()) ? 'style="left:50px; position:relative; float:left;"' : 'style="float:right; position:relative; right:10px;"'; ?> >
+                                                
+                                            </div>
+                                        </form> 
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>                 
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

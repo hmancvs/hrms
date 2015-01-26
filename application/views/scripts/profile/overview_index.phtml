@@ -1,0 +1,273 @@
+<div class="row-fluid margin0 newuserdetails">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Summary</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-6 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_firstname_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <input type="text" name="firstname" id="firstname" class="form-control screentrigger input-width-large" value="<?php echo $user->getFirstName(); ?>" /><div id="firstname_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_lastname_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <input type="text" name="lastname" id="lastname" class="form-control screentrigger input-width-large" value="<?php echo $user->getLastName(); ?>" />
+                                <div id="lastname_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_othernames_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="othername" id="othername" class="form-control screentrigger input-width-large" value="<?php echo $user->getOtherName(); ?>" />
+                                <div id="othername_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_displayname_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <?php
+                                      $displaynameselect = new Zend_Form_Element_Select('displayname',
+                                              array(
+                                                      'multiOptions' => array(""=>"<Select one>"),
+                                                      'view' => new Zend_View(),
+                                                      'decorators' => array(array('ViewHelper')),
+                                                      'class' => array('form-control','input-sm','xchosen-select')
+                                              )
+                                      );
+                                      
+                                      $displaynameselect->setValue(isEmptyString($user->getDisplayName()) ? $user->getName() : $user->getDisplayName());
+                                      echo $displaynameselect->render();
+                                  ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_gender_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <label class="radio radio-inline"><input type="radio" name="gender" id="gender_male" class="<?php echo $user->isMale() ? 1 : 0; ?>" value="1" /> Male &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="gender" id="gender_female" class="<?php echo $user->isFemale() ? 1 : 0; ?>" value="2" /> Female</label>
+                                <div id="gender_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_salutation_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getDatavariables('SALUTATION');
+                                    $dropdown = new Zend_Form_Element_Select('salutation',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getSalutation()); 
+                                    echo $dropdown->render();
+                                ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_nationality_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                    $countries = getCountries();
+                                    $countrydropdown = new Zend_Form_Element_Select('country',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>", "UG"=>"Uganda"), $countries),
+                                                            'view' => new Zend_View(), 
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')                                            	)
+                                                    );
+                                    $countrydropdown->setValue($user->getCountry()); 
+                                    echo $countrydropdown->render(); 
+                                ?><div id="country_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_ethnicity_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="ethnicity" id="ethnicity" class="form-control input-sm" value="<?php echo $user->getEthnicity(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_dateofbirth_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" class="form-control input-sm datefield readonly width100 manyyears" name="dateofbirth" id="dateofbirth" value="<?php echo changeMySQLDateToPageFormat($user->getDateOfBirth()); ?>" />
+                                <div id="dateofbirth_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_maritalstatus_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                    $allvalues = getDatavariables('MARITAL_STATUS_VALUES');
+                                    $dropdown = new Zend_Form_Element_Select('maritalstatus',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getMaritalStatus()); 
+                                    echo $dropdown->render();
+                                ?><div id="maritalstatus_error"></div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0 newuserdetails">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Contact Information</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-8 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_email_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <?php if($user->isUserActive()){ ?>
+                                    <?php echo $user->getEmail(); ?>
+                                    <input type="hidden" name="email" id="email" value="<?php echo $user->getEmail(); ?>" />
+                                <?php } else { ?>
+                                     <input type="text" name="email_auto" id="email_auto" class="form-control input-width-medium" value="<?php echo $user->getEmail(); ?>" /><div id="email_auto_error"></div>
+                                <?php } ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_altemail_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="email2" id="email2" class="form-control input-width-medium" value="<?php echo $user->getEmail2(); ?>" /><div id="email2_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="phone2" id="phone2" class="form-control input-width-medium width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g 256414123456" maxlength="12" /><div id="phone2_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                                <input type="text" name="phone" id="phone" class="form-control width150 inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /> 
+                                <div id="phone_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_skype_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="skype" id="skype" class="form-control input-width-medium" value="<?php echo $user->getSkype(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_linkedin_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="linkedin" id="linkedin" class="form-control input-width-medium" value="<?php echo $user->getLinkedIn(); ?>" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0 newuserdetails">
+     <div class="col-md-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Address</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_address_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <textarea name="address1" id="address1" class="form-control expanding" style="height:35px;"><?php echo $user->getAddress1(); ?></textarea>
+                                <div class="divider5"></div>
+                                <textarea name="address2" id="address2" class="form-control expanding" style="height:35px;"><?php echo $user->getAddress2(); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_citytown_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="town" id="town" class="form-control input-sm" value="<?php echo $user->getTown(); ?>" />
+                                <div id="town_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_postalcode_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="postalcode" id="postalcode" class="form-control input-sm" value="<?php echo $user->getPostalCode(); ?>" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>                                                                        
+    </div>
+</div>
+<div class="row-fluid margin0 newuserdetails">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <legend>Emergency Details</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-8 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_name_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <div class="divider10"></div>
+                                <div class="contact_text">
+                                    <input type="text" name="contactname" id="contactname" class="form-control input-sm" value="<?php echo $user->getContactName(); ?>" />
+                                </div>
+                                <div class="divider2"></div>                                            
+                                <div id="contactname_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_rship_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <?php
+                                      $values = getDatavariables('CONTACT_RELATIONSHIPS');
+                                      $dropdown = new Zend_Form_Element_Select('contactrshp',
+                                              array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select one>'), $values),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array(array('ViewHelper')),
+                                                    'class' => array('form-control','input-sm')
+                                              )
+                                      );
+                                      
+                                      $dropdown->setValue($user->getcontactrshp());
+                                      echo $dropdown->render();
+                                  ?><div id="contactrshp_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group contact_text">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_phone_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="contactphone" id="contactphone" class="form-control input-width-medium width150" value="<?php echo $user->getContactPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /><div id="contactphone_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_email_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <input type="text" name="contactemail" id="contactemail" class="form-control input-sm width150" value="<?php echo $user->getContactEmail(); ?>" /><div id="contactemail_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="divider15"></div>

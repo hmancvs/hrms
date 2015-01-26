@@ -1,0 +1,133 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+
+	$userid = $session->getVar("userid"); // debugMessage($userid);
+	$user->populate($userid);
+	
+	$customurl = '';
+	
+	$thecontroller = $request->getControllerName();
+	$theaction = $request->getActionName();
+	$publiccontrollers = array("signup","user"); 
+	if(isEmptyString($userid)){
+		$publiccontrollers[] = 'contactus';
+	}
+	if(($thecontroller == 'index' && $theaction == 'accessdenied')){
+		unset($publiccontrollers['0']);
+	}
+	
+	$toggled = $session->getVar('toggled');
+	$toggledclass = '';
+	// $toggled = 1;
+	if($toggled == '1'){
+		$toggledclass = ' toggled';
+	}
+	
+	$c = new Doctrine_RawSql();
+	$c->select('{m.*}, {mr.*}');
+	$c->from('message m INNER JOIN messagerecipient mr ON (m.id = mr.messageid)');
+	$c->where("(mr.recipientid = '".$userid."' AND mr.isread = 0) ORDER BY m.datecreated");
+	$c->addComponent('m', 'Message m');
+	$c->addComponent('mr', 'm.recipients mr');
+	$unread_messages = $c->execute()->count();
+	$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:14px;">('.$unread_messages.' Unread)</span>';
+	
+?>
+<!-- Header -->
+<header class="navbar" id="headercontainer">
+    <nav class="navbar-wrapper navbar-default navbar-fixed-top" role="navigation">
+        <div class="container-fluid headerwrapper"> 
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header margin0 padding0">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"> 
+                    <span class="sr-only">Toggle navigation</span> 
+                    <span class="icon-bar"></span> 
+                    <span class="icon-bar"></span> 
+                    <span class="icon-bar"></span> 
+                </button>
+       			<!--<div class="divider10"></div>-->
+        		<a class="navbar-brand margin0 padding0 hidden-xs" href="<?php echo $this->baseUrl('index'); ?>" id="homelink">
+                    <img class="img-responsive" id="logoimg" src="<?php echo $this->baseUrl('images/logo.png'); ?>" />		
+                    <span class="paddingleft0" id="appname"><?php echo getAppName(); ?></span>
+       			</a> 
+        	</div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse navonlogin" style="height:100px;">
+                <ul class="nav navbar-nav" id="headermenu">
+					<?php if ($acl->checkPermission('Dashboard', ACTION_VIEW)) { ?>
+                    	<li class="<?php echo $controller == 'dashboard' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('dashboard'); ?>"><span class="glyphicon xglyphicon-home"><i class="icon-large icon-home <?php echo $controller == 'dashboard' ? 'white' : ''; ?>"></i></span><span class="menutext">Dashboard</span></a></li> 
+                    <?php } ?>
+                    <?php if ($acl->checkPermission('Message', ACTION_LIST)) { ?>
+                    	<li class="<?php echo $controller == 'notifications' ? 'active' : ''; ?>" id="message_counter">
+                        	<span class="count <?php echo $controller == 'notifications' ? 'count2' : 'count1'; ?> number"><?php echo $unread_messages; ?></span>
+                        	<a class="blockanchor" href="<?php echo $this->baseUrl('notifications/list'); ?>"><span class="glyphicon <?php echo $controller == 'notifications' ? 'glyphicon-envelope' : ''; ?>"><?php echo $controller == 'notifications' ? '' : '<i class="icon-large icon-envelope"></i>'; ?></span><span class="menutext">Notifications</span></a></li>
+                    <?php } ?>
+                    <?php if ($acl->checkPermission('User Account', ACTION_LIST)) { ?>
+                    	<li class="<?php echo $controller == 'profile' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>"><span class="glyphicon"><i class="icon-large icon-group <?php echo $controller == 'profile' ? 'white' : ''; ?>"></i></span><span class="menutext">Employees</span></a></li>
+                    <?php } ?>
+                    <?php if ($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>
+                    	<li class="<?php echo $controller == 'timesheets' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>"><span class="glyphicon"><i class="icon-large icon-time <?php echo $controller == 'timesheets' ? 'white' : ''; ?>"></i></span><span class="menutext">Timesheets</span></a></li>
+                    <?php } ?>
+                    <?php if ($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
+                    	<li class="<?php echo $controller == 'benefits' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('benefits/list'); ?>"><span class="glyphicon"><i class="icon-large icon-gift <?php echo $controller == 'benefits' ? 'white' : ''; ?>"></i></span><span class="menutext">Benefits</span></a></li>
+                    <?php } ?>
+                    
+                    <?php if ($acl->checkPermission('Report Dashboard', ACTION_VIEW)) { ?>
+                    	<li class="<?php echo $controller == 'report' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('report/dashboard'); ?>"><span class="glyphicon"><i class="icon-large icon-signal <?php echo $controller == 'report' ? 'white' : ''; ?>"></i></span><span class="menutext"> Reports</span></a></li>
+                    <?php } ?>
+                </ul>
+                <ul class="nav navbar-nav navbar-right" id="headerright">
+                    <li class="userloggedinfo">
+                    	<?php if($isloggedin){ ?>
+                            <div class="row margin0 padding0">
+                                <ul style="background-color:#63ABDB; min-width:100px; width:auto; margin-top:35px; margin-right:-10px;">
+                                    <li class="dropdown user">
+                                        <a style="color:#fff; padding-left:20px; padding-right:20px;" href="<?php echo $this->baseUrl('profile/view/id/'.encode($user->getID())); ?>" class="dropdown-toggle" data-toggle="dropdown">My Account &nbsp; <span class="glyphicon glyphicon-chevron-down" style="color:#fff;"></span>
+                                        </a>
+                                        <ul class="dropdown-menu margin0 padding0" id="menupulldown" style="margin:0; padding:0;">
+                                            <?php if(isLoggedIn()){ ?>
+                                                <li><a class="blockanchor" href="<?php echo $this->baseUrl('profile/view/id/'.encode($user->getID())); ?>"><i class="glyphicon glyphicon-user"></i> My Profile</a></li>
+                                                <li class="divider"></li>
+                                                <?php if ($acl->checkPermission('User Account', ACTION_EDIT)) { ?>
+                                                	<li><a class="blockanchor" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID())); ?>"><i class="glyphicon glyphicon-pencil"></i> Update Profile</a></li>
+                                                <?php } ?>
+                                                <li><a class="blockanchor" href="<?php echo $this->baseUrl('profile/view/id/'.encode($user->getID()).'/tab/account'); ?>"><i class="glyphicon glyphicon-cog"></i> Account Settings</a></li>
+                                                <li class="divider"></li>
+                                                <li><a href="<?php echo $this->baseUrl('user/logout'); ?>" class="blockanchor"><i class="icon-key"></i> Log Out</a></li>
+                                            <?php } else { ?>
+                                                <li class="divider"></li>
+                                                <li><a href="<?php echo $this->baseUrl('user/login'); ?>" class="blockanchor"><i class="icon-key"></i> Login</a></li>
+                                            <?php } ?>
+                                        </ul>
+                                    </li>
+                                </ul>
+                                <a id="userinfolink" href="<?php echo $this->baseUrl("profile/view/id/".encode($user->getID())); ?>"><img src="<?php echo $user->getMediumPicturePath(); ?>" style="border:3px solid #63ABDB;" /></a>
+                            </div>
+                        <?php } ?>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="publicnav">
+            <?php if($isloggedin){ ?>
+                <div class="breadcrumbs <?php echo $toggledclass; ?>">
+                    <div class="titlebreadcrumb"></div>
+                    <div class="right">
+                        <div class="contentArea searchbar">
+                            <div class="input-group">
+                                <input type="text" placeholder="Search <?php echo getAppName(); ?>..." id="inputSearch" class="search" tabindex="1">
+                                <span class="input-group-btn">
+                                    <button type="submit" class="searchsubmit"><img src="<?php echo $this->baseUrl('images/search.png'); ?>" /></button>
+                                </span>
+                            </div>
+                            <ul id="divResult"></ul>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+        </div>
+    </nav>
+</header>
+<?php if($isloggedin){ ?>
+	<div style="height:80px;"></div>
+<?php } ?>

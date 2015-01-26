@@ -1,0 +1,84 @@
+<div class="row-fluid margin0">
+	<div class="makeabsolute" style="right:35px; top:-40px;">
+		<?php if($allowedit) { ?>
+            <a class="btn btn-primary btn-xs blockanchor xnoround" href="<?php echo $indexurl; ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+        <?php } ?>
+    </div>
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer minheight200">
+            <legend>Basic Earnings</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-10 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_rate_label'); ?> (<?php echo $user->getCurrencyName(); ?>):</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static nullifempty view">
+									<?php echo '****'/*isEmptyString($user->getRate()) ? '' : $user->getRate().' / '.getDatavariables('EMPLOYEE_RATE_TYPES', $user->getRateType(), true)*/; ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row-fluid margin0">
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer minheight200">
+            <legend>Holidays and Leave Benefits</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-10 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_leavetype_label'); ?>:</label>
+                            <div class="col-md-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getAccrualTypeText(); ?></p>
+                            </div>
+                        </div>
+                        <?php if($user->getaccrualtype() == '1'){ ?>
+                            <div class="form-group">
+                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleave_label'); ?>:</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static nullifempty view"><span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<span class="bolded" style="font-size:14px; color:#428bca;"><?php echo $user->getregularleavehrs(); ?></span></p>
+                                </div>
+                            </div>
+                       	<?php } ?>
+                        <?php if($user->getaccrualtype() == '2'){ ?>
+                        	<div class="form-group">
+                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static nullifempty view"><span><?php echo $user->getregularleavedays(); ?> </span> Days &nbsp;<span><?php echo $user->getRegularLeaveTypeText(); ?></span></p>
+                                </div>
+                            </div>
+                        <?php } ?>
+                        <?php if($user->getaccrualtype() == '1'){ ?>
+                            <div class="form-group">
+                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleave_label'); ?>:</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static nullifempty view"><span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<span class="bolded" style="font-size:14px; color:#428bca;"><?php echo $user->getsickleavehrs(); ?></span></p>
+                                </div>
+                            </div>
+                       	<?php } ?>
+                        <?php if($user->getaccrualtype() == '2'){ ?>
+                        	<div class="form-group">
+                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static nullifempty view"><span><?php echo $user->getsickleavedays(); ?> </span> Days &nbsp;<span><?php echo $user->getSickLeaveTypeText(); ?></span></p>
+                                </div>
+                            </div>
+                        <?php } ?>
+                        <?php if($user->getaccrualtype() == '1'){ ?>
+                            <div class="form-group ashours">
+                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_accrualfrequency_label'); ?>:</label>
+                                <div class="col-md-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getAccrualFrequencyText(); ?></p>
+                                </div>
+                            </div>
+                        <?php } ?>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>

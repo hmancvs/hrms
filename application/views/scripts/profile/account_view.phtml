@@ -1,0 +1,85 @@
+<div class="row-fluid margin0">
+	<div class="xmakeabsolute" style="margin-right:15px; float:right;">
+		<?php if($allowedit) { ?>
+            <a class="btn btn-primary btn-xs blockanchor xnoround" href="<?php echo $indexurl; ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+        <?php } ?>
+    </div>
+    <div class="col-md-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Account Settings and Preferences</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-12 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-md-2 control-label"><?php echo $this->translate('profile_type_label'); ?>:</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static nullifempty view"><?php echo getUserType($user->getType()); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Account Status:</label>
+                            <div class="col-md-10">
+                                <?php $allstatus = getUserStatus(); ?> 
+                                <p class="form-control-static nullifempty view"><?php echo isArrayKeyAnEmptyString($user->getStatus(), $allstatus) ? '' : $allstatus[$user->getStatus()]; ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-2 control-label">Login <?php echo $this->translate('profile_emailonly_label'); ?>:</label>
+                            <div class="col-md-10">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getEmail(); ?>
+                                <?php if($user->isUserActive() && $isme){ ?>
+                                    <a href="<?php echo $this->baseUrl('profile/changeemail/id/'.encode($user->getID()).'/pgc/true'); ?>" class="addpopup changeemail btn btn-xs btn-default pull-right floatright" title="Change Email" rel="Change Email" id="changeemail" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl($controller."/processchangeemail"); ?>">Change Email</a>
+                                <?php } ?>
+                                </p>
+                            </div>
+                        </div>
+                        <?php if($user->isUserActive()){ ?>
+                        	<div class="form-group">
+                            <label class="col-md-2 control-label"><?php echo $this->translate('profile_username_label'); ?>:</label>
+                                <div class="col-md-10">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getUsername(); ?>
+                                    <?php if($user->isUserActive() && $isme){ ?>
+                                        <a href="<?php echo $this->baseUrl('profile/changeusername/id/'.encode($user->getID()).'/pgc/true'); ?>" class="addpopup changeusername btn btn-xs btn-default pull-right floatright" title="Change Username" rel="Change Username" id="changeusername" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("profile/processchangeusername"); ?>">Change Username</a>
+                                    <?php } ?>    
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-md-2 control-label"><?php echo $this->translate('profile_password_label'); ?>:</label>
+                                <div class="col-md-10">
+                                    <p class="form-control-static nullifempty view">
+                                        <b style="font-size:16px;">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</b> &nbsp;
+                                        
+                                        <?php if($isme){ ?>
+                                            <a class="addpopup btn btn-xs btn-default pull-right floatright" rel="Change Password" href="<?php echo $this->baseUrl('profile/changepassword/pgc/true/id/'.encode($user->getID())); ?>" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("profile/processchangepassword"); ?>" submittext="Change Password">Change Password</a>
+                                        <?php } ?>
+                                        <?php if($acl->checkPermission('User Account', ACTION_DELETE) && $user->isUserActive() && !$isme){ ?>
+                                            <a class="btn btn-default btn-xs confirm-dialog pull-right floatright" action="<?php echo $this->baseUrl('profile/resetpassword/id/'.encode($user->getID()).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to reset <?php echo $user->getName() ?>'s Password?">Reset Password</a>
+                                        <?php } ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php } ?> 
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <div class="form-group">
+            <div class="col-md-12">
+                <div class="divider5"></div>
+                <?php if($allowedit){ ?>
+                    <a class="btn btn-default btn-xs blockanchor" href="<?php echo $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>"><i class="glyphicon glyphicon-upload"></i> Upload Photo</a>
+                <?php } ?>
+                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isDeactivated() && !$isme){ ?>
+                    <a class="btn btn-success btn-xs confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/1/successmessage/profile_reactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_reactivate_confirmation'); ?>"><i class="glyphicon glyphicon-arrow-up"></i> Re-Activate Account</a>
+                <?php } ?>
+                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isUserActive() && !$user->isDeactivated() && !$isme){ ?>
+                   <a class="btn btn-warning btn-xs confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/2/successmessage/profile_deactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_deactivate_confirmation'); ?>"><i class="glyphicon glyphicon-arrow-down"></i> De-Activate Account</a>
+                <?php } ?>
+                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme){ ?>
+                    <a class="btn btn-danger btn-xs confirm-dialog" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" action="<?php echo $this->baseUrl($controller.'/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>"><i class="glyphicon glyphicon-remove-sign"></i> Delete Account</a>
+                <?php } ?>
+            </div>
+        </div>
+	</div>
+</div>            

@@ -1,0 +1,155 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+		
+	$user->populate($userid);
+	$role = getUserType($user->getType());
+	$title = $role." ".$this->translate("dashboard_pagetitle");
+	$description = 'Welcome to '.getAppName();
+	
+	$this->headTitle($title.$browserappend);
+	
+?>
+<script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/highcharts.js'); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/exporting.js'); ?>"></script>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo 'System / '.$this->translate("dashboard_pagetitle"); ?>');
+	$('.titlelabel').html('<?php echo 'Dashboard'; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-home"></span>');
+
+});
+</script>
+
+<div class="row row-bg" style="margin-bottom:10px;">
+    <div class="col-sm-12 col-md-12">
+        <div class="widget box makerelative">
+            <div class="widget-header">
+                <h4><i class="glyphicon glyphicon-align-justify"></i> System Summary</h4>
+            </div>
+            <div class="widget-content no-padding">
+                <table class="table table-striped margin0">
+                    <thead class="monitor">
+                        <tr>
+                            <th style="width:15px;" class="monitorhead"></th>
+                            <th style="width:130px; text-align:left; padding-left:0;" class="monitorhead"></th>
+                            <th style="width:15px; text-align:center; padding:0;">&nbsp;</th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead"></th>
+                            <th class="monitorhead" style="width:50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="monitorbody">
+                        <tr id="members_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="members_today"></label></td>
+                            <td><label id="members_yesterday"></label></td>
+                            <td><label id="members_thisweek"></label></td>
+                            <td><label id="members_lastweek"></label></td>
+                            <td><label id="members_thismonth"></label></td>
+                            <td><label id="members_lastmonth"></label></td>
+                            <td><label id="members_thisyear"></label></td>
+                            <td class="last"><label id="members_allentries"></label></td>
+                        </tr>
+                        <tr id="users_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="users_today"></label></td>
+                            <td><label id="users_yesterday"></label></td>
+                            <td><label id="users_thisweek"></label></td>
+                            <td><label id="users_lastweek"></label></td>
+                            <td><label id="users_thismonth"></label></td>
+                            <td><label id="users_lastmonth"></label></td>
+                            <td><label id="users_thisyear"></label></td>
+                            <td class="last"><label id="users_allentries"></label></td>
+                        </tr>
+                        <tr id="churches_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="churches_today"></label></td>
+                            <td><label id="churches_yesterday"></label></td>
+                            <td><label id="churches_thisweek"></label></td>
+                            <td><label id="churches_lastweek"></label></td>
+                            <td><label id="churches_thismonth"></label></td>
+                            <td><label id="churches_lastmonth"></label></td>
+                            <td><label id="churches_thisyear"></label></td>
+                            <td class="last"><label id="churches_allentries"></label></td>
+                        </tr>
+                        <tr id="appoints_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="appoints_today"></label></td>
+                            <td><label id="appoints_yesterday"></label></td>
+                            <td><label id="appoints_thisweek"></label></td>
+                            <td><label id="appoints_lastweek"></label></td>
+                            <td><label id="appoints_thismonth"></label></td>
+                            <td><label id="appoints_lastmonth"></label></td>
+                            <td><label id="appoints_thisyear"></label></td>
+                            <td class="last"><label id="appoints_allentries"></label></td>
+                        </tr>
+                        <tr id="churches_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="churches_today"></label></td>
+                            <td><label id="churches_yesterday"></label></td>
+                            <td><label id="churches_thisweek"></label></td>
+                            <td><label id="churches_lastweek"></label></td>
+                            <td><label id="churches_thismonth"></label></td>
+                            <td><label id="churches_lastmonth"></label></td>
+                            <td><label id="churches_thisyear"></label></td>
+                            <td class="last"><label id="churches_allentries"></label></td>
+                        </tr>
+                        <tr id="appoints_row">
+                            <td class="icontd"></td>
+                            <td class="variabletd"></td>
+                            <td>&nbsp;</td>
+                            <td><label id="appoints_today"></label></td>
+                            <td><label id="appoints_yesterday"></label></td>
+                            <td><label id="appoints_thisweek"></label></td>
+                            <td><label id="appoints_lastweek"></label></td>
+                            <td><label id="appoints_thismonth"></label></td>
+                            <td><label id="appoints_lastmonth"></label></td>
+                            <td><label id="appoints_thisyear"></label></td>
+                            <td class="last"><label id="appoints_allentries"></label></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row row-bg" style="margin-bottom:10px;">
+    <div class="col-sm-12 col-md-12">
+        <div class="widget box hidden-xs">
+            <div class="widget-header">
+                <h4><i class="glyphicon glyphicon-align-justify"></i> Leave Calendar</h4>
+                <div class="toolbar no-padding">
+                    <div class="btn-group">
+                        <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
+                    </div>
+                </div>
+            </div>
+            <div class="widget-content no-padding whitebg minheight400">
+            	<div id="mapcanvas" class="maxwidth" style="height:1000px; xborder: 2px solid #878787; border-radius: 3px; margin:4px; width:99%;"></div>
+                <div class="row span12 margin0 padding0 clearfix">
+                    
+                </div>
+          	</div>
+      	</div>
+   	</div>
+</div>
+<div class="divider10"></div>                            
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>
