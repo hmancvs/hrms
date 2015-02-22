@@ -15,6 +15,7 @@ class AppConfig extends BaseEntity {
 		$this->hasColumn('displayname', 'string', 50);
 		$this->hasColumn('active', 'enum', array('values' => array(0 => 'Y', 1 => 'N'), 'default' => 'Y'));
 		$this->hasColumn('editable', 'interger', null, array('default' => '1'));
+		$this->hasColumn('companyid', 'integer', null, array('default' => NULL));
 	}
 	/**
 	 * Contructor method for custom functionality - add the fields to be marked as dates

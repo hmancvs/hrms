@@ -32,6 +32,11 @@
 	$unread_messages = $c->execute()->count();
 	$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:14px;">('.$unread_messages.' Unread)</span>';
 	
+	$istimesheetemployee = false;
+	if(isTimesheetEmployee()){
+		$istimesheetemployee = true;
+	}
+	
 ?>
 <!-- Header -->
 <header class="navbar" id="headercontainer">
@@ -65,11 +70,11 @@
                     <?php if ($acl->checkPermission('User Account', ACTION_LIST)) { ?>
                     	<li class="<?php echo $controller == 'profile' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>"><span class="glyphicon"><i class="icon-large icon-group <?php echo $controller == 'profile' ? 'white' : ''; ?>"></i></span><span class="menutext">Employees</span></a></li>
                     <?php } ?>
-                    <?php if ($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>
-                    	<li class="<?php echo $controller == 'timesheets' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>"><span class="glyphicon"><i class="icon-large icon-time <?php echo $controller == 'timesheets' ? 'white' : ''; ?>"></i></span><span class="menutext">Timesheets</span></a></li>
+                    <?php if (($acl->checkPermission('Timesheets', ACTION_LIST) && $istimesheetemployee) || $acl->checkPermission('Timesheets', ACTION_APPROVE) || isAdmin()) { ?>
+                    	<li class="<?php echo $controller == 'timesheets' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>"><span class="glyphicon"><i class="icon-large icon-time <?php echo $controller == 'timesheets' ? 'white' : ''; ?>"></i></span><span class="menutext">Timesheets</span></a></li>
                     <?php } ?>
                     <?php if ($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
-                    	<li class="<?php echo $controller == 'benefits' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('benefits/list'); ?>"><span class="glyphicon"><i class="icon-large icon-gift <?php echo $controller == 'benefits' ? 'white' : ''; ?>"></i></span><span class="menutext">Benefits</span></a></li>
+                    	<li class="<?php echo $controller == 'ledger' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list'); ?>"><span class="glyphicon"><i class="icon-large icon-gift <?php echo $controller == 'ledger' ? 'white' : ''; ?>"></i></span><span class="menutext">Benefits</span></a></li>
                     <?php } ?>
                     
                     <?php if ($acl->checkPermission('Report Dashboard', ACTION_VIEW)) { ?>

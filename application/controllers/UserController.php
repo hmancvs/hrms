@@ -123,6 +123,7 @@ class UserController extends IndexController  {
 		$session->setVar("userid", $useraccount->getID());
 		$session->setVar("username", $useraccount->getUserName());
 		$session->setVar("type", $useraccount->getType());
+		$session->setVar("istimesheetuser", $useraccount->getIsTimesheetUser());
 		$session->setVar("browseraudit", $browser_session);
 		
 		// clear user specific cache, before it is used again

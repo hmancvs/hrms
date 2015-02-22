@@ -1,0 +1,399 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$loggedinuser = new UserAccount();
+	$loggedinuser->populate($userid);
+	$istimesheetuser = false;
+	if(isTimesheetEmployee()){
+		$istimesheetuser = true;
+	}
+	
+	$title = "Timeoff Requests"; 
+	
+	$style = '2';
+	if(!isEmptyString($request->style)){
+		$style = $request->style;
+		$session->setVar('style', $request->style);
+	}
+	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
+		$style = $session->getVar('style');
+	}
+	
+	$timeofftypes = getTimeoffTypes();
+	$timeoffstatuses = getTimeoffStatuses();
+	$timeoffoptions = getHoursDaysDropdown();
+	
+	# Create an instance of the class to handle the pagination
+	$paginate = new Pagination();	
+	$paginate->setView($this);
+	# set the search columns to be used on this list
+	$paginate->setSearchColumns(array());
+	$paginate->setFilterColumns(array());	
+	$paginate->setItemCountPerPage("10");
+	
+	# define the letter to be clicked to ease navigation 
+	$where_query = " WHERE t.id <> '' ";
+	$allowclear = false;
+	
+	if(!isEmptyString($request->searchterm)){
+		$allowclear = true;
+	}
+	
+	if($istimesheetuser){
+		$where_query .= " AND t.`userid` = '".$loggedinuser->getID()."' ";
+	}
+	$userid = $request->userid;
+	if(!isEmptyString($userid)){
+		$where_query .= " AND t.`userid` = '".$userid."' ";
+		$allowclear = true;
+		if($istimesheetuser){
+			$allowclear = false;
+		}
+	}
+	
+	$typeid = $request->typeid;
+	if(!isEmptyString($typeid)){
+		$where_query .= " AND t.`typeid` = '".$typeid."' ";
+		$allowclear = true;
+	}
+	
+	if($request->forapproval == '1'){
+		$request->setParam('status', 0);
+	}
+	if($request->whoisoff == '1'){
+		$request->setParam('status', 3);
+	}
+	$status = trim($request->status);
+	if(!isEmptyString($status)){
+		$where_query .= " AND t.`status` = '".$status."' ";
+		if(!isArrayKeyAnEmptyString($status, $timeoffstatuses)){
+			switch($status){
+				case '0':
+					$title = "Leave Requests for Approval";
+					break;
+				case '1':
+					$title = "Approved Requests";
+					break;
+				case '2':
+					$title = "Rejected Requests";
+					break;
+				case '3':
+					$title = "Currently Off";
+					break;
+				case '4':
+					$title = "Leave Taken";
+					break;
+				default:
+					break;
+			}
+		}
+		$allowclear = true;
+	}
+	
+	$order = trim($request->order);
+	$order_query = " ORDER BY t.datecreated DESC, t.id desc ";
+	
+	$sortcolumn = $request->sortby;
+	$sortorder = $request->sortorder;
+	if(!isEmptyString($sortcolumn) && !isEmptyString($sortorder)){
+		$order_query = " ORDER BY " . $sortcolumn. " " .$sortorder. " ";
+	}
+	
+	$paginate->processPost($request->getParams());
+	$all_results_query = "
+		select t.id, t.userid, t.companyid, 
+		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `User`,
+		IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby,
+		IF(p.displayname <> '', p.displayname, concat(p.firstname, ' ', p.lastname, ' ', p.othername)) as approver,
+		t.startdate, t.enddate, t.starttime, t.endtime, t.returndate, t.returntime, t.createdby AS createdby, t.datecreated AS datecreated, t.dateapproved,
+		t.typeid, t.`status`, t.duration, t.durationtype, t.remarks, t.reason
+		from timeoff t 
+		inner join timeofftype x on t.typeid = x.id 
+		inner join useraccount u on t.userid = u.id
+        left join useraccount mc on (t.createdby = mc.id)
+		left join useraccount p on (t.approvedbyid = p.id)
+		".$where_query."  ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$order_query;
+	
+	// debugMessage($all_results_query);
+	$paginate->setItemCountFromSQLQuery($all_results_query);
+	
+	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+	//echo $current_results_query;
+	$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+	$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+	
+	$conn = Doctrine_Manager::connection(); 
+	$result = $conn->fetchAll($current_results_query);
+	$has_no_data = (count($result) == 0) ? true : false; 
+	
+	$listurl = $this->baseUrl('timeoff/list');
+	$addurl = $this->baseUrl('timeoff/index');
+	$resource = "Time off"; // $resource = "Department";
+	$icon = "glyphicon glyphicon-time";
+	$description = '';
+	
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	// breadcrumb config
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+	
+}); 
+</script>
+<div class="row margin0">
+    <div class="col-md-12 padding0">
+    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("timeoff/listsearch"); ?>" method="get" id="listform">
+		<?php if ($sessionhaserror) { ?>
+            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+        <?php } ?>
+        <div class="row-fluid clearfix">
+        	<div class="col-md-9 paddingleft0">
+            	<ul class="listfilter" style="margin-bottom:10px;">
+					<?php if(!$acl->checkPermission($resource, ACTION_APPROVE)) { ?>
+                        <li style="margin:0;"><a class="btn btn-primary btn-sm blockanchor" href="<?php echo $addurl; ?>"  title="Request Timeoff"><i class="glyphicon glyphicon-plus"></i> Request Timeoff</a></li>
+                    <?php } ?>
+                    <?php if($acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                        <li>
+                            <?php
+                                $allusers = getUsers();
+                                $dropdown = new Zend_Form_Element_Select('userid',
+                                                    array(
+                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Employees'), $allusers),
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
+                                                    )
+                                );  
+                                $dropdown->setValue($request->getParam('userid')); 
+                                echo $dropdown->render();
+                            ?>
+                        </li>
+                    <?php } ?>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('typeid',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Types'), $timeofftypes),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('typeid')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('status',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $timeoffstatuses),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'width125', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('status')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-3 padding0">
+                <input type="hidden" name="type" id="type" value="<?php echo $type; ?>" />
+                <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
+                <?php if($allowclear){ ?>
+                    <a href="<?php echo $listurl; ?>" title="Clear Search and Filters" class="reset close button btn resetlink blockanchor">&times;</a>
+                <?php } ?>
+            </div>
+        </div>
+        <div class="row-fluid clearfix">
+        	<div class="col-md-12 paddingleft0">
+            	<ul class="listfilter blocked" style="margin-bottom:0;">
+                	
+               	</ul>
+            </div>
+      	</div>
+        <div class="row-fluid peoplelist clearfix makerelative whitebg" style="margin-bottom: 10px;">
+            <div class="wrapper1">
+                <div class="div1" style="width:1700px;"></div>
+            </div>
+            <div class="wrapper2">
+                <div class="div2" style="width:1700px;">
+                    <table class="table list table-bordered table-striped data-table" id="datatable" style="width:auto;">
+                        <thead class="paginationheader">
+                        	<?php if($request->forapproval != '1'){ ?>
+                        		<th style="width:75px;">Actions</th>
+                            <?php } ?>    
+                            <?php if($request->forapproval == '1'){ ?>
+                            	<th style="width:40px;">Approve</th>
+                                <th style="width:40px;">Reject</th>
+                            <?php } ?>
+                        	<?php if($acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                                <th style="width:150px;">Employee</th>
+                            <?php } ?>
+                            <th style="width:100px;">Start Date</th>
+                            <th style="width:80px;">End Date</th>
+                            <th style="width:80px;">Return Date</th>
+                            <th style="width:75px;">Duration</th>
+                            <th style="width:100px;">Timeoff Type</th>
+                            <th style="width:100px;">Status</th>
+                            <th style="width:120px;">Date Submitted</th>
+                            <th style="width:170px;">Approved By</th>
+                            <th style="width:120px;">Date Approved</th>
+                            <th style="width:250px;">Remarks / Comments</th>
+                        </thead>
+                        <tbody>
+							<?php if($has_no_data) { ?>
+                                <tr>
+                                    <td colspan="20"><div style="clear:both;" class="alert alert-warning margin5">There are no requests to display</div></td>
+                                </tr>
+                            <?php } else { ?>
+                            	<?php
+									foreach($result as $line){
+										$viewurl = $this->baseUrl('timeoff/view/id/'.encode($line['id']));
+										$indexurl = $this->baseUrl('timeoff/index/id/'.encode($line['id']));
+										
+										$style = ''; $customclass = '';
+										$status = isArrayKeyAnEmptyString($line['status'], $timeoffstatuses) ? '' : $timeoffstatuses[$line['status']];
+										if($line['status'] == 0){ // requested
+											$customclass = ' alert-warning bolded';
+										}
+										if($line['status'] == 1){ // approved
+											$customclass = ' alert-success';
+										}
+										if($line['status'] == 2){ // rejected
+											$customclass = ' alert-danger';
+										}
+										if($line['status'] == 3){ // on leave
+											$style = 'style="background-color:#2d6ca2; color:#fff;"';
+										}
+										if($line['status'] == 4){ // taken
+											$style = 'style="background-color:#f8ea07; color:#000;"';
+										}
+										// check permission to edit
+										$allowedit = false;
+										if($acl->checkPermission($resource, ACTION_EDIT)){
+											if($loggedinuser->getID() == $line['userid'] && $line['status'] == 0){
+												$allowedit = true;
+											}
+											if($loggedinuser->getID() == $line['userid'] && $line['status'] == 2){
+												$allowedit = true;
+											}
+										}
+										$allowdelete = false;
+										if($acl->checkPermission($resource, ACTION_DELETE)){
+											if($loggedinuser->getID() == $line['userid'] && $line['status'] == 0){
+												$allowdelete = true;
+											}
+										}
+										if($acl->checkPermission($resource, ACTION_APPROVE) && $line['status'] == 2){
+											$allowdelete = true;
+										}
+										
+										$allowapprove = false;
+										if($acl->checkPermission($resource, ACTION_APPROVE) && ($line['status'] == '0') && $line['userid'] != $loggedinuser->getID()){
+											$allowapprove = true;
+										}
+										
+										$allowreject = false;
+										if($acl->checkPermission($resource, ACTION_APPROVE) && ($line['status'] == '0' || $line['status'] == '1') && $line['userid'] != $loggedinuser->getID()){
+											$allowreject = true;
+										}
+										
+										$unit = '';
+										if(!isArrayKeyAnEmptyString($line['durationtype'], $timeoffoptions)){
+											$unit = ' ('.$timeoffoptions[$line['durationtype']].')';
+										}
+								?>
+                                    <tr style="font-size:13px;">
+                                    	<?php ob_start(); ?>
+                                        	<a class="btn btn-default btn-xs confirm-prompt noimgbutton inline" title="Reject Request" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$line['id'].'/status/2/successurl/'.encode($this->viewurl).'/successmessage/leave_rejected_success'); ?>" message="Reject <?php echo $line['duration'].$unit; ?> requested by <?php echo $line['User']; ?>. <br>Please specify Reason/Comment to continue"><i class="glyphicon glyphicon-remove"></i></a>
+                                        <?php $rejecthtml = ob_get_clean(); ?>
+                                        <?php ob_start(); ?>
+                                        	<a class="btn btn-success btn-xs confirm-dialog noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" title="Approve Request" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$line['id'].'/status/1/successurl/'.encode($this->viewurl).'/successmessage/leave_approve_success'); ?>" message="Are you sure you want to Approve <?php echo $line['duration'].$unit; ?> requested by <br><?php echo $line['User']; ?> from <?php echo changeMySQLDateToPageFormat($line['startdate']); ?> to <?php echo changeMySQLDateToPageFormat($line['enddate']); ?>"><i class="glyphicon glyphicon-ok"></i></a>
+                                        <?php $approvehtml = ob_get_clean(); ?>
+                                        <?php if($request->forapproval != '1'){ ?>
+                                            <td>
+                                            	<a class="btn btn-default btn-xs noimgbutton blockanchor inline" title="View Request Details" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $viewurl; ?>"><i class="glyphicon glyphicon-list"></i></a>
+                                                <?php if ($allowdelete) { ?>
+                                                    <a class="btn btn-default btn-xs noimgbutton deleteline gonowhere inline" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('timeoff/delete/id/'.encode($line['id'])."/entityname/Timeoff/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon glyphicon-trash"></i></a>
+                                                <?php } ?>  
+                                                <?php if ($allowedit) { ?>
+                                                    <a class="inline blockanchor btn btn-primary btn-sm noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $indexurl; ?>" title="Update"><i class="glyphicon glyphicon-pencil"></i></a>
+                                                <?php } ?>
+                                                <?php if($acl->checkPermission($resource, ACTION_APPROVE) && $line['status'] == '1' && $line['userid'] != $loggedinuser->getID()/* && strtotime($line['startdate']) < mktime()*/){ ?>
+													<?php echo $rejecthtml; ?>    
+                                                <?php } ?>
+                                            </td>
+                                        <?php } ?>
+                                        <?php if($request->forapproval == '1' && $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                                            <th class="nullifempty">
+                                            	<?php if($allowapprove){ ?>
+                                                    <?php echo $approvehtml; ?>    
+                                                <?php } ?>
+                                            </th>
+                                            <th>
+                                            	<?php if($allowreject){ ?>
+                                 					<?php echo $rejecthtml; ?>                   
+                                                <?php } ?>
+                                            </th>
+                                        <?php } ?>
+                                        <?php if($acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                                        	<td class="nullifempty"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($line['userid'])); ?>"><?php echo $line['User']; ?></a></td>
+                                        <?php } ?>    
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?>&nbsp; 
+										<span class="blocked" style="font-size:11px;"><?php echo date("h:i A", strtotime($line['starttime'])); ?></span></td>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['enddate']); ?>
+                                        <span class="blocked" style="font-size:11px;"><?php echo date("h:i A", strtotime($line['endtime'])); ?></span>
+                                        </td>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['returndate']); ?>
+                                        <span class="blocked" style="font-size:11px;"><?php echo date("h:i A", strtotime($line['returntime'])); ?></span>
+                                        </td>
+                                        <td class="nullifempty"><?php echo $line['duration'].$unit; ?></td>
+                                        <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['typeid'], $timeofftypes) ? '' : $timeofftypes[$line['typeid']]; ?></td>
+                                        <td class="nullifempty <?php echo $customclass; ?>" <?php echo $style; ?>><?php echo $status; ?></td>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['datecreated']); ?>
+                                        <span class="blocked" style="font-size:11px;"><?php echo date("h:i A", strtotime($line['datecreated'])); ?></span>
+                                        </td>
+                                        <td class="nullifempty"><?php echo $line['approver']; ?></td>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['dateapproved']); ?>
+                                        <span class="blocked" style="font-size:11px;"><?php echo isEmptyString($line['dateapproved']) ? '--' : date("h:i A", strtotime($line['dateapproved'])); ?></span>
+                                        </td>
+                                        <td class="nullifempty">
+											<span class="blocked"><?php echo isEmptyString($line['remarks']) ? '' : nl2br($line['remarks']); ?></span>
+                                        	<span class="blocked bolded"><?php echo isEmptyString($line['reason']) ? '' : nl2br($line['reason']); ?></span>
+                                        </td>
+                                    </tr>
+                            	<?php } ?>
+                       		<?php } ?>
+                        </tbody>
+                    </table>
+              	</div>
+         	</div>
+        </div>
+        <?php if(!$has_no_data) { ?>
+            <div class="row-fluid">
+                <div class="table-footer">
+                    <div class="col-md-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                    <div class="col-md-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                    <div class="col-md-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                </div>
+            </div>
+        <?php } ?>
+        <div class="divider10"></div>
+	</form>
+</div>            
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

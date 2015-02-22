@@ -1,0 +1,361 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$loggedinuser = new UserAccount();
+	$loggedinuser->populate($userid);
+	$customlabel = "";
+	$istimesheetuser = false;
+	if(isTimesheetEmployee()){
+		$istimesheetuser = true;
+	}
+	
+	$title = "Benefits and Accruals Ledger"; 
+	$description = "";
+	
+	$style = '2';
+	if(!isEmptyString($request->style)){
+		$style = $request->style;
+		$session->setVar('style', $request->style);
+	}
+	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
+		$style = $session->getVar('style');
+	}
+	
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	if(!isEmptyString($startdate)){
+		$startdate = changeDateFromPageToMySQLFormat($startdate);
+		$allowclear = true;
+	}
+	$enddate = $request->getParam('enddate');
+	if(!isEmptyString($enddate)){
+		$enddate = changeDateFromPageToMySQLFormat($enddate);
+		$allowclear = true;
+	}
+	
+	# Create an instance of the class to handle the pagination
+	$paginate = new Pagination();	
+	$paginate->setView($this);
+	# set the search columns to be used on this list
+	$paginate->setSearchColumns(array('b.name','p.name'));
+	$paginate->setFilterColumns(array());	
+	$paginate->setItemCountPerPage("10");
+	
+	# define the letter to be clicked to ease navigation 
+	$where_query = " WHERE l.id <> '' ";
+	$allowclear = false;
+	
+	if(!isEmptyString($request->searchterm)){
+		$allowclear = true;
+	}
+	
+	if($istimesheetuser){
+		$where_query .= " AND l.`userid` = '".$loggedinuser->getID()."' ";
+	}
+	$userid = $request->userid;
+	if(!isEmptyString($userid)){
+		$where_query .= " AND l.`userid` = '".$userid."' ";
+		$allowclear = true;
+		if($istimesheetuser){
+			$allowclear = false;
+		}
+	}
+	$ledgertype = $request->ledgertype;
+	if(!isEmptyString($ledgertype)){
+		$where_query .= " AND l.`ledgertype` = '".$ledgertype."' ";
+		$allowclear = true;
+	}
+	$trxntype = $request->trxntype;
+	if(!isEmptyString($trxntype)){
+		$where_query .= " AND l.`trxntype` = '".$trxntype."' ";
+		$allowclear = true;
+	}
+	$benefitid = $request->benefitid;
+	if(!isEmptyString($benefitid)){
+		$where_query .= " AND l.`benefitid` = '".$benefitid."' ";
+		$allowclear = true;
+	}
+	$timeoffid = $request->timeoffid;
+	if(!isEmptyString($timeoffid)){
+		$where_query .= " AND l.`timeoffid` = '".$timeoffid."' ";
+		$allowclear = true;
+	}
+	
+	$status = trim($request->status);
+	if(!isEmptyString($status)){
+		$where_query .= " AND l.`status` = '".$status."' ";
+		$allowclear = true;
+	}
+	
+	if(!isEmptyString($startdate)){
+		$where_query .= " AND (TO_DAYS(l.trxndate) >= TO_DAYS('".$startdate."')) ";
+		$allowclear = true;
+	}
+	if(!isEmptyString($enddate)){
+		$where_query .= " AND (TO_DAYS(l.trxndate) <= TO_DAYS('".$enddate."')) ";
+		$allowclear = true;
+	}
+		
+	$order = trim($request->order);
+	$order_query = " ORDER BY l.trxndate DESC, l.id desc ";
+	
+	$sortcolumn = $request->sortby;
+	$sortorder = $request->sortorder;
+	if(!isEmptyString($sortcolumn) && !isEmptyString($sortorder)){
+		$order_query = " ORDER BY " . $sortcolumn. " " .$sortorder. " ";
+	}
+	
+	$paginate->processPost($request->getParams());
+	$all_results_query = "
+		select l.id, l.userid, l.companyid, l.benefitid, l.timeoffid, 
+		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `User`,
+		IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby,
+		l.trxndate, l.startdate AS startdate, l.enddate AS enddate,
+		l.timeofflength, l.lengthtype, l.`status` AS `status`, l.ledgertype, l.trxntype, l.amount,
+		l.remarks AS remarks,l.createdby AS createdby,l.datecreated AS datecreated
+		from ledger l 
+		left join benefittype b on l.benefitid = b.id 
+		left join timeofftype p on l.timeoffid = p.id 
+		inner join useraccount u on l.userid = u.id
+        left join useraccount mc on (l.createdby = mc.id)
+		".$where_query."  ".$paginate->getSearchAndFilterSQL()." GROUP BY l.id ".$order_query;
+	
+	// debugMessage($all_results_query);
+	$paginate->setItemCountFromSQLQuery($all_results_query);
+	
+	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+	//echo $current_results_query;
+	$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+	$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+	
+	$conn = Doctrine_Manager::connection(); 
+	$result = $conn->fetchAll($current_results_query);
+	$has_no_data = (count($result) == 0) ? true : false; 
+	
+	$listurl = $this->baseUrl('ledger/list');
+	$addurl = $this->baseUrl('ledger/index/pgc/true');
+	$resource = "Benefits"; // $resource = "Department";
+	$icon = "glyphicon glyphicon-gift";
+	
+	$description = '';
+	$benefittypes = getBenefitTypes();
+	$trxtypes = getTrxnTypes();
+	$benefits = getBenefits(); // debugMessage($benefits);
+	$timeoffs = getTimeoffTypes();
+	$timeoffoptions = getHoursDaysDropdown();
+	
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	// breadcrumb config
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+	
+}); 
+</script>
+<div class="row margin0">
+    <div class="col-md-12 padding0">
+    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("ledger/listsearch"); ?>" method="get" id="listform">
+		<?php if ($sessionhaserror) { ?>
+            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+        <?php } ?>
+        <div class="row-fluid clearfix">
+        	<div class="col-md-9 paddingleft0">
+            	<ul class="listfilter" style="margin-bottom:10px;">
+					<?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                        <li style="margin:0;"><a class="btn btn-primary btn-sm addpopup" href="<?php echo $addurl; ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"><i class="glyphicon glyphicon-plus"></i> Add OneTime Benefit</a>
+                        </li>
+                        <li style="margin:0;"><a class="btn btn-default btn-sm addpopup" href="<?php echo $addurl.'/type/2'; ?>"  title="Debit Transaction" rel="New Debit Transaction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"><i class="glyphicon glyphicon-minus"></i> Debit/Reverse Accruals</a>
+                        </li>
+                    <?php } ?>
+                </ul>
+            </div>
+            <div class="col-md-3 padding0">
+            	<div class="col-md-12 padding0"><input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><button type="submit" class="btn btn-default blockanchor searchbtn"><i class="glyphicon glyphicon-search"></i></button></div>
+                <input type="hidden" name="type" id="type" value="<?php echo $type; ?>" />
+                <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
+                <?php if($allowclear){ ?>
+                    <a href="<?php echo $listurl; ?>" title="Clear Search and Filters" class="reset close button btn resetlink blockanchor">&times;</a>
+                <?php } ?>
+            </div>
+        </div>
+        <div class="row-fluid clearfix">
+        	<div class="col-md-12 paddingleft0">
+            	<ul class="listfilter blocked" style="margin-bottom:0;">
+                	<?php if($acl->checkPermission($resource, ACTION_CREATE)){ ?>
+                        <li>
+                            <?php
+                                $allusers = getUsers();
+                                $dropdown = new Zend_Form_Element_Select('userid',
+                                                    array(
+                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Employees'), $allusers),
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
+                                                    )
+                                );  
+                                $dropdown->setValue($request->getParam('userid')); 
+                                echo $dropdown->render();
+                            ?>
+                        </li>
+                    <?php } ?>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('trxntype',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Trxn Types'), $trxtypes),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'xwidth125', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('trxntype')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('ledgertype',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Benefit Types'), $benefittypes),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'xwidth125', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('ledgertype')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('benefitid',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Cash Benefits'), $benefits),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'xwidth150', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('benefitid')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<?php
+                            $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                                array(
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Time Benefits'), $timeoffs),
+                                                    'view' => new Zend_View(),
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array("xautofilter", "form-control", 'xwidth150', 'chosen-select')
+                                                )
+                            );  
+                            $dropdown->setValue($request->getParam('timeoffid')); 
+                            echo $dropdown->render();
+                        ?>
+                    </li>
+                    <li>
+                    	<button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
+                    </li>
+               	</ul>
+            </div>
+      	</div>
+        <div class="row-fluid peoplelist clearfix makerelative whitebg" style="margin-bottom: 10px;">
+            <div class="wrapper1">
+                <div class="div1" style="width:1600px;"></div>
+            </div>
+            <div class="wrapper2">
+                <div class="div2" style="width:1600px;">
+                    <table class="table list table-bordered table-striped data-table" id="datatable" style="width:auto;">
+                        <thead class="paginationheader">
+                        	<?php if($acl->checkPermission($resource, ACTION_CREATE)){ ?>
+                                <th style="width:50px;">Actions</th>
+                                <th style="width:150px;">Employee</th>
+                            <?php } ?>
+                            <th style="width:125px;">Trxn Date</th>
+                            <th style="width:100px;">Trxn Type</th>
+                            <th style="width:100px;">Benefit Type</th>
+                            <th style="width:200px;">Category</th>
+                            <th style="width:100px;">Value</th>
+                            <th style="width:250px;">Remarks</th>
+                            <th style="width:150px;">Input Date</th>
+                            <th style="width:150px;">Input By</th>
+                        </thead>
+                        <tbody>
+							<?php if($has_no_data) { ?>
+                                <tr>
+                                    <td colspan="10"><div style="clear:both;" class="alert alert-warning margin5">There are no Transactions to display</div></td>
+                                </tr>
+                            <?php } else { ?>
+                            	<?php
+									foreach($result as $line){
+										$viewurl = $this->baseUrl('ledger/view/id/'.encode($line['id']));
+										$indexurl = $this->baseUrl('ledger/index/id/'.encode($line['id']).'/pgc/true');
+										$benefittype = isArrayKeyAnEmptyString($line['ledgertype'], $benefittypes) ? '' : str_replace('Benefit', '', $benefittypes[$line['ledgertype']]);
+										$trxtype = isArrayKeyAnEmptyString($line['trxntype'], $trxtypes) ? '' : $trxtypes[$line['trxntype']];
+										$itemtype = ''; $itemvalue = ''; $unit = '';
+										if($line['ledgertype'] == 1){
+											$itemtype = isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '' : $benefits[$line['benefitid']];
+											$itemvalue = $line['amount'];
+											$unit = ' ('.$config->country->currencycode.')';
+										}
+										if($line['ledgertype'] == 2){
+											$itemtype = isArrayKeyAnEmptyString($line['timeoffid'], $timeoffs) ? '' : $timeoffs[$line['timeoffid']];
+											$itemvalue = $line['timeofflength'];
+											$unit = '';
+											if(!isArrayKeyAnEmptyString($line['lengthtype'], $timeoffoptions)){
+												$unit = ' ('.$timeoffoptions[$line['lengthtype']].')';
+											}
+										}
+										
+								?>
+                                    <tr style="font-size:13px;">
+                                    	<?php if($acl->checkPermission($resource, ACTION_CREATE)){ ?>
+                                            <td>
+                                            	<?php if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                                    <a class="addpopup inline" href="<?php echo $indexurl; ?>"  title="Update" rel="Update Transaction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save Changes"><i class="glyphicon glyphicon-pencil"></i></a> &nbsp;
+                                                <?php } ?>
+                                                <?php if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                                    <a class="deleteline gonowhere inline" action="<?php echo $this->baseUrl('ledger/delete/id/'.encode($line['id'])."/entityname/Ledger/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon  glyphicon-trash"></i></a>
+                                                <?php } ?>
+                                            </td>
+                                        	<td class="nullifempty"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($line['userid'])); ?>"><?php echo $line['User']; ?></a></td>
+                                        <?php } ?>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?></td>
+                                        <td class="nullifempty"><?php echo $trxtype; ?></td>
+                                        <td class="nullifempty"><?php echo $benefittype; ?></td>
+                                        <td class="nullifempty"><?php echo $itemtype; ?></td>
+                                        <td class="nullifempty"><?php echo $itemvalue.$unit; ?></td>
+                                        <td class="nullifempty"><?php echo $line['remarks']; ?></td>
+                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['datecreated']); ?></td>
+                                        <td class="nullifempty"><?php echo $line['addedby']; ?></td>
+                                    </tr>
+                            	<?php } ?>
+                       		<?php } ?>
+                        </tbody>
+                    </table>
+              	</div>
+         	</div>
+        </div>
+        <?php if(!$has_no_data) { ?>
+            <div class="row-fluid">
+                <div class="table-footer">
+                    <div class="col-md-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                    <div class="col-md-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                    <div class="col-md-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                </div>
+            </div>
+        <?php } ?>
+        <div class="divider10"></div>
+	</form>
+</div>            
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

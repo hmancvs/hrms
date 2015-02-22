@@ -1,0 +1,238 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$ledger = new Ledger();
+	if(isEmptyString($request->id)){
+		$successmessage = "Successfully Saved";
+		if(!isEmptyString($request->userid)){
+			$ledger->setUserID($request->userid);
+		}
+		$ledger->setTrxnDate(date('Y-m-d'));
+		$ledger->setLedgerType(1);
+		$ledger->setTrxnType(1);
+		$ledger->setAmount('');
+		$ledger->setTimeoffLength('');
+		if($request->type == 2){
+			$ledger->setTrxnType(2);
+		}
+	} else { 
+		$ledger->populate(decode($request->id)); 
+		$successmessage = "Updated Successfully";
+	}
+	
+	$benefittypes = getBenefitTypes();
+	$trxtypes = getTrxnTypes();
+	$benefits = getBenefits(); // debugMessage($benefits);
+	$timeoffs = getTimeoffTypes();
+	$timeoffoptions = getHoursDaysDropdown();
+?>
+<script>
+$(document).ready(function() {		
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			userid: "required",
+			benefitid: "required",
+			timeoffid: "required",
+			trxndate: "required",
+			amount: {
+				required: true
+			},
+			timeofflength: {
+				required: true
+			},
+			remarks: "required"
+		}, 
+		// the messages for each of the fields being validated
+		messages: {				
+			userid: "Please select a User",
+			benefitid: "Please select Category",
+			timeoffid: "Please select Category",
+			trxndate: "Please select a Date",
+			amount: {
+				required: "Please enter Amount in <?php echo $config->country->currencycode; ?>"
+			}, 
+			timeofflength: {
+				required: "Please enter Value"
+			},
+			remarks: "Please enter Remarks"
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					error.appendTo("#"+element.attr("name")+"_error")
+					break;
+			}			
+		}
+	});
+	
+	$(".readonly").each(function(){
+		$(this).attr('readonly','readonly');
+	});
+	$(".disabledfield").each(function(){
+		$(this).attr('readonly', true).attr('disabled', true);
+	});
+	
+	var datepickerOpts = {
+		showOn: 'both', 
+		buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
+		buttonImageOnly: true,
+		changeMonth: true,
+		changeYear: true,
+		minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
+		maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
+		dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
+		hideIfNoPrevNext: true,
+		showButtonPanel: true, 
+		currentText: 'Now'		
+	}; 
+	
+	var dateofbirthOpts = datepickerOpts;
+	var yearback = '<?php echo intval(date('Y'))-1995; ?>';
+	dateofbirthOpts.yearRange = "-"+yearback+":+3"; 
+	dateofbirthOpts.minDate = "-"+yearback+"Y";
+	datepickerOpts.maxDate = new Date("Dec 31, "+<?php echo intval(date('Y'))+3; ?>);
+	$(".ordinary").datepicker(dateofbirthOpts);
+	
+	$("#ledgertype_1").click(function(){
+		enableContainerByClass('b_cash');
+		disableContainerByClass('b_time');
+	});
+	$("#ledgertype_2").click(function(){
+		enableContainerByClass('b_time');
+		disableContainerByClass('b_cash');
+	});
+	<?php if($ledger->getledgertype() == '1'){ ?>
+		enableContainerByClass('b_cash');
+		disableContainerByClass('b_time');
+	<?php } ?>
+	<?php if($ledger->getledgertype() == '2'){ ?>
+		enableContainerByClass('b_time');
+		disableContainerByClass('b_cash');
+	<?php } ?>
+});
+</script>
+<style>
+.modal-body {
+	padding-top: 10px;
+}
+</style>
+<div class="popupdiv">
+    <form id="indexform" class="form-horizontal profile" role="form" method="post">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <input name="entityname" id="entityname" type="hidden" value="Ledger" />
+            <input type="hidden" id="id" name="id" value="<?php echo encode($ledger->getID()); ?>" />
+            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" /> 
+            <input type="hidden" id="status" name="status" value="<?php echo $ledger->getStatus(); ?>" /> 
+            <div class="panel-body well-sm" style="min-height:150px;">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-12 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-md-3 control-label">Employee: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<?php
+									$allvalues = getUsers();
+									$dropdown = new Zend_Form_Element_Select('userid',
+														array(
+															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+															'view' => new Zend_View(),
+															'decorators' => array('ViewHelper'),
+															'class' => array('form-control','input-sm','width200')
+														)
+									);  
+									$dropdown->setValue($ledger->getUserID()); 
+									echo $dropdown->render();
+								?><div id="userid_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Transaction Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="trxndate" id="trxndate" value="<?php echo changeMySQLDateToPageFormat($ledger->gettrxndate()); ?>" /><div id="trxndate_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Transaction Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                             	<?php foreach($trxtypes as $key => $value){ ?>
+                             		<label class="radio radio-inline"><input type="radio" name="trxntype" id="trxntype_<?php echo $key; ?>" class="<?php echo $ledger->gettrxntype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->gettrxntype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo $value; ?> &nbsp;</label>
+                                <?php } ?>
+                                <div id="trxntype_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Benefit Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<?php foreach($benefittypes as $key => $value){ ?>
+                             		<label class="radio radio-inline"><input type="radio" name="ledgertype" id="ledgertype_<?php echo $key; ?>" class="<?php echo $ledger->getledgertype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->getledgertype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo str_replace('Benefit', '', $value); ?> &nbsp;</label>
+                                <?php } ?>
+                                <div id="ledgertype_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Category: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<span id="benefit_cash" class="b_cash">
+									<?php
+                                        $dropdown = new Zend_Form_Element_Select('benefitid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $benefits),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width200')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($ledger->getBenefitID()); 
+                                        echo $dropdown->render();
+                                    ?>
+                               	</span>
+                                <span id="benefit_timeoff" class="b_time">
+                                	<?php
+                                        $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffs),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width200')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($ledger->getTimeOffID()); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </span>
+                                <div id="benefitid_error"></div><div id="timeoffid_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Value: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<span class="b_cash">
+                                    <input type="text" name="amount" id="amount" class="form-control input-sm isnumber centeralign width100 inline" value="<?php echo $ledger->getAmount(); ?>" />
+                                    &nbsp; (<?php echo $config->country->currencycode; ?> Amount)
+                                </span>
+                                <span class="b_time">
+                                	<input type="text" name="timeofflength" id="timeofflength" class="form-control input-sm centeralign isdecimal b_time width80 inline" value="<?php echo $ledger->getTimeoffLength(); ?>" />&nbsp; 
+                                    <?php foreach($timeoffoptions as $key => $value){ ?>
+                                        <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype_<?php echo $key; ?>" id="lengthtype_<?php echo $key; ?>" class="<?php echo $ledger->getlengthtype() == $key ? 1 : 0; ?>" value="1" <?php echo $ledger->getlengthtype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo $value; ?> &nbsp;</label>
+                                    <?php } ?>
+                               	</span>
+                                <div id="amount_error"></div><div id="timeofflength_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Remarks: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                             	<textarea name="remarks" id="description" class="form-control input-sm expanding"><?php echo $ledger->getRemarks(); ?></textarea>
+                                <div id="remarks_error"></div>        
+                            </div>
+                        </div>
+                    </div>
+               	</div>
+            </div>
+      	</fieldset>
+    </form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

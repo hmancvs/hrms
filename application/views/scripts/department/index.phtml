@@ -1,0 +1,91 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$department = new Department();
+	if(isEmptyString($request->id)){
+		$successmessage = "Successfully Added";
+	} else { 
+		$department->populate(decode($request->id)); 
+		$successmessage = "Updated Successfully";
+	}
+	// debugMessage($department->toArray());
+?>
+<script>
+	$(document).ready(function() {		
+		
+		$("#indexform").validate({		
+			// define the validation rules one field at a time
+			rules: {
+				name: "required"
+			}, 
+			// the messages for each of the fields being validated
+			messages: {				
+				name: "Please enter a Name"
+			},
+			// custom error positions
+			errorPlacement: function(error, element) {
+				switch(element.attr("name")){					
+					default:
+						error.appendTo("#"+element.attr("name")+"_error")
+						break;
+				}			
+			}
+		});
+	});
+</script>
+<style>
+.modal-body {
+	padding-top: 10px;
+}
+</style>
+<div class="popupdiv">
+    <form id="indexform" class="form-horizontal profile" role="form" method="post">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+            <input name="entityname" id="entityname" type="hidden" value="Department" />
+            <input type="hidden" id="id" name="id" value="<?php echo encode($department->getID()); ?>" />
+            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+            <input type="hidden" id="headid_old" name="headid_old" value="<?php echo $department->getHeadID(); ?>" />
+            <div class="panel-body well-sm" style="min-height:150px;">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-12 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-md-3 control-label">Name: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                             	<input type="text" name="name" id="name" class="form-control input-sm" value="<?php echo $department->getName(); ?>" />
+                                <div id="name_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Description:</label>
+                            <div class="col-md-8">
+                             	<textarea name="description" id="description" class="form-control input-sm expanding"><?php echo $department->getDescription(); ?></textarea>
+                                        
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-md-3 control-label">Manager / Head:</label>
+                            <div class="col-md-8">
+                             	<?php
+									$allvalues = getUsers();
+									$dropdown = new Zend_Form_Element_Select('headid',
+														array(
+															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+															'view' => new Zend_View(),
+															'decorators' => array('ViewHelper'),
+															'class' => array('form-control','input-sm','width200')
+														)
+									);  
+									$dropdown->setValue($department->getHeadID()); 
+									echo $dropdown->render();
+								?>
+                            </div>
+                        </div>
+                    </div>
+               	</div>
+            </div>
+      	</fieldset>
+    </form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

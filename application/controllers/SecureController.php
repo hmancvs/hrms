@@ -21,6 +21,7 @@ class SecureController extends IndexController  {
 		// load the acl instance
 		$acl = getACLInstance(); 
 		
+		// debugMessage('resource is '.$this->getResourceForACL()." action ".$this->getActionforACL()); exit;
 		if (!$acl->checkPermission($this->getResourceForACL(), $this->getActionforACL())) { 
 			// debugMessage('resource is '.$this->getResourceForACL()." action ".$this->getActionforACL());
 			

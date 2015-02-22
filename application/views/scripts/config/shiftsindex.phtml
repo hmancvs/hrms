@@ -1,0 +1,172 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$shift = new Shift();
+	$id = decode($request->id);
+	
+	if(isEmptyString($request->id)){
+		$title = 'New Work Shift';
+		$description = '';
+		$button_title = $this->translate("global_button_save"); 
+		$successmessage = $this->translate('global_save_success');
+	} else {
+		$shift->populate(decode($request->id));
+		$title = 'Update Shift';
+		$description = '';
+		$button_title = $this->translate("global_button_save");
+		$successmessage = $this->translate('global_update_success');
+	}
+	$posturl = $this->baseUrl("config/shiftscreate");
+	$icon = "glyphicon glyphicon-cog";
+	
+	#in case of errors in session, populate the fields from session
+	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+		$shift->processPost($session->getVar(FORM_VALUES));	
+	}
+	
+	$this->headTitle($title.$browserappend);
+?>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.date.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.time.js')); ?>"></script>
+<link href='<?php echo $this->baseUrl('stylesheets/pickadate.css'); ?>' rel='stylesheet' type='text/css'>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Timeoff Types / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+	
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			name: "required",
+			starttime: "required",
+			endtime: "required",
+			hours: {
+				required: true
+			}
+		}, 
+		// the messages for each of the fields being validated
+		messages: {		
+			name: "<?php echo $this->translate("global_name_error"); ?>",
+			starttime: "Please select Start Time",
+			endtime: "Please select End Time",
+			hours: {
+				required: "Please specify Hours"
+			}
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					if(element.hasClass("useid_error")){
+						error.appendTo("#"+element.attr("id")+"_error");
+					} else {
+						error.appendTo("#"+element.attr("name")+"_error");
+					}
+					break;
+			}			
+		},
+		ignore: ":hidden:not(select)"
+	});
+	
+	$('.timepicker').pickatime({
+	   interval: 15
+	});	
+	<?php if(isEmptyString($shift->getStartTime())){ ?>
+		$('#starttime').val('');
+	<?php } ?>
+	<?php if(isEmptyString($shift->getEndTime())){ ?>
+		$('#endtime').val('');
+	<?php } ?>
+	<?php if(isEmptyString($shift->getoverduestarttime())){ ?>
+		$('#overduestarttime').val('');
+	<?php } ?>
+});
+</script>
+<div class="row-fluid margin0 index">
+    <form id="indexform" class="form-horizontal" role="form" action="<?php echo $posturl; ?>" method="post">
+        <div class="col-md-12 padding0">
+            <div class="headerbox">
+                <table class="table border0 nohover margin0">                       
+                    <tr>		                    
+                        <td class="padding2">
+                            <button type="submit" class="btn btn-primary savethenview save"><i class="glyphicon glyphicon-ok icon-white"></i> <?php echo $button_title; ?></button>
+                            <a class="btn btn-default cancel gonowhere"><i class="glyphicon glyphicon-remove"></i> <?php echo $this->translate('global_button_cancel'); ?></a>
+                            <input name="entityname" id="entityname" type="hidden" value="Shift" />
+        					<input type="hidden" id="id" name="id" value="<?php echo encode($shift->getID()); ?>" />
+                            <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" />
+                            <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                            <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($this->baseUrl('config/shifts')); ?>" /> 
+                            <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($this->viewurl); ?>" /> 
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <?php if ($sessionhaserror) { ?>
+            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+        <?php } ?>
+        <div class="contentcontainer clearfix">
+        	<div class="row-fluid marginleft5">
+            	<div class="col-md-12">
+                    <fieldset class="fieldsetcontainer">
+                        <legend>Shift Details</legend>
+                        <div class="panel-body well-sm">
+                            <div class="col-md-12">
+                            	<div class="row-fluid margin">
+                                	<div class="col-md-12 paddingleft0">
+                                    	<div class="form-group">
+                                            <label class="col-sm-2 control-label"><?php echo $this->translate("global_name_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                            <div class="col-sm-10">
+                                                <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $shift->getName(); ?>" /><div id="name_error"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-md-2 control-label">Shift Start Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                            <div class="col-md-10">
+                                            	<input type="text" name="starttime" id="starttime" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($shift->getStartTime())); ?>" /><div id="starttime_error"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-md-2 control-label">Shift End Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                            <div class="col-md-10">
+                                                <input type="text" name="endtime" id="endtime" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($shift->getEndTime())); ?>" /><div id="endtime_error"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-md-2 control-label">Overdue Checkout <span class="blocked">Start Time <?php echo $this->translate("global_required_field_marker"); ?>:</span></label>
+                                            <div class="col-md-10">
+                                                <input type="text" name="overduestarttime" id="overduestarttime" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($shift->getoverduestarttime())); ?>" /><div id="overduestarttime_error"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-md-2 control-label">Break Duration: <span class="blocked notbolded">(Hrs)</span></label>
+                                            <div class="col-md-10">
+                                                <input type="text" name="breakhours" id="breakhours" class="form-control input-sm width100 isdecimal centeralign" value="<?php echo $shift->getbreakhours(); ?>" /><div id="breakhours_error"></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-md-2 control-label">Actual Shift Duration: <?php echo $this->translate("global_required_field_marker"); ?><span class="blocked notbolded">(Hrs)</span></label>
+                                            <div class="col-md-10">
+                                                <input type="text" name="hours" id="hours" class="form-control input-sm width100 isdecimal centeralign" value="<?php echo $shift->getHours(); ?>" /><div id="hours_error"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                    
+                </div>
+            </div>
+   		</div>
+ 	</form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

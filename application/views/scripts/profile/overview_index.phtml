@@ -60,10 +60,13 @@
                                     $allvalues = getDatavariables('SALUTATION');
                                     $dropdown = new Zend_Form_Element_Select('salutation',
                                                         array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues, array('0'=>$this->translate("global_addvariable_label"))),
                                                             'view' => new Zend_View(),
                                                             'decorators' => array('ViewHelper'),
-                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                            'class' => array('form-control','input-sm','configvariable'),
+															'lookupid' => 2,
+															'fieldid' => 'salutation',
+															'fieldlabel' => $this->translate('profile_salutation_label')
                                                         )
                                     );  
                                     $dropdown->setValue($user->getSalutation()); 
@@ -89,12 +92,6 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_ethnicity_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <input type="text" name="ethnicity" id="ethnicity" class="form-control input-sm" value="<?php echo $user->getEthnicity(); ?>" />
-                            </div>
-                        </div>
-                        <div class="form-group">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_dateofbirth_label'); ?>:</label>
                             <div class="col-md-8">
                                 <input type="text" class="form-control input-sm datefield readonly width100 manyyears" name="dateofbirth" id="dateofbirth" value="<?php echo changeMySQLDateToPageFormat($user->getDateOfBirth()); ?>" />
@@ -108,10 +105,13 @@
                                     $allvalues = getDatavariables('MARITAL_STATUS_VALUES');
                                     $dropdown = new Zend_Form_Element_Select('maritalstatus',
                                                         array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues, array('0'=>$this->translate("global_addvariable_label"))),
                                                             'view' => new Zend_View(),
                                                             'decorators' => array('ViewHelper'),
-                                                            'class' => array('form-control','input-sm','xwidth200')
+                                                            'class' => array('form-control','input-sm','configvariable'),
+															'lookupid' => 3,
+															'fieldid' => 'maritalstatus',
+															'fieldlabel' => $this->translate('profile_maritalstatus_label')
                                                         )
                                     );  
                                     $dropdown->setValue($user->getMaritalStatus()); 
@@ -140,26 +140,26 @@
                                     <?php echo $user->getEmail(); ?>
                                     <input type="hidden" name="email" id="email" value="<?php echo $user->getEmail(); ?>" />
                                 <?php } else { ?>
-                                     <input type="text" name="email_auto" id="email_auto" class="form-control input-width-medium" value="<?php echo $user->getEmail(); ?>" /><div id="email_auto_error"></div>
+                                     <input type="text" name="email_auto" id="email_auto" class="form-control isvalidemail input-width-medium" value="<?php echo $user->getEmail(); ?>" /><div id="email_auto_error"></div>
                                 <?php } ?>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_altemail_label'); ?>:</label>
                             <div class="col-md-8">
-                                <input type="text" name="email2" id="email2" class="form-control input-width-medium" value="<?php echo $user->getEmail2(); ?>" /><div id="email2_error"></div>
+                                <input type="text" name="email2" id="email2" class="form-control isvalidemail input-width-medium" value="<?php echo $user->getEmail2(); ?>" /><div id="email2_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
                             <div class="col-md-8">
-                                <input type="text" name="phone2" id="phone2" class="form-control input-width-medium width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g 256414123456" maxlength="12" /><div id="phone2_error"></div>
+                                <input type="text" name="phone2" id="phone2" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g 256414123456" maxlength="12" /><div id="phone2_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-md-8">
-                                <input type="text" name="phone" id="phone" class="form-control width150 inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /> 
+                                <input type="text" name="phone" id="phone" class="form-control width150 isnumber inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /> 
                                 <div id="phone_error"></div>
                             </div>
                         </div>
@@ -227,7 +227,7 @@
                             <div class="col-md-8">
                                 <div class="divider10"></div>
                                 <div class="contact_text">
-                                    <input type="text" name="contactname" id="contactname" class="form-control input-sm" value="<?php echo $user->getContactName(); ?>" />
+                                    <input type="text" name="contactname" id="contactname" class="form-control input-sm validate_50_string" value="<?php echo $user->getContactName(); ?>" />
                                 </div>
                                 <div class="divider2"></div>                                            
                                 <div id="contactname_error"></div>
@@ -240,10 +240,13 @@
                                       $values = getDatavariables('CONTACT_RELATIONSHIPS');
                                       $dropdown = new Zend_Form_Element_Select('contactrshp',
                                               array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select one>'), $values),
+                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select one>'), $values, array('0'=>$this->translate("global_addvariable_label"))),
                                                     'view' => new Zend_View(),
                                                     'decorators' => array(array('ViewHelper')),
-                                                    'class' => array('form-control','input-sm')
+                                                    'class' => array('form-control','input-sm','configvariable'),
+													'lookupid' => 5,
+													'fieldid' => 'contactrshp',
+													'fieldlabel' => $this->translate('profile_nextkin_rship_label')
                                               )
                                       );
                                       
@@ -255,13 +258,13 @@
                         <div class="form-group contact_text">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_phone_label'); ?>:</label>
                             <div class="col-md-8">
-                                <input type="text" name="contactphone" id="contactphone" class="form-control input-width-medium width150" value="<?php echo $user->getContactPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /><div id="contactphone_error"></div>
+                                <input type="text" name="contactphone" id="contactphone" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getContactPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /><div id="contactphone_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-md-4 control-label"><?php echo $this->translate('profile_nextkin_email_label'); ?>:</label>
                             <div class="col-md-8">
-                                <input type="text" name="contactemail" id="contactemail" class="form-control input-sm width150" value="<?php echo $user->getContactEmail(); ?>" /><div id="contactemail_error"></div>
+                                <input type="text" name="contactemail" id="contactemail" class="form-control input-sm isvalidemail width250" value="<?php echo $user->getContactEmail(); ?>" /><div id="contactemail_error"></div>
                             </div>
                         </div>
                     </div>

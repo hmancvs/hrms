@@ -296,10 +296,14 @@ $(document).ready(function() {
 		var formid = $(this).attr('formtitle');
 		var posturl = $(this).attr('action');
 		var successurl = $(this).attr('successurl');
-		var submittext = $(this).attr('submittext'); 
+		var submittext = $(this).attr('submittext');
+		var submiticon = $(this).attr('submiticon'); 
 		var addconfirm = $(this).attr('addconfirm');
 		var confirmmessage = $(this).attr('confirmmessage'); 
 		var hasconfirm = false;
+		if(!submiticon || submiticon == '' || submiticon == 'undefined'){
+			submiticon = 'ok';
+		}
 		// alert(posturl);
 		// popup title
 		$(".modal-header h4").html(title);
@@ -313,7 +317,7 @@ $(document).ready(function() {
 		
 		// check for default submit button text
 		if(!isEmptyString(submittext)){
-			$("#new #save").html('<i class="glyphicon glyphicon-ok"></i> '+submittext);
+			$("#new #save").html('<i class="glyphicon glyphicon-'+submiticon+'"></i> '+submittext);
 		}
 		if(!isEmptyString(addconfirm)){
 			hasconfirm = true;
@@ -486,12 +490,11 @@ $(document).ready(function() {
 				bootbox.hideAll();
 			} else {
 				if(isEmptyString(result)){
-					bootbox.alert("Please specify comments to continue");       
+					bootbox.alert("Please specify Reason/Comment to continue");       
 				} else {
 					var submiturl = url+'/reason/'+result; // alert(submiturl);
 					$.blockUI({ message: uiblockcontent}); 
 					window.location.href = submiturl;	    
-					$.blockUI({ message: uiblockcontent}); 
 					return true;    
 				}
 			}
@@ -663,7 +666,7 @@ $(document).ready(function() {
 	// UI tabs
 	$("#tabs").tabs();
 	
-	$("#indexform, #signupform").submit(function(){
+	$("#indexform, #signupform, #reportform").submit(function(){
 		if ($(this).valid()) {
 			$.blockUI({ message: uiblockcontent}); 
 		}
@@ -845,10 +848,15 @@ $(document).ready(function() {
 		if(isEmptyString(appendclass) || appendclass == 'undefined'){
 			appendclass = '';
 		}
+		var parent = $("#"+fieldid).attr('parentid');
+		var parentid = '';
+		if(!isEmptyString(parent)){
+			parentid = $("#"+parent).val();
+		}
 		
 		if(!isEmptyString(value) && value == '0'){
 			var title = fieldlabel+' - New Value';
-			var href = '<?php echo $this->baseUrl('config/add/pgc/true/hasalias/'); ?>'+hasalias+'/lookupid/'+lookupid+'/fieldid/'+fieldid+'/doubleappendid/'+doubleappendid+'/appendclass/'+appendclass;
+			var href = '<?php echo $this->baseUrl('config/add/pgc/true/hasalias/'); ?>'+hasalias+'/lookupid/'+lookupid+'/fieldid/'+fieldid+'/doubleappendid/'+doubleappendid+'/appendclass/'+appendclass+'/parentid/'+parentid;
 			var formid = 'configform';
 			var posturl = '<?php echo $this->baseUrl("config/processvariables"); ?>';
 			var submittext = 'Save'; 
@@ -886,30 +894,32 @@ $(document).ready(function() {
 						posturl,  
 						$("#"+formid).serialize(),  
 						function(data){
-							// alert(data); return false;
+							// alert(data); // return false;
 							data = jQuery.parseJSON(data);
 							if(data.error == ''){
-							var labelname = data.name;
-							if(hasalias == '1'){
-								var labelname = data.alias+' - '+data.name;
-							}
-							var newselectoption = '<option label="'+labelname+'" value="'+data.id+'" selected="selected">'+labelname+'</option>';
-							// append the option to the defined fieldid
+								var labelname = data.name;
+								/*if(hasalias == '1'){
+									var labelname = data.alias+' - '+data.name;
+								}*/
+								var newselectoption = '<option label="'+labelname+'" value="'+data.id+'" selected="selected">'+labelname+'</option>';
+								// alert(newselectoption);
+								// append the option to the defined fieldid
 							
-							$("#"+fieldid).append(newselectoption);
-							// also append the option to another select if specified
-							if(!isEmptyString(doubleappendid) && doubleappendid != 'undefined'){
-								var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
-								$("#"+doubleappendid).append(altselectoption);
-							}
-							if(!isEmptyString(appendclass) && appendclass != 'undefined'){
-								var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
+								$("#"+fieldid).append(newselectoption);
+								// also append the option to another select if specified
+								if(!isEmptyString(doubleappendid) && doubleappendid != 'undefined'){
+									var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
+									$("#"+doubleappendid).append(altselectoption);
+								}
+								if(!isEmptyString(appendclass) && appendclass != 'undefined'){
+									var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
 									$("."+appendclass+":not(#"+fieldid+")").append(altselectoption);
-							}
+								}
+							
 								enableContainerByID('indexform');
-							$("#dialog").modal('hide');
+								$("#dialog").modal('hide');
 							} else {
-							enableContainerByID('indexform');
+								enableContainerByID('indexform');
 								$("#dialog").modal('hide');
 								bootbox.alert(data.error); 
 							}

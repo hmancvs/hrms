@@ -1,0 +1,677 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$session->setVar('toggled', "1");
+	$title = "Payroll Report";
+	$subtitle = 'Payroll Report';
+	$description = '';
+	
+	$startdate = $request->startdate;
+	if(!isEmptyString($startdate)){
+		$startdate = changeDateFromPageToMySQLFormat($startdate);
+	}
+	$enddate = $request->enddate;
+	if(!isEmptyString($enddate)){
+		$enddate = changeDateFromPageToMySQLFormat($enddate);
+	}
+	$middate = $request->middate;
+	if(!isEmptyString($middate)){
+		$middate = changeDateFromPageToMySQLFormat($middate);
+	}
+	$midmonthlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($middate)).' '.date('M', strtotime($startdate));
+	$monthendlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($enddate)).' '.date('M', strtotime($startdate));
+	
+	$isgenerated = false;
+	if(!isEmptyString($startdate) && !isEmptyString($enddate) && !isEmptyString($middate)){
+		$isgenerated = true;
+		$subtitle = 'Payroll Report - '.date('F', strtotime($startdate)).' '.date('Y', strtotime($startdate)); // .' <span class="notbolded" style="font-size:12px;">('.$request->startdate.' to '.$request->enddate.')</span>'
+		
+		# pagination setup
+		$paginate = new Pagination();	
+		$paginate->setView($this);
+		$paginate->setSearchColumns(array());
+		$paginate->setFilterColumns(array());
+		$paginate->setItemCountPerPage("ALL");
+		
+		# custom where condition
+		$where_query = " WHERE u.id <> '' ";
+		
+		$departmentid = $request->departmentid;
+		if(!isEmptyString($departmentid)){
+			$where_query .= " AND u.departmentid = '".$departmentid."' ";
+		}
+		
+		$empstatus = $request->empstatus;
+		if(!isEmptyString($empstatus)){
+			$where_query .= " AND u.empstatus = '".$empstatus."' ";
+		}
+		
+		$empid = $request->userid;
+		if(!isEmptyString($empid)){
+			$where_query .= " AND u.id = '".$empid."' ";
+		}
+		
+		$paginate->processPost($request->getParams());
+		$all_results_query = "SELECT u.id AS id, concat(u.firstname, ' ', u.lastname, ' ', u.othername) as name, u.departmentid, u.empstatus, u.position, u.rate, u.istimesheetuser FROM useraccount as u
+		 ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY u.id ORDER BY name ASC ";
+		// debugMessage($all_results_query); // exit;
+		 
+		$conn = Doctrine_Manager::connection(); 
+		$result = $conn->fetchAll($all_results_query);
+		$has_no_data = (count($result) == 0) ? true : false;
+		
+		$testdata = array(
+			16 => array('hoursworked'=>176, 'halfhours'=>88, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>20000),
+			15 => array('hoursworked'=>159, 'halfhours'=>80, 'hourspending'=>'0', 'daysworked'=>18, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>0),
+			10 => array('hoursworked'=>141, 'halfhours'=>70, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>0),
+			9 =>  array('hoursworked'=>171, 'halfhours'=>82, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>245000),
+			4 => array('hoursworked'=>165, 'halfhours'=>78, 'hourspending'=>'0', 'daysworked'=>21, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>0),
+			12 => array('hoursworked'=>170, 'halfhours'=>76, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'3500', 'empstatus'=>'1','otheradditions'=>10000),
+			3 => array('hoursworked'=>132, 'halfhours'=>65, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'5000', 'empstatus'=>'3','otheradditions'=>0),
+			6 => array('hoursworked'=>132, 'halfhours'=>60, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'5000', 'empstatus'=>'3','otheradditions'=>0),
+			13 => array('hoursworked'=>88, 'halfhours'=>40, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>0),
+			8 => array('hoursworked'=>88, 'halfhours'=>38, 'hourspending'=>'0', 'daysworked'=>21, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>50000),
+			5 => array('hoursworked'=>88, 'halfhours'=>40, 'hourspending'=>'0', 'daysworked'=>20, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>0),
+			11 => array('hoursworked'=>88, 'halfhours'=>40, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>10000),
+			17 => array('hoursworked'=>87, 'halfhours'=>42, 'hourspending'=>'0', 'daysworked'=>20, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>0),
+			14 => array('hoursworked'=>84, 'halfhours'=>44, 'hourspending'=>'0', 'daysworked'=>21, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>0),
+			7 => array('hoursworked'=>82, 'halfhours'=>40, 'hourspending'=>'0', 'daysworked'=>22, 'rate'=>'1515', 'empstatus'=>'2','otheradditions'=>0)
+		);
+	}
+	 
+	$employeesstatuses = getDatavariables('EMPLOYEE_STATUS');
+	$departments = getDepartments();
+	$positions = getDatavariables('EMPLOYEE_POSITIONS');
+	$users = getUsers();
+	
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	$("#reportform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			startdate: {
+				required:true
+			},
+			middate: {
+				required:true,
+				midafterstart: true	
+			},
+			enddate: {
+				required:true,
+				endafterstart: true,
+				endaftermid: true
+			}
+		}, 
+		// the messages for each of the fields being validated
+		messages: {				
+			startdate: {
+				required: "Please select Payroll Start Date"
+			},
+			middate: {
+				required: "Please select Mid Month Last Date"
+			},
+			enddate: {
+				required: "Please select Payroll End Date"
+			}
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					error.appendTo("#"+element.attr("name")+"_error")
+					break;
+			}			
+		}
+	});
+	
+	// function to validate the midmonth is after start
+	$.validator.addMethod("midafterstart", function(value, element) {            
+		var startDate = $("#startdate").val();  
+		if($.trim(value) == ""){
+			return true;
+		}
+		if($.trim(startDate) == ""){
+			return false;
+		}
+		return Date.parse(startDate) <= Date.parse(value);        
+	}, "Please select Mid Date greater than Start Date");
+	
+	// function to validate the end is after start
+	$.validator.addMethod("endafterstart", function(value, element) {            
+		var startDate = $("#startdate").val();  
+		if($.trim(value) == ""){
+			return true;
+		}
+		if($.trim(startDate) == ""){
+			return false;
+		}
+		return Date.parse(startDate) <= Date.parse(value);        
+	}, "Please select End Date greater than Start Date");
+	
+	// function to validate the end is after mid
+	$.validator.addMethod("endaftermid", function(value, element) {            
+		var startDate = $("#middate").val();  
+		if($.trim(value) == ""){
+			return true;
+		}
+		if($.trim(startDate) == ""){
+			return false;
+		}
+		return Date.parse(startDate) <= Date.parse(value);        
+	}, "Please select End Date greater than Mid Date");
+	
+	// export list to excel
+	$(".submitexcel").click(function(e){
+		e.preventDefault();
+		var csv_value = $('#datatable').table2CSV({delivery:'value'});
+		var decoded_value = base64_encode(csv_value);
+		$("#csv_text").val(decoded_value);
+		$("#reportform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
+		// on submit reset the form parameters to previous definition
+		$("#reportform").attr('action', '<?php echo $this->baseUrl("payroll/listsearch"); ?>').attr('method', 'get');
+		$("#csv_text").val('');
+		$.unblockUI();
+		return true;
+	});
+});
+</script>
+<div class="row margin0">
+    <div class="col-md-12 padding0">
+        <form class="form-search makerelative" action="<?php echo $this->baseUrl("payroll/listsearch"); ?>" method="get" id="reportform">
+        	<?php if ($sessionhaserror) { ?>
+            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+			<?php } ?>
+            <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+                <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+            <?php } ?>
+            <div class="row-fluid clearfix whitebg">
+            	<div class="divider10"></div>
+                <div class="col-md-12">
+                    <ul class="listfilter">
+                        <li><input type="text" name="startdate" id="startdate" class="form-control input-sm input_not_empty datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="Month Start:" /></li>
+                        <li><input name="middate" id="middate" type="text" class="form-control input-sm input_not_empty datefield ordinary readonly width100" placeholder="Mid Month:" value="<?php echo $request->middate; ?>" /></li>
+                    	<li><input name="enddate" id="enddate" type="text" class="form-control input-sm input_not_empty datefield ordinary readonly width100" placeholder="Month End:" value="<?php echo $request->enddate; ?>" /></li>
+                        <li>
+							<?php
+                                $dropdown = new Zend_Form_Element_Select('departmentid',
+                                                    array(
+                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Departments'), $departments),
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
+                                                    )
+                                );  
+                                $dropdown->setValue($request->getParam('departmentid')); 
+                                echo $dropdown->render();
+                            ?>                    
+                        </li>
+                        <li>
+							<?php
+                                $dropdown = new Zend_Form_Element_Select('empstatus',
+                                                    array(
+                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $employeesstatuses),
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("xautofilter", "form-control", 'chosen-select'),
+                                                        'style' => 'width:150px;'
+                                                    )
+                                );  
+                                $dropdown->setValue($request->getParam('empstatus')); 
+                                echo $dropdown->render();
+                            ?>                    
+                        </li>
+                        <li>
+                            <?php
+                                $dropdown = new Zend_Form_Element_Select('userid',
+                                                    array(
+                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Employees'), $users),
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("xautofilter", "form-control", 'chosen-select'),
+                                                        'style' => 'width:170px;'
+                                                    )
+                                );  
+                                $dropdown->setValue($request->getParam('userid')); 
+                                echo $dropdown->render();
+                            ?>
+                        </li>
+                        
+                        <li><button type="submit" class="btn btn-primary btn-sm" title="Generate Report" id="filter"><i class="glyphicon glyphicon-filter"></i> Generate</button>
+                        	<input type="hidden" name="csv_text" id="csv_text" value="" />
+                        </li>
+                        <li><a href="<?php echo $this->baseUrl('payroll/list'); ?>">Reset</a></li>
+                    </ul>
+                    <div id="startdate_error"></div><div id="enddate_error"></div><div id="middate_error"></div>
+                </div>
+                <div></div>
+           	</div>
+            <div class="divider10"></div>
+    		<div class="row row-bg" style="margin-bottom:10px;">
+                <div class="col-sm-12 col-md-12">
+                    <div class="widget box makerelative">
+                        <div class="widget-header">
+                            <h4 class="widgettitle blocked maxwidth"><?php echo $subtitle; ?>
+                            <?php if($isgenerated && !$has_no_data) { ?>	
+                                <button type="button" class="btn btn-default btn-xs submitexcel pull-right" tableid="regiontable" style="float:right;"><i class='glyphicon glyphicon-download-alt'></i> Export to Excel</button> &nbsp;
+                            <?php } ?>
+                            </h4>
+                        </div>
+                        <div class="widget-content no-padding whitebg minheight400">
+                            <?php if($isgenerated){ ?>
+                                <?php if($has_no_data) { ?>
+                                    <div class="divider10"></div>
+                                    <div style="clear:both;" class="alert alert-warning margin5">There are no records for this report</div>
+                                <?php } else { ?>
+                                    <div class="paginatecustom padding10" style="padding-bottom: 2px;"><?php echo "Currently viewing Payroll for <b>".count($result)."</b> Employee(s) from ".$request->startdate." to ".$request->enddate; ?></div>
+                                    <div class="row-fluid xpeoplelist clearfix makerelative whitebg" style="margin: 10px; margin-top:0;">
+                                        <div class="wrapper1">
+                                            <div class="div1" style="width:2750px;"></div>
+                                        </div>
+                                        <div class="wrapper2" style="min-height:0;">
+                                            <div class="div2" style="width:2750px;">
+                                                <table class="table list table-bordered table-striped data-table" id="datatable" style="width:auto;">
+                                                	<thead>
+                                                        <tr style="font-size:12px; font-weight:normal;">
+                                                        	<td style="width:15px;">#</td>
+                                                            <td style="width:160px;"><label class="control-label">Employee</label></td>
+                                                            <td style="width:125px;"><label class="control-label">Department</label></td>
+                                                            <td style="width:150px;"><label class="control-label">Position</label></td>
+                                                            <td style="width:80px;"><label class="control-label">Status</label></td>
+                                                            <td style="width:50px;"><label class="control-label">Days Worked</label></td>
+                                                            <td style="width:100px;"><label class="control-label">Hours Pending Approval</label></td>
+                                                            <td style="width:100px;"><label class="control-label bolded">Hours Approved <br />(<?php echo $midmonthlabel; ?>)</label></td>
+                                                            <td style="width:100px;"><label class="control-label bolded">Hours Approved <br />(<?php echo $monthendlabel; ?>)</label></td>
+                                                            <td style="width:80px;"><label class="control-label">Rate</label></td>
+                                                            <td style="width:140px;"><label class="control-label bolded">Mid Month Gross Pay <br />(<?php echo $midmonthlabel; ?>)</label></td>
+                                                            <td style="width:140px;"><label class="control-label">Month End Gross Pay <br />(<?php echo $monthendlabel; ?>)</label></td>
+                                                            <td style="width:100px;"><label class="control-label">NSSF (-)</label></td>
+                                                            <td style="width:100px;"><label class="control-label">PAYE (-)</label></td>
+                                                            <td style="width:120px;"><label class="control-label">Other Deductions (-)</label></td>
+                                                            <td style="width:100px;"><label class="control-label bolded">Net Earnings</label></td>
+                                                            <td style="width:100px;"><label class="control-label">Transport (+)</label></td>
+                                                            <td style="width:100px;"><label class="control-label">Other Benefits (+)</label></td>
+                                                            <td style="width:100px;"><label class="control-label bolded">Net Payout</label></td>
+                                                            <td style="width:25px;"></td>
+                                                            <td style="width:130px;"><label class="control-label">Leave Hours Accrued<br />(<?php echo $monthendlabel; ?>)</label></td>
+                                                            <td style="width:130px;"><label class="control-label">Sick Hours Accrued<br />(<?php echo $monthendlabel; ?>)</label></td>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                       <?php 
+													   		$i = 1;
+															$total_hourspending = $total_halfhoursworked = $total_fullhoursworked = $total_midmonthpay = $total_gross = $total_nssf = $total_paye = $total_otherdeductions = $total_netminusdeductions = $total_transport = $total_totalbenefits = $total_netpayout = 0;
+													   		foreach($result as $employee){
+																$conn = Doctrine_Manager::connection();
+																
+																$query = "SELECT SUM(IF(t.status = 3, t.hours, 0)) as hoursworked, SUM(IF(t.status = 3 AND UNIX_TIMESTAMP(t.timesheetdate) <= ".strtotime($middate).", t.hours, 0)) as halfhours, SUM(IF(t.status = 1, t.hours, 0)) as hourspending, SUM(IF(t.status = 3, 1, 0)) as daysworked from timesheet t where t.userid = '".$employee['id']."' and TO_DAYS(t.timesheetdate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') ";   
+																$result = $conn->fetchRow($query); 
+																$result['rate'] = $employee['rate'];
+																$result['empstatus'] = $employee['empstatus'];
+																// debugMessage($result);
+																
+																$query_benefits = "SELECT 
+																SUM(IF(l.`ledgertype` = '1' AND l.`trxntype` = '1', l.amount, 0)) as totaladditions,
+																SUM(IF(l.`ledgertype` = '1' AND l.`trxntype` = '2', l.amount, 0)) as totaldeductions 
+																from ledger l where l.userid = '".$employee['id']."' and TO_DAYS(l.trxndate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') ";
+																$result_benefits = $conn->fetchRow($query_benefits); 
+																// debugMessage($result_benefits);
+																
+																$query_recurring = "SELECT ub.* from userbenefit ub where ub.userid = '".$employee['id']."' ";
+																$result_recurring = $conn->fetchAll($query_recurring); 
+																
+																$totcredit = 0; $totdebit = 0; $totaltransport = 0; $nssf = 0;
+																$total_leavehrs = '0'; $total_sickhrs = '0';
+																if(count($result_recurring) > 0){
+																	foreach($result_recurring as $benefit){
+																		if($benefit['benefitid'] == 1){
+																			unset($benefit);
+																			
+																		} else { 
+																			// credit benefits
+																			if($benefit['type'] == 1 && $benefit['benefitterms'] == 1){
+																				if($benefit['benefitfrequency'] == 4){ // per month frequency
+																					switch($benefit['benefitid']){
+																						case 16:
+																							$totaltransport += $benefit['amount'];
+																							break;
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totcredit += $benefit['amount'];
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 3){ // per week frequency
+																					$weeks = ceil($result['daysworked']/5);
+																					switch($benefit['benefitid']){
+																						case 16:
+																							$totaltransport += ($benefit['amount'] * $week);
+																							break;
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totcredit += ($benefit['amount'] * $week);
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 2){ // per day frequency
+																					switch($benefit['benefitid']){
+																						case 16:
+																							$totaltransport += ($benefit['amount'] * $result['daysworked']);
+																							break;
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totcredit += ($benefit['amount'] * $result['daysworked']);
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 1){ // per hour frequency
+																					switch($benefit['benefitid']){
+																						case 16:
+																							$totaltransport += ($benefit['amount'] * $result['hoursworked']);
+																							break;
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totcredit += ($benefit['amount'] * $result['hoursworked']);
+																							break;
+																					}
+																				}
+																			}
+																			// deduction benefits
+																			if($benefit['type'] == 1 && $benefit['benefitterms'] == 2 ){
+																				if($benefit['benefitfrequency'] == 4){ // per month frequency
+																					switch($benefit['benefitid']){
+																						case 19:
+																							$nssf = str_replace('%', '', $benefit['amount']);
+																							break;
+																						case 20:
+																							
+																							break;
+																						default:
+																							$totdebit += $benefit['amount'];
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 3){ // per week frequency
+																					$weeks = ceil($result['daysworked']/5);
+																					switch($benefit['benefitid']){
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totdebit += ($benefit['amount'] * $week);
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 2){ // per day frequency
+																					switch($benefit['benefitid']){
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totdebit += ($benefit['amount'] * $result['daysworked']);
+																							break;
+																					}
+																				}
+																				if($benefit['benefitfrequency'] == 1){ // per hour frequency
+																					switch($benefit['benefitid']){
+																						case 19:
+																						case 20:
+																							break;
+																						default:
+																							$totdebit += ($benefit['amount'] * $result['hoursworked']);
+																							break;
+																					}
+																				}
+																			}
+																			
+																			// accrual of leave hours
+																			if($benefit['type'] == 2){
+																				switch($benefit['timeofftypeid']){
+																					case 1:
+																						if($benefit['accrualtype'] == 1){
+																							$total_leavehrs = $benefit['accrualvalue']; 
+																						}
+																						break;
+																					case 2:
+																						if($benefit['accrualtype'] == 1){
+																							$total_sickhrs = $benefit['accrualvalue']; 
+																						}
+																						break;
+																					default:
+																						
+																						break;
+																				}
+																			}
+																		}
+																	}
+																	/*debugMessage($totcredit);
+																	debugMessage($totdebit);
+																	debugMessage($totaltransport);*/
+																}
+																
+																$totcredit += $result_benefits['totaladditions'];
+																$totdebit += $result_benefits['totaldeductions'];
+																/*debugMessage($totcredit);
+																debugMessage($totdebit);
+																debugMessage($totaltransport);*/
+																
+																$result['otheradditions'] = $totcredit;
+																$result['otherdeductions'] = $totdebit;
+																$result['totaltransport'] = $totaltransport;
+																$result['nssfdeduction'] = $nssf;
+																
+																$result['leavehrs'] = $total_leavehrs;
+																$result['sickhrs'] = $total_sickhrs;	
+																
+																if($employee['id'] != 15 && date('n', strtotime($startdate)) == '1' && date('Y', strtotime($startdate))  == '2015'){
+																	if(!isArrayKeyAnEmptyString($employee['id'], $testdata)){
+																		$result = $testdata[$employee['id']];
+																	}
+																}
+																// debugMessage($result);
+																
+																# now compute table values
+																// hours pending approval
+																$hourspending = 0; $total_hourspending += $hourspending;
+																// days worked
+																$daysworked = 0;
+																if(!isArrayKeyAnEmptyString('halfhours', $result)){
+																	$daysworked = isEmptyString($result['daysworked']) ? 0 : $result['daysworked'];
+																}
+																
+																// mid month hours worked
+																$halfhoursworked = 0;
+																if(!isArrayKeyAnEmptyString('halfhours', $result)){
+																	$halfhoursworked = isEmptyString($result['halfhours']) ? 0 : $result['halfhours'];
+																}
+																$total_halfhoursworked += $halfhoursworked;
+																
+																// total hours worked
+																$fullhoursworked = 0;
+																if(!isArrayKeyAnEmptyString('hoursworked', $result)){
+																	$fullhoursworked = isEmptyString($result['hoursworked']) ? 0 : $result['hoursworked'];
+																}
+																$total_fullhoursworked += $fullhoursworked;
+																
+																// leave accrued
+																$leaveaccrued = 0;
+																if($result['empstatus'] == 1){
+																	$leaveaccrued = number_format($fullhoursworked/160, 2);
+																	if(!isArrayKeyAnEmptyString('leavehrs', $result)){
+																		if(!isEmptyString($result['leavehrs']) & $result['leavehrs'] > 0){
+																			$leaveaccrued = number_format($fullhoursworked/$result['leavehrs'], 2);
+																		}
+																	}
+																}
+																
+																// sick leave accrued
+																$sickaccrued = 0;
+																if($result['empstatus'] == 1){
+																	$sickaccrued = number_format($fullhoursworked/320, 2);
+																	if(!isArrayKeyAnEmptyString('sickhrs', $result)){
+																		if(!isEmptyString($result['sickhrs']) & $result['sickhrs'] > 0){
+																			$sickaccrued = number_format($fullhoursworked/$result['sickhrs'], 2);
+																		}
+																	}
+																}
+																
+																// mid month pay
+																$midmonthpay = 0; $rate = 0;
+																if(!isArrayKeyAnEmptyString('rate', $result)){
+																	$rate = isEmptyString($result['rate']) ? 0 : $result['rate'];
+																	$midmonthpay = $halfhoursworked * $rate;
+																}
+																$total_midmonthpay += $midmonthpay;
+																
+																// end of month gross earnings
+																$gross = $fullhoursworked * $rate;
+																$total_gross += $gross;
+																
+																// compute nssf
+																$nssf = 0;
+																if($result['empstatus'] == 1){
+																	$nssf = $gross * 0.05;
+																	if(!isArrayKeyAnEmptyString('nssfdeduction', $result)){
+																		if(!isEmptyString($result['nssfdeduction']) & $result['nssfdeduction'] > 0){
+																			$nssf = $gross * ($result['nssfdeduction']/100); // debugMessage($nssf); 
+																		}
+																	}
+																}
+																$total_nssf += $nssf;
+																
+																// paye contribution
+																$paye = 0;
+																if($result['empstatus'] == 1){
+																	if($gross > 10000000){
+																		$paye = (($gross - 10000000) * 0.4) + 2902000;
+																	}
+																	if($gross > 410000 && $gross < 10000000){
+																		$paye = (($gross - 410000) * 0.3) + 25000;
+																	}
+																	if($gross > 335000 && $gross < 410000){
+																		$paye = (($gross - 335000) * 0.2) + 10000;
+																	}
+																	if($gross > 235000 && $gross < 335000){
+																		$paye = (($gross - 235000) * 0.1);
+																	}
+																	if($gross <= 235000){
+																		$paye = 0;
+																	}
+																}
+																$total_paye += $paye; 
+																
+																// other deductions
+																$otherdeductions = 0;
+																if(!isArrayKeyAnEmptyString('otherdeductions', $result)){
+																	$otherdeductions = isEmptyString($result['otherdeductions']) ? 0 : $result['otherdeductions'];
+																}
+																$total_otherdeductions += $otherdeductions;
+																
+																// net pay less deductions
+																$netminusdeductions = $gross - ($nssf + $paye + $otherdeductions);
+																$total_netminusdeductions += $netminusdeductions;
+																
+																// transport 
+																$transport = 0;
+																if($result['empstatus'] == 1){
+																	$transport = $daysworked * 5000;
+																}
+																if(!isArrayKeyAnEmptyString('totaltransport', $result)){
+																	$transport = isEmptyString($result['totaltransport']) ? 0 : $result['totaltransport'];
+																}
+																$total_transport += $transport;
+																
+																// total benefits
+																$totalbenefits = 0;
+																if(!isArrayKeyAnEmptyString('otheradditions', $result)){
+																	$totalbenefits = isEmptyString($result['otheradditions']) ? 0 : $result['otheradditions'];
+																}
+																$total_totalbenefits += $totalbenefits;
+																
+																// net pay
+																$netpayout = $netminusdeductions + $transport + $totalbenefits;
+																$total_netpayout += $netpayout;
+																
+													   ?>
+                                                       		<tr style="font-size:12px; font-weight:normal;">
+                                                            	<td><?php echo $i; ?></td>
+                                                                <td class="bolded"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employee['id'])); ?>" title="View Profile" target="_blank"><?php echo $employee['name']; ?></a></td>
+                                                                <td><?php echo isArrayKeyAnEmptyString($employee['departmentid'], $departments) ? '' : $departments[$employee['departmentid']]; ?></td>
+                                                                <td><?php echo isArrayKeyAnEmptyString($employee['position'], $positions) ? '' : $positions[$employee['position']]; ?></td>
+                                                                <td><?php echo isArrayKeyAnEmptyString($employee['empstatus'], $employeesstatuses) ? '' : $employeesstatuses[$employee['empstatus']]; ?></td>
+                                                                <td class="rightalign"><?php echo $daysworked; ?></td>
+                                                                <td class="rightalign"><?php echo $hourspending; ?></td>
+                                                                <td class="rightalign"><?php echo $halfhoursworked; ?></td>	
+                                                                <td class="rightalign bolded"><?php echo $fullhoursworked; ?></td>	
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($rate); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($midmonthpay); ?></td>
+                                                                <td class="rightalign bolded"><?php echo formatMoneyOnly($gross); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($nssf); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($paye); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($otherdeductions); ?></td>
+                                                                <td class="rightalign bolded"><?php echo formatMoneyOnly($netminusdeductions); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($transport); ?></td>
+                                                                <td class="rightalign"><?php echo formatMoneyOnly($totalbenefits); ?></td>
+                                                                <td class="rightalign bolded"><?php echo formatMoneyOnly($netpayout); ?></td>
+                                                                <td></td>
+                                                                <td class="rightalign"><?php echo $leaveaccrued; ?></td>
+                                                                <td class="rightalign"><?php echo $sickaccrued; ?></td>
+                                                            </tr>
+                                                       <?php $i++; } ?>
+                                                       <tr style="font-size:12px; font-weight:bold;">
+                                                            <td></td>
+                                                            <td class="rightalign">Totals</td>
+                                                            <td><?php //echo $employee['name']; ?></td>
+                                                            <td><?php //echo $employee['name']; ?></td>
+                                                            <td><?php //echo $employee['name']; ?></td>
+                                                            <td></td>
+                                                            <td class="rightalign"><?php echo $total_hourspending; ?></td>
+                                                            <td class="rightalign"><?php echo $total_halfhoursworked; ?></td>	
+                                                            <td class="rightalign"><?php echo $total_fullhoursworked; ?></td>	
+                                                            <td></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_midmonthpay); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_gross); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_nssf); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_paye); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_otherdeductions); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_netminusdeductions); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_transport); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_totalbenefits); ?></td>
+                                                            <td class="rightalign"><?php echo formatMoneyOnly($total_netpayout); ?></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                          	</div>
+                                      	</div>
+                                  	</div>
+                                <?php } ?>
+                            <?php } else { ?>
+                                <label class="labeldescription noresults">Select reporting parameters to Generate</label>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+		</form>
+	</div>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

@@ -2,7 +2,7 @@
 	include APPLICATION_PATH.'/includes/header.php';
 	
 	$user = new UserAccount();
-	$user->populate($userid);
+	$user->populate($session->getVar('userid'));
 	$customurl = '';
 	
 	$toggled = $session->getVar('toggled');
@@ -12,6 +12,10 @@
 		$toggledclass = ' toggled';
 	}
 	
+	$istimesheetemployee = false;
+	if(isTimesheetEmployee()){
+		$istimesheetemployee = true;
+	}
 ?>
 <ul id="mainNav" class="makerelative">
     <li id="navDashboard" class="nav">
@@ -34,48 +38,75 @@
             </ul>						
         </li>
     <?php } ?>
-    <?php if($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>	
+    <?php if (($acl->checkPermission('Timesheets', ACTION_LIST) && $istimesheetemployee) || $acl->checkPermission('Timesheets', ACTION_APPROVE) || isAdmin()) { ?>
         <li class="nav dropdown <?php echo $controller == 'timesheets' ? 'active' : ''; ?>">
-            <a class="gonowhere"><span class="glyphicon glyphicon-list"></span> <span class="hideontoggle">Timesheets</span></a>
+            <a class="gonowhere"><span class="glyphicon glyphicon-time"></span> <span class="hideontoggle">Timesheets</span></a>
             <ul class="subNav" id="timesheet" <?php echo $controller == 'timesheets' ? 'style="display:block;"' : ''; ?>>
-                <?php if ($acl->checkPermission('Timesheets', ACTION_APPROVE)) { ?>
-                	<li class="<?php echo $controller == 'timesheets' && ($action == 'list') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list/status/2'); ?>">Timesheets for Approval</a></li>
-                <?php } ?>
-                <?php if(isTimesheetEmployee()) { ?>	
-                	<li class="<?php echo $controller == 'timesheets' && ($action == 'checkin') ? 'active' : ''; ?>"><a class="xblockanchor gonowhere" href="<?php echo $this->baseUrl('timesheets/checkin'); ?>">Check In</a></li>
-                    <li class="<?php echo $controller == 'timesheets' && ($action == 'list') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>">My Timesheets</a></li>
+                <?php if($istimesheetemployee) { 
+					$ischeckin = isCheckedIn($session->getVar('userid'), date('Y-m-d')) ? true : false; // debugMessage($ischeckin);
+				?>	
+                	<li class="<?php echo $controller == 'timesheets' && ($action == 'checkin') ? 'active' : ''; ?>">
+                        <a class="<?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right">Check In</a>
+                    </li>
+                    <li class="<?php echo $controller == 'timesheets' && ($action == 'attendance') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>">Attendance History</a></li>
+                    <li class="<?php echo $controller == 'timesheets' && ($action == 'list' && isEmptyString($request->view)) ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>">Timesheets Weekly View</a></li>
+                    <li class="<?php echo $controller == 'timesheets' && ($action == 'list' && $request->view == 'month') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list/view/month'); ?>">Timesheets Monthly View</a></li>
                 <?php } else { ?>
-                	<?php if ($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>
-                    	<li class="<?php echo $controller == 'timesheets' && ($action == 'list') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>">Manage Timesheets</a></li>
+                  	<?php if ($acl->checkPermission('Attendance', ACTION_LIST)) { ?>
+                        <li class="<?php echo $controller == 'timesheets' && ($action == 'attendance') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>">Attendance Records</a></li>
                     <?php } ?>
+                    <?php if ($acl->checkPermission('Timesheets', ACTION_APPROVE)) { ?>
+                        <li class="<?php echo $controller == 'timesheets' && ($action == 'forapproval') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>">Timesheets for Approval</a></li>
+                    <?php } ?>
+                    <?php if ($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>
+                    	<li class="<?php echo $controller == 'timesheets' && ($action == 'list' && isEmptyString($request->view)) ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list'); ?>">Timesheets Weekly View</a></li>
+                    <li class="<?php echo $controller == 'timesheets' && ($action == 'list' && $request->view == 'month') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/list/view/month'); ?>">Timesheets Monthly View</a></li>
+                    <?php } ?>    
                 <?php } ?>
             </ul>						
         </li>
     <?php } ?>
     <?php if($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
-    	<li class="nav dropdown <?php echo $controller == 'benefits' ? 'active' : ''; ?>">
-        	<a class="gonowhere" id="benefitlink"><span class="glyphicon glyphicon-th-large"></span> <span class="hideontoggle">Benefits</span></a>
-            <ul class="subNav committee" id="benefit" <?php echo $controller == 'benefits' ? 'style="display:block;"' : ''; ?>>
-            	<?php if (isTimesheetEmployee()) { ?>
-                	<li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Request Time off</a></li>
-                    <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">My Leave Accruals</a></li>
-                    <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Other Benefits</a></li>
+    	<li class="nav dropdown <?php echo $controller == 'ledger' ? 'active' : ''; ?>">
+        	<a class="gonowhere" id="benefitlink"><span class="glyphicon glyphicon-gift"></span> <span class="hideontoggle">Benefits</span></a>
+            <ul class="subNav committee" id="benefit" <?php echo $controller == 'ledger' ? 'style="display:block;"' : ''; ?>>
+                <?php if ($acl->checkPermission('Benefits', ACTION_CREATE)) { ?>
+                	<li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add One-Time Benefit</a></li>
+               	<?php } ?>
+                <?php if ($acl->checkPermission('Benefits', ACTION_LIST) && !$istimesheetemployee) { ?>
+                	<li class="<?php echo $controller == 'ledger' && $action == 'list' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list'); ?>">Manage Benefits and Accruals</a></li>
                 <?php } ?>
-                <?php if ($acl->checkPermission('Time off', ACTION_APPROVE)) { ?>
-                	<li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Leave Requests</a></li>
-                    <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Manage Accruals</a></li>
-                    <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Assign Benefits</a></li>
+                <?php if ($istimesheetemployee) { ?>
+                    <li class="<?php echo $controller == 'ledger' && $action == 'list' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list'); ?>">My Benefits and Accruals</a></li>
                 <?php } ?>
             </ul>
       	</li>
+    <?php } ?>
+    <?php if($acl->checkPermission('Time off', ACTION_VIEW) || $acl->checkPermission('Time off', ACTION_APPROVE) || isAdmin()) { ?>
+    	<li class="nav dropdown <?php echo $controller == 'timeoff' ? 'active' : ''; ?>">
+        	<a class="gonowhere" id="benefitlink"><span class="glyphicon glyphicon-time"></span> <span class="hideontoggle">Time-off</span></a>
+            <ul class="subNav committee" id="benefit" <?php echo $controller == 'timeoff' ? 'style="display:block;"' : ''; ?>>
+            	<?php if ($acl->checkPermission('Time off', ACTION_CREATE) && !$acl->checkPermission('Time off', ACTION_APPROVE) && $user->isPermanent()) { ?>
+               		<li class="<?php echo $controller == 'timeoff' && $action == 'index' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/index'); ?>">Request Time-off</a></li>
+                <?php } ?>
+                <?php if ($acl->checkPermission('Time off', ACTION_APPROVE)) { ?>
+                	<li class="<?php echo $controller == 'timeoff' && $action == 'list' && ($request->forapproval == '1' || $request->status == '0') ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list/forapproval/1'); ?>"> Requests for Approval</a></li>
+                	<li class="<?php echo $controller == 'timeoff' && $action == 'list' && $request->whoisoff == '1' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>">Who is Off?</a></li>
+                <?php } ?>
+                <?php if ($acl->checkPermission('Time off', ACTION_LIST)) { ?>
+               		<li class="<?php echo $controller == 'timeoff' && $action == 'list' && isEmptyString($request->status) && $request->forapproval != '1' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list'); ?>"><?php echo $istimesheetemployee ? 'My Leave' : 'All'; ?> Requests</a></li>
+                <?php } ?>
+                <?php if ($acl->checkPermission('Time off', ACTION_VIEW)) { ?>
+                    <li class="<?php echo $controller == 'timeoff' && $action == 'calendar' && isEmptyString($request->status) ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/calendar'); ?>">Leave Calendar</a></li>
+                <?php } ?>
+           	</ul>
     <?php } ?>
     <?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
     	<li class="nav dropdown <?php echo $controller == 'payroll' ? 'active' : ''; ?>">
         	<a class="gonowhere"><span class="glyphicon glyphicon-usd"></span> <span class="hideontoggle">Payroll</span></a>
             <ul class="subNav committee" id="benefit" <?php echo $controller == 'payroll' ? 'style="display:block;"' : ''; ?>>
-                <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Generate Payroll</a></li>
-                <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Payroll History</a></li>
-                <li class=""><a class="xblockanchor gonowhere" href="<?php // echo $this->baseUrl('benefits/list'); ?>">Payroll Parameters</a></li>
+                <li class="<?php echo $controller == 'payroll' && $action == 'list' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('payroll/list'); ?>">Generate Payroll</a></li>
+                <li class="<?php echo $controller == 'history' && $action == 'list' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('payroll/history'); ?>">Payroll History</a></li>
             </ul>
       	</li>
     <?php } ?>
@@ -83,12 +114,14 @@
     	<li class="nav dropdown <?php echo in_array($controller, array('config','role')) ? 'active' : ''; ?>">
         	<a class="gonowhere"><span class="glyphicon glyphicon-cog"></span> <span class="hideontoggle">Administration</span></a>
             <ul class="subNav" id="admin" <?php echo in_array($controller, array('config','role')) ? 'style="display:block; margin-bottom:70px;"' : 'style="margin-bottom:70px;"'; ?>>
-                <li class="<?php //echo $request->type == 2 ? 'active' : ''; ?>"><a class="xblockanchor gonowhere" href="<?php //echo $this->baseUrl('config/variables/type/2'); ?>">Departments</a></li>
+                <li class="<?php echo $controller == 'department' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/11'); ?>">Departments</a></li>
                 <li class="<?php echo $request->type == 7 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/7'); ?>">Job Positions</a></li>
-                <li class="<?php //echo $request->type == 5 ? 'active' : ''; ?>"><a class="xblockanchor gonowhere" href="<?php //echo $this->baseUrl('config/variables/type/6'); ?>">Work Shifts</a></li>
-                <li class="<?php echo $request->type == 6 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/6'); ?>">Employment Status</a></li>
+                <li class="<?php echo $request->type == 10 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/10'); ?>">Time Off Types</a></li>
+                <li class="<?php echo $request->type == 9 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/9'); ?>">Benefit Types</a></li>
+                <li class="<?php echo $request->type == 12 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/12'); ?>">Work Shifts</a></li>
+                <li class="<?php echo $request->type == 6 ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/6'); ?>">Job Statuses</a></li>
                 <li class=""><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables'); ?>">System Variables</a></li>
-                <li class=""><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig'); ?>">System Config</a></li>
+                <li class=""><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig/section/system'); ?>">System Config</a></li>
                 <?php if ($acl->checkPermission('Role', ACTION_LIST)) { ?>
                     <li class="<?php echo $controller == 'role' ? 'active' : ''; ?>"><a class="blockanchor" href="<?php echo $this->baseUrl('role/list'); ?>">User Roles</a></li>
                 <?php } ?>

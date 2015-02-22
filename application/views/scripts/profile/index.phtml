@@ -31,6 +31,11 @@
 		$tab = 'overview';
 	}
 	
+	$isme = false;
+	if($user->getID() == $loggedinuser->getID()){
+		$isme = true;
+	}
+	
 	if($tab == 'picture'){
 		$posturl = $this->baseUrl("profile/uploadpicture");
 		$button_title = "Upload Picture";
@@ -376,29 +381,13 @@ $(document).ready(function() {
 		triggerUserAddition(current);
 	});
 	
-	$("#accrualtype_1").click(function(){
-		enableContainerByClass('ashours');
-		disableContainerByClass('asdays');
-	});
-	$("#accrualtype_2").click(function(){
-		enableContainerByClass('asdays');
-		disableContainerByClass('ashours');
-	});
-	<?php if($user->getaccrualtype() == '1'){ ?>
-		enableContainerByClass('ashours');
-		disableContainerByClass('asdays');
-	<?php } ?>
-	<?php if($user->getaccrualtype() == '2'){ ?>
-		enableContainerByClass('asdays');
-		disableContainerByClass('ashours');
-	<?php } ?>
-	
 	$("#email_auto").keyup(function(){
 		$("#email").val($(this).val());
 	});
 	$("#email_auto").change(function(){
 		$("#email").val($(this).val());
 	});
+			
 });
 </script>
 <div class="row-fluid margin0 view">

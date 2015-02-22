@@ -57,7 +57,6 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('linkedin', 'string', 255);
 		$this->hasColumn('skype', 'string', 255);
 		$this->hasColumn('maritalstatus', 'string', 255);
-		$this->hasColumn('ethnicity', 'string', 255);
 		$this->hasColumn('salutation', 'string', 15);
 		$this->hasColumn('position', 'string', 50);
 		$this->hasColumn('qualifications', 'string', 1000);
@@ -80,17 +79,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('accno', 'string', 255);
 		$this->hasColumn('swiftcode', 'string', 255);
 		$this->hasColumn('branchname', 'string', 255);
-		
-		$this->hasColumn('regularleavehrs', 'integer', null, array('default' => DEFAULT_REGULAR_LEAVE_HRS));
-		$this->hasColumn('regularleavedays', 'integer', null, array('default' => DEFAULT_REGULAR_LEAVE_DAYS));
-		$this->hasColumn('regularleavetype', 'integer', null, array('default' => 1));
-		
-		$this->hasColumn('sickleavehrs', 'integer', null, array('default' => DEFAULT_SICK_LEAVE_HRS));
-		$this->hasColumn('sickleavedays', 'integer', null, array('default' => DEFAULT_SICK_LEAVE_DAYS));
-		$this->hasColumn('sickleavetype', 'integer', null, array('default' => 1));
-		
-		$this->hasColumn('accrualtype', 'integer', null, array('default' => 1));
-		$this->hasColumn('accrualfrequency', 'integer', null, array('default' => 4));
+		$this->hasColumn('istimesheetuser', 'integer', null, array('default' => 1));
 		
 		# override the not null and not blank properties for the createdby column in the BaseEntity
 		$this->hasColumn('createdby', 'integer', 11);
@@ -217,8 +206,14 @@ class UserAccount extends BaseEntity {
 						);
 		$this->hasOne('UserAccount as manager',
 								array(
-										'local' => 'managerid',
-										'foreign' => 'id',
+									'local' => 'managerid',
+									'foreign' => 'id',
+								)
+						);
+		$this->hasMany('UserBenefit as userbenefits',
+								array(
+									'local' => 'id',
+									'foreign' => 'userid'
 								)
 						);
 	}
@@ -505,30 +500,6 @@ class UserAccount extends BaseEntity {
 				unset($formvalues['workingdays']);
 			}
 		}
-		if(isArrayKeyAnEmptyString('regularleavehrs', $formvalues)){
-			unset($formvalues['regularleavehrs']);
-		}
-		if(isArrayKeyAnEmptyString('regularleavedays', $formvalues)){
-			unset($formvalues['regularleavedays']);
-		}
-		if(isArrayKeyAnEmptyString('regularleavetype', $formvalues)){
-			unset($formvalues['regularleavetype']);
-		}
-		if(isArrayKeyAnEmptyString('sickleavehrs', $formvalues)){
-			unset($formvalues['sickleavehrs']);
-		}
-		if(isArrayKeyAnEmptyString('sickleavedays', $formvalues)){
-			unset($formvalues['sickleavedays']);
-		}
-		if(isArrayKeyAnEmptyString('sickleavetype', $formvalues)){
-			unset($formvalues['sickleavetype']);
-		}
-		if(isArrayKeyAnEmptyString('accrualtype', $formvalues)){
-			unset($formvalues['accrualtype']);
-		}
-		if(isArrayKeyAnEmptyString('accrualfrequency', $formvalues)){
-			unset($formvalues['accrualfrequency']);
-		}
 		if(isArrayKeyAnEmptyString('startdate', $formvalues)){
 			unset($formvalues['startdate']);
 		}
@@ -545,7 +516,62 @@ class UserAccount extends BaseEntity {
 			unset($formvalues['departmentid']);
 		}
 		
-		// debugMessage($formvalues); exit();
+		if(!isArrayKeyAnEmptyString('hasbenefits', $formvalues)){
+			$benefitsarray = array();
+			$totcash = countCashBenefits();
+			$tottime = countTimeBenefits(); 
+			
+			$benefitsarray[md5(1)]['benefitid'] = $formvalues['benefitid_1'];
+			$benefitsarray[md5(1)]['amount'] = $formvalues['rate'];
+			$benefitsarray[md5(1)]['accrualfrequency'] = $formvalues['ratetype'];
+			if(!isArrayKeyAnEmptyString('id_1', $formvalues)){
+				$benefitsarray[md5(1)]['id'] = $formvalues['id_1'];
+			}
+			
+			for($i = 2; $i <= $totcash; $i++){
+				if(!isArrayKeyAnEmptyString('amount_'.$i, $formvalues)){
+					if($formvalues['amount_'.$i] > 0  || !is_numeric($formvalues['amount_'.$i])){
+						if(!isArrayKeyAnEmptyString('id_'.$i, $formvalues)){
+							$benefitsarray[md5($i)]['id'] = $formvalues['id_'.$i];
+						}
+						$benefitsarray[md5($i)]['type'] = 1;
+						$benefitsarray[md5($i)]['benefitid'] = $formvalues['benefitid_'.$i];
+						$benefitsarray[md5($i)]['amount'] = $formvalues['amount_'.$i];
+						$benefitsarray[md5($i)]['benefitfrequency'] = $formvalues['benefitfrequency_'.$i];
+						$benefitsarray[md5($i)]['benefitterms'] = $formvalues['benefitterms_'.$i];
+						$benefitsarray[md5($i)]['accrualtype'] = NULL;
+						$benefitsarray[md5($i)]['accrualfrequency'] = NULL;
+						$benefitsarray[md5($i)]['accrualvalue'] = NULL;
+					}
+				}
+			}
+			
+			for($x = $totcash; $x <= $totcash+$tottime; $x++){
+				if(!isArrayKeyAnEmptyString('accrualvalue_'.$x, $formvalues)){
+					if($formvalues['accrualvalue_'.$x] > 0){
+						if(!isArrayKeyAnEmptyString('id_'.$x, $formvalues)){
+							$benefitsarray[md5($x)]['id'] = $formvalues['id_'.$x];
+						}
+						if(!isArrayKeyAnEmptyString('accrualfrequency_'.$x, $formvalues)){
+							$benefitsarray[md5($x)]['accrualfrequency'] = $formvalues['accrualfrequency_'.$x];
+						}
+						$benefitsarray[md5($x)]['type'] = 2;
+						$benefitsarray[md5($x)]['timeofftypeid'] = $formvalues['timeofftypeid_'.$x];
+						$benefitsarray[md5($x)]['accrualtype'] = $formvalues['accrualtype_'.$x];
+						$benefitsarray[md5($x)]['accrualvalue'] = $formvalues['accrualvalue_'.$x];
+						$benefitsarray[md5($x)]['amount'] = NULL;
+						$benefitsarray[md5($x)]['benefitfrequency'] = NULL;
+						$benefitsarray[md5($x)]['benefitterms'] = NULL;
+					}
+				}
+			}
+			if(count($benefitsarray) > 0){
+				$formvalues['userbenefits'] = $benefitsarray;
+			}
+		}
+		
+		/* debugMessage($benefitsarray);
+		debugMessage($formvalues); exit(); */
 		parent::processPost($formvalues);
 	}
 	/*
@@ -1385,27 +1411,19 @@ class UserAccount extends BaseEntity {
     }
     # determine if is an employee
     function isEmployee(){
-    	return $this->getType() == 2 ? true : false;
+    	return true;
     }
     # determine if user is a permanent staff
 	function isPermanent(){
-    	return $this->getType() == 2 ? true : false; 
+    	return $this->getEmpStatus() == 1 ? true : false; 
     }
 	# determine if user is a temporally staff
 	function isTemporally(){
-    	return $this->getType() == 3 ? true : false; 
+    	return $this->getEmpStatus() == 2 ? true : false; 
     }
     # determine if an intern
     function isIntern(){
-    	return $this->getType() == 4 ? true : false;
-    }
-    # determine if user is a supervisor
-    function isSupervisor(){
-    	return $this->getType() == 5 ? true : false;
-    }
-    # determine if user is management
-    function isManagement(){
-    	return $this->getType() == 6 ? true : false;
+    	return $this->getEmpStatus() == 3 ? true : false;
     }
     # determine if person has not been invited
     function hasNotBeenInvited() {
@@ -1654,43 +1672,13 @@ class UserAccount extends BaseEntity {
 		}
 		return $str;
 	}
-	# determine accrual type
-	function getAccrualTypeText(){
-		$str = '';
-		if($this->getaccrualtype() == '1'){
-			$str = 'Hours';
-		}
-		if($this->getaccrualtype() == '2'){
-			$str = 'Days';
-		}
-		return $str;
-	}
-	# determine regularleavetype text
-	function getRegularLeaveTypeText(){
-		$str = '';
-		$allvalues = array('1'=>'Per Year', '2'=>'Per Month');
-		if(!isEmptyString($this->getRegularLeaveType()) && !isArrayKeyAnEmptyString($this->getRegularLeaveType(), $allvalues)){
-			$str = $allvalues[$this->getRegularLeaveType()];
-		}
-		return $str;
-	}
-	# determine regularleavetype text
-	function getSickLeaveTypeText(){
-		$str = '';
-		$allvalues = array('1'=>'Per Year', '2'=>'Per Month');
-		if(!isEmptyString($this->getSickLeaveType()) && !isArrayKeyAnEmptyString($this->getSickLeaveType(), $allvalues)){
-			$str = $allvalues[$this->getSickLeaveType()];
-		}
-		return $str;
-	}
-	# determine getAccrualFrequencyText
-	function getAccrualFrequencyText(){
-		$str = '';
-		$allvalues = array('1'=>'End of Day', '2'=>'End of Week', '3'=>'End of Month','4'=>'Timesheet Approval');
-		if(!isEmptyString($this->getAccrualFrequency()) && !isArrayKeyAnEmptyString($this->getAccrualFrequency(), $allvalues)){
-			$str = $allvalues[$this->getAccrualFrequency()];
-		}
-		return $str;
+	
+	# determine the timeoff events for user
+	function getTimeoffRequests($userid = '', $start, $end){
+		return true;
+		$q = Doctrine_Query::create()->from('Timeoff t')->where("t.userid = '".$this->getID()."' AND ")->orderby('t.datecreated desc');
+		$result = $q->execute();
+		return $result;
 	}
 }
 ?>

@@ -60,7 +60,7 @@ define("PAGE_TITLE", "ttl");
 define('DEFAULT_USER_GROUP', '2');
 define('DEFAULT_ID', '1');
 define('VALIDATE_PHONE_ACTIVATED', false);
-define('DEFAULT_DATETIME', date("Y-m-d H:i:s"));
+define('DEFAULT_DATETIME', date("Y-m-d H:i:s", strtotime('now')));
 define('DEFAULT_PROGRAM_LINES', 20);
 define('DEFAULT_REGULAR_LEAVE_HRS', 160);
 define('DEFAULT_SICK_LEAVE_HRS', 320);
@@ -199,6 +199,14 @@ function formatTime($timestring){
 	}
 	$otime = new DateTime($timestring);
 	$stime = $otime->format("H:i a");
+	return $stime;
+}
+function formatTimeCustom($timestring){
+	if(isEmptyString($timestring)){
+		return '--';
+	}
+	$otime = new DateTime($timestring);
+	$stime = $otime->format("h:i A");
 	return $stime;
 }
 function getCurrentMysqlTimestamp(){
@@ -852,7 +860,7 @@ function isTimesheetEmployee() {
 	$session = SessionWrapper::getInstance(); 
 	$acl = getACLInstance();
 	
-	return $session->getVar('type') == '2' ? true : false;
+	return $session->getVar('type') == '2' || $acl->checkPermission("Check In", ACTION_YESNO) || $session->getVar('istimesheetuser') == '1' ? true : false;
 }
 function isManager() {
 	$session = SessionWrapper::getInstance(); 

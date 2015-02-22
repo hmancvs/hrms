@@ -102,28 +102,16 @@ class LookupType extends BaseEntity  {
 	function getAllDataValues($type = '') {
 		$conn = Doctrine_Manager::connection();
 		$resultvalues = $conn->fetchAll("SELECT * FROM lookuptypevalue WHERE lookuptypeid = '".$this->getID()."' order by lookupvaluedescription asc ");
-		if($this->getName() == 'COMMODITY_CATEGORIES'){
-			// $resultvalues = $conn->fetchAll("SELECT c.id as id, c.id as lookuptypevalue, c.name as lookupvaluedescription FROM commodity_category c order by lookupvaluedescription asc ");
+		if($this->getName() == 'BENEFIT_TYPES'){
+			$resultvalues = $conn->fetchAll("SELECT c.id as id, c.id as lookuptypevalue, c.name as lookupvaluedescription, c.defaultamount as alias, c.amounttype as alias2 FROM benefittype c order by c.name asc ");
 		}
 		return $resultvalues;	
 	}
 	function getNextInsertIndex(){
 		$conn = Doctrine_Manager::connection(); 
 		$resultvalues = $conn->fetchOne("SELECT lookuptypevalue FROM lookuptypevalue WHERE lookuptypeid = '".$this->getID()."' order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
-		if($this->getName() == 'COMMODITY_CATEGORIES'){
-			$resultvalues = $conn->fetchOne("SELECT c.id as lookuptypevalue FROM commodity_category c order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
-		}
-		if($this->getName() == 'COMMODITY_UNITS'){
-			$resultvalues = $conn->fetchOne("SELECT c.id as lookuptypevalue FROM commodity_unit c order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
-		} 
-		if($this->getName() == 'FORUM_CATEGORIES'){
-			$resultvalues = $conn->fetchOne("SELECT c.value as lookuptypevalue FROM category c WHERE c.parentid = 115 order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
-		}
-		if($this->getName() == 'DIRECTORY_CATEGORIES' || $this->getName() == 'INFOTRADE_SECTORS'){
-			$resultvalues = $conn->fetchOne("SELECT c.id as lookuptypevalue FROM sector c WHERE c.status = 1 order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
-		}
-		if($this->getName() == 'PRIORITY_COMMODITIES'){
-			$resultvalues = $conn->fetchOne("SELECT c.id as lookuptypevalue FROM commodity c order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
+		if($this->getName() == 'BENEFIT_TYPES'){
+			$resultvalues = $conn->fetchOne("SELECT c.id as lookuptypevalue FROM benefittype c order by CAST(lookuptypevalue AS SIGNED) desc limit 1 ");
 		}
 		return intval($resultvalues)+1;
 	}

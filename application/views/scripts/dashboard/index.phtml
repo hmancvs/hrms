@@ -1,7 +1,12 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
-		
+	
+	$user = new UserAccount();	
 	$user->populate($userid);
+	$currentuserid = '';
+	if(isTimesheetEmployee()){
+		$currentuserid = $user->getID();
+	}
 	$role = getUserType($user->getType());
 	$title = $role." ".$this->translate("dashboard_pagetitle");
 	$description = 'Welcome to '.getAppName();
@@ -9,19 +14,142 @@
 	$this->headTitle($title.$browserappend);
 	
 ?>
+<link href='<?php echo $this->baseUrl('stylesheets/5.fullcalendar.css'); ?>' rel='stylesheet' type='text/css'>
 <script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/highcharts.js'); ?>"></script>
 <script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/exporting.js'); ?>"></script>
+<!--<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/moment.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar.min.js')); ?>"></script>-->
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/5.jquery.fullcalendar.min.js')); ?>"></script>
+
 <script>
 $(document).ready(function() {
 	$('.titlebreadcrumb').html('<?php echo 'System / '.$this->translate("dashboard_pagetitle"); ?>');
 	$('.titlelabel').html('<?php echo 'Dashboard'; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="glyphicon glyphicon-home"></span>');
-
+	
+	$('#calendar').fullCalendar({
+		header: {
+			left: 'prev,next today',
+			center: 'title',
+			right: 'month,basicWeek,basicDay'
+		},
+		defaultView: 'month',
+		eventLimit: true, // allow "more" link when too many events
+		events: "<?php echo $this->baseUrl('timeoff/events/id/'.$currentuserid); ?>"
+			/*[{
+				title: 'All Day Event',
+				start: '2015-02-01'
+			},
+			{
+				title: 'Conference',
+				start: '2015-02-11',
+				end: '2015-02-13'
+			},
+			{
+				title: 'Meeting',
+				start: '2015-02-12T10:30:00',
+				end: '2015-02-12T12:30:00'
+			},
+			{
+				title: 'Birthday Party',
+				start: '2015-02-13T07:00:00'
+			},
+			{
+				title: 'Click for Google',
+				url: 'http://google.com/',
+				start: '2015-02-28'
+			}]*/
+		
+	});
 });
 </script>
-
+<style>
+.fc-event-skin {
+    /*background-color: #92C4E6;
+    border-color: #63abdb;*/
+	background-color: #6A93AD;
+    border-color: #457899;
+}
+</style>
+<?php if ($sessionhaserror) { ?>
+    <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+<?php } ?>
+<?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+    <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+<?php } ?>
 <div class="row row-bg" style="margin-bottom:10px;">
+	<?php if(isTimesheetEmployee()){ ?>
+        <div class="col-sm-6 col-md-6">
+            <div class="widget box hidden-xs">
+                <div class="widget-header">
+                    <h4><i class="glyphicon glyphicon-align-justify"></i> Quick Action</h4>
+                    <div class="toolbar no-padding">
+                        <div class="btn-group">
+                            <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="widget-content no-padding whitebg" style="height:215px;">
+                    
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-6">
+            <div class="widget box makerelative">
+                <div class="widget-header">
+                    <h4><i class="glyphicon glyphicon-align-justify"></i> Statistics</h4>
+                </div>
+                 <table class="table table-striped margin0">
+                    <thead class="monitor">
+                        <tr>
+                            <th style="width:35px;" class="monitorhead"></th>
+                            <td style="width:180px;" class="variabletd"></td>
+                            <td></td>
+                        </tr>
+                    </thead>
+                    <tbody class="monitorbody">
+                        <tr>
+                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
+                            <td class="variabletd">Approved Hours this Week</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
+                            <td class="variabletd">Approved Hours Last Week</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
+                            <td class="variabletd">Approved Hours this Month</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
+                            <td class="variabletd">Approved Hours Last Month</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
+                            <td class="variabletd">Timeoff Accrued Todate</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
+                            <td class="variabletd">Timeoff Utilised Todate</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
+                            <td class="variabletd">Timeoff Available Todate</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php } ?>
+    <?php if(isAdmin()){ ?>
     <div class="col-sm-12 col-md-12">
         <div class="widget box makerelative">
             <div class="widget-header">
@@ -128,6 +256,7 @@ $(document).ready(function() {
             </div>
         </div>
     </div>
+    <?php }  ?>
 </div>
 <div class="row row-bg" style="margin-bottom:10px;">
     <div class="col-sm-12 col-md-12">
@@ -141,10 +270,7 @@ $(document).ready(function() {
                 </div>
             </div>
             <div class="widget-content no-padding whitebg minheight400">
-            	<div id="mapcanvas" class="maxwidth" style="height:1000px; xborder: 2px solid #878787; border-radius: 3px; margin:4px; width:99%;"></div>
-                <div class="row span12 margin0 padding0 clearfix">
-                    
-                </div>
+            	<div id='calendar' class="padding0 margin0 row clearfix" style="margin-top:10px; margin-bottom:10px; width:100%;"></div>
           	</div>
       	</div>
    	</div>

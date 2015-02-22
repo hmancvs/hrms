@@ -1,84 +1,106 @@
 <div class="row-fluid margin0">
-	<div class="makeabsolute" style="right:35px; top:-40px;">
+	<div class="makeabsolute" style="right:35px; top:11px; z-index:1000;">
 		<?php if($allowedit) { ?>
-            <a class="btn btn-primary btn-xs blockanchor xnoround" href="<?php echo $indexurl; ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+            <a class="btn btn-primary btn-xs blockanchor xnoround" href="<?php echo $indexurl; ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update Recurring Benefits</a>
         <?php } ?>
     </div>
-    <div class="col-md-12">
-        <fieldset class="fieldsetcontainer minheight200">
-            <legend>Basic Earnings</legend>
-            <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-10 paddingleft10">
-                        <div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_rate_label'); ?> (<?php echo $user->getCurrencyName(); ?>):</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static nullifempty view">
-									<?php echo '****'/*isEmptyString($user->getRate()) ? '' : $user->getRate().' / '.getDatavariables('EMPLOYEE_RATE_TYPES', $user->getRateType(), true)*/; ?></p>
-                            </div>
+    <div class="col-md-12" style="padding-left:5px;">
+    	<div class="divider5"></div>
+    	<div class="tabbable tabbable-custom tabbable-full-width">
+            <ul class="nav nav-tabs">
+                <li class="<?php echo $section == 'view' ? 'active gonowhere' : ''; ?>" ><a href="#view">Recurring Benefits</a></li>
+                <li class="<?php echo $section == 'list' ? 'active gonowhere' : 'blockanchor'; ?>"><a href="<?php echo $this->baseUrl('ledger/list/userid/'.$user->getID()); ?>">One Time Benefits</a></li>
+            </ul>
+            <div class="tab-content row-fluid margin0" style="padding-left:5px;padding-right:5px;">
+				<div class="tab-pane active" id="view">
+                    <fieldset class="fieldsetcontainer minheight200">
+                        <legend style="font-size:12px;">Recurring Monetary Benefits</legend>
+                        <div class="panel-body well-sm">
+                            <div class="divider10"></div>
+                            <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
+                                <thead class="paginationheader">
+                                    <th>Benefit Type</th>
+                                    <th style="width:30%;">Rate (<?php echo $config->country->currencycode; ?>) / Frequency</th>
+                                    <th style="width:45%;">Terms</th>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                        $ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
+                                        $benefits = getBenefits();
+                                        $timeoffs = getTimeoffTypes();
+                                        $usercashbenefits = getEmployeeBenefits($user->getID(), 1, " and benefitid <> 1 "); 
+                                        $usertimebenefits = getEmployeeBenefits($user->getID(), 2); 
+                                        $allterms = getAllBenefitTerms(); // debugMessage($allterms);
+                                        $hoursdaysoptions = getHoursDaysDropdown();
+                                        $yearmonthvalues = getYearMonthDropdown();
+                                    ?>
+                                    <tr style="font-size:12px;">
+                                        <td><?php echo $benefits[1]; ?></td>
+                                        <td>
+                                            <?php echo isTimesheetEmployee() ? '' : formatMoneyOnly($user->getRate()); ?> 
+                                            <?php echo isArrayKeyAnEmptyString($user->getRateType(), $ratetypes) ? '--' : $ratetypes[$user->getRateType()]; ?></td>
+                                        <td>--</td>
+                                    </tr>
+                                    <?php
+                                        foreach($usercashbenefits as $key => $abenefit){ 
+                                            // debugMessage($abenefit);
+                                            $id = $abenefit['benefitid'];
+                                            $amount = $abenefit['amount'];
+                                            $ratetype = $abenefit['benefitfrequency'];
+                                            $terms = $abenefit['benefitterms'];
+                                    ?>
+                                        <tr style="font-size:12px;">
+                                            <td><?php echo isArrayKeyAnEmptyString($id, $benefits) ? '--' : $benefits[$id]; ?></td>
+                                            <td>
+                                                <?php echo formatMoneyOnly($amount); ?> 
+                                                <?php echo isArrayKeyAnEmptyString($ratetype, $ratetypes) ? '--' : $ratetypes[$ratetype]; ?></td>
+                                            <td><?php echo isArrayKeyAnEmptyString($terms, $allterms) ? '--' : $allterms[$terms]; ?></td>
+                                        </tr>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </div>
+                    </fieldset>
+                    <fieldset class="fieldsetcontainer minheight200">
+            <legend style="font-size:12px;">Recurring Time off Benefits</legend>
+            <div class="panel-body well-sm">
+                <div class="divider10"></div>
+                <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
+                    <thead class="paginationheader">
+                        <th>Time off Type</th>
+                        <!--<th style="width:25%;">Accrue As</th>-->
+                        <th style="width:75%;">Duration Assigned</th>
+                    </thead>
+                    <tbody>
+                    	<?php if(count($usertimebenefits) == 0){ ?>
+                        	<tr>
+                            	<td colspan="2"><span class="pagedescription">None available</span></td>
+                            </tr>
+                        <?php } else { ?>
+							<?php
+                                foreach($usertimebenefits as $key => $abenefit){ 
+                                    // debugMessage($abenefit);
+                                    $id = $abenefit['timeofftypeid'];
+                                    $accrualtype = $abenefit['accrualtype'];
+                                    $accrualfrequency = $abenefit['accrualfrequency'];
+                                    $accrualvalue = formatNumber($abenefit['accrualvalue']);
+                            ?>
+                                <tr style="font-size:12px;">
+                                    <td><?php echo isArrayKeyAnEmptyString($id, $timeoffs) ? '--' : $timeoffs[$id]; ?></td>
+                                    <!--<td><?php //echo isArrayKeyAnEmptyString($accrualtype, $hoursdaysoptions) ? '--' : $hoursdaysoptions[$accrualtype]; ?></td>-->
+                                    <td><?php echo $accrualtype == '1' ? 'Total Hours divided by ' : ''; ?>
+                                        <?php echo $accrualvalue; ?>&nbsp;
+                                        <?php echo $accrualtype == '2' ? isArrayKeyAnEmptyString($accrualtype, $hoursdaysoptions) ? '' : $hoursdaysoptions[$accrualtype].'&nbsp;': ''; ?>
+                                        <?php echo isArrayKeyAnEmptyString($accrualfrequency, $yearmonthvalues) ? '' : $yearmonthvalues[$accrualfrequency]; ?></td>
+                                </tr>
+                            <?php } ?>
+						<?php } ?>                            
+                    </tbody>
+             	</table>
             </div>
         </fieldset>
-    </div>
-</div>
-<div class="row-fluid margin0">
-    <div class="col-md-12">
-        <fieldset class="fieldsetcontainer minheight200">
-            <legend>Holidays and Leave Benefits</legend>
-            <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-10 paddingleft10">
-                        <div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_leavetype_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getAccrualTypeText(); ?></p>
-                            </div>
-                        </div>
-                        <?php if($user->getaccrualtype() == '1'){ ?>
-                            <div class="form-group">
-                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleave_label'); ?>:</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static nullifempty view"><span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<span class="bolded" style="font-size:14px; color:#428bca;"><?php echo $user->getregularleavehrs(); ?></span></p>
-                                </div>
-                            </div>
-                       	<?php } ?>
-                        <?php if($user->getaccrualtype() == '2'){ ?>
-                        	<div class="form-group">
-                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static nullifempty view"><span><?php echo $user->getregularleavedays(); ?> </span> Days &nbsp;<span><?php echo $user->getRegularLeaveTypeText(); ?></span></p>
-                                </div>
-                            </div>
-                        <?php } ?>
-                        <?php if($user->getaccrualtype() == '1'){ ?>
-                            <div class="form-group">
-                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleave_label'); ?>:</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static nullifempty view"><span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<span class="bolded" style="font-size:14px; color:#428bca;"><?php echo $user->getsickleavehrs(); ?></span></p>
-                                </div>
-                            </div>
-                       	<?php } ?>
-                        <?php if($user->getaccrualtype() == '2'){ ?>
-                        	<div class="form-group">
-                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static nullifempty view"><span><?php echo $user->getsickleavedays(); ?> </span> Days &nbsp;<span><?php echo $user->getSickLeaveTypeText(); ?></span></p>
-                                </div>
-                            </div>
-                        <?php } ?>
-                        <?php if($user->getaccrualtype() == '1'){ ?>
-                            <div class="form-group ashours">
-                                <label class="col-md-4 control-label"><?php echo $this->translate('profile_accrualfrequency_label'); ?>:</label>
-                                <div class="col-md-8">
-                                    <p class="form-control-static nullifempty view"><?php echo $user->getAccrualFrequencyText(); ?></p>
-                                </div>
-                            </div>
-                        <?php } ?>
-                    </div>
-                </div>
-            </div>
-        </fieldset>
+              	</div>
+         	</div>
+      	</div>
     </div>
 </div>

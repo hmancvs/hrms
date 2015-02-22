@@ -1,5 +1,5 @@
 <?php
-class ConfigController extends IndexController   {
+class ConfigController extends SecureController   {
 
 	/**
 	 * @see SecureController::getResourceForACL()
@@ -9,7 +9,7 @@ class ConfigController extends IndexController   {
 	 * @return String
 	 */
 	function getResourceForACL() {
-		return "Application Settings"; 
+		return "System Variables"; 
 	}
 	/**
 	 * Get the name of the resource being accessed 
@@ -18,10 +18,10 @@ class ConfigController extends IndexController   {
 	 */
 	function getActionforACL() {
 		$action = strtolower($this->getRequest()->getActionName()); 
-		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add"){
+		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add" || $action = "timeoff" || $action = "timeoffcreate" || $action = "timeoffindex" || $action = "shifts" || $action = "shiftscreate" || $action = "shiftsindex"){
 			return ACTION_EDIT;
 		}
-		if($action == "variables" || $action == "globalconfig") {
+		if($action == "variables" || $action == "globalconfig" || $action = "timeofflistsearch") {
 			return ACTION_LIST; 
 			// return ACTION_VIEW;
 		}
@@ -34,6 +34,15 @@ class ConfigController extends IndexController   {
     
 	function variablesAction(){
     	// parent::listAction();
+		if($this->_getParam('type') == 10){
+			$this->_helper->redirector->gotoUrl($this->view->baseUrl('config/timeoff'));
+		}
+		if($this->_getParam('type') == 11){
+    		$this->_helper->redirector->gotoUrl($this->view->baseUrl('department/list'));
+    	}
+    	if($this->_getParam('type') == 12){
+    		$this->_helper->redirector->gotoUrl($this->view->baseUrl('config/shifts'));
+    	}
     }
     
 	function variablessearchAction(){
@@ -47,8 +56,7 @@ class ConfigController extends IndexController   {
      	$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		
-		$formvalues = $this->_getAllParams();
-		// debugMessage($formvalues); 
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
 		if(isArrayKeyAnEmptyString('noreload', $formvalues)){
 			$hasnoreload = false; 	
 		} else {
@@ -71,9 +79,81 @@ class ConfigController extends IndexController   {
 				$alias = '';
 			}
 		}
+		if($formvalues['lookupid'] == 7){
+			if(!isArrayKeyAnEmptyString('departmentid', $formvalues)){
+				$alias = $formvalues['departmentid'];
+			}
+		}
 		// exit;
 		// debugMessage()
 		switch ($formvalues['lookupid']){
+			case 9:
+				$formvalues['defaultamount'] = decode($formvalues['alias']);
+				$formvalues['amounttype'] = $formvalues['alias2'];
+				$formvalues['name'] = decode(trim($formvalues['value']));
+				
+				$benefittype = new BenefitType();
+				if(!isArrayKeyAnEmptyString('id', $formvalues)){
+					$benefittype->populate($formvalues['id']);
+					$formvalues['lastupdatedby'] = $session->getVar('userid');
+				} else {
+					$formvalues['createdby'] = $session->getVar('userid');
+				}
+				$benefittype->processPost($formvalues);
+				/* debugMessage($benefittype->toArray());
+				debugMessage('errors are '.$benefittype->getErrorStackAsString()); exit(); */
+				
+				$result = array('id'=>'', 'name'=>'', 'error'=>'');
+				if($benefittype->hasError()){
+					$session->setVar(ERROR_MESSAGE, $benefittype->getErrorStackAsString());
+					$session->setVar(FORM_VALUES, $formvalues);
+					$result['error'] = $benefittype->getErrorStackAsString();
+				} else {
+					try {
+						$benefittype->save(); // debugMessage($benefittype->toArray()); exit;
+						$result = array('id'=>$benefittype->getID(), 'name'=>$benefittype->getName(), 'alias'=>$benefittype->getdefaultamount(), 'alias2'=>$benefittype->getamounttype());
+						$session->setVar(SUCCESS_MESSAGE, "Successfully saved");
+						
+					} catch (Exception $e) {
+						$session->setVar(ERROR_MESSAGE, $e->getMessage()."<br />".$benefittype->getErrorStackAsString());
+						$session->setVar(FORM_VALUES, $formvalues);
+						$result['error'] = $benefittype->getErrorStackAsString();
+					}
+				}
+				break;
+				
+			case 11:
+				$formvalues['name'] = trim($formvalues['value']);
+				$department = new Department();
+				if(!isArrayKeyAnEmptyString('id', $formvalues)){
+					$department->populate($formvalues['id']);
+					$formvalues['lastupdatedby'] = $session->getVar('userid');
+				} else {
+					$formvalues['createdby'] = $session->getVar('userid');
+				}
+				$department->processPost($formvalues);
+				/* debugMessage($department->toArray());
+				debugMessage('errors are '.$department->getErrorStackAsString()); // exit(); */
+			
+				$result = array('id'=>'', 'name'=>'', 'error'=>'');
+				if($department->hasError()){
+					$session->setVar(ERROR_MESSAGE, $department->getErrorStackAsString());
+					$session->setVar(FORM_VALUES, $formvalues);
+					$result['error'] = $department->getErrorStackAsString();
+				} else {
+					try {
+						$department->save(); 
+						$result = array('id'=>$department->getID(), 'name'=>$department->getName(), 'error'=>'');
+						$session->setVar(SUCCESS_MESSAGE, "Successfully saved");
+			
+					} catch (Exception $e) {
+						$session->setVar(ERROR_MESSAGE, $e->getMessage()."<br />".$department->getErrorStackAsString());
+						$session->setVar(FORM_VALUES, $formvalues);
+						$result['error'] = $department->getErrorStackAsString();
+					}
+				}
+				break;
+					
 			default:
 				$lookupvalue = new LookupTypeValue();
 				$lookuptype = new LookupType();
@@ -99,7 +179,7 @@ class ConfigController extends IndexController   {
 									'alias' => $alias,
 									'createdby' => $session->getVar('userid')
 							);
-				
+				// debugMessage($dataarray);
 				if(!isArrayKeyAnEmptyString('id', $formvalues)){
 					$lookupvalue->populate($formvalues['id']);
 					$beforesave = $lookupvalue->toArray(); // debugMessage($beforesave);
@@ -107,13 +187,14 @@ class ConfigController extends IndexController   {
 				// unset($dataarray['id']);
 				$lookupvalue->processPost($dataarray);
 				/* debugMessage($lookupvalue->toArray());
-		    	debugMessage('errors are '.$lookupvalue->getErrorStackAsString()); // exit(); */
+		    	debugMessage('errors are '.$lookupvalue->getErrorStackAsString()); exit(); */
 				
-		    	$result = array('id'=>'', 'name'=>'');
+		    	$result = array('id'=>'', 'name'=>'', 'error' => '');
 				if($lookupvalue->hasError()){
 					$haserror = true;
 					$session->setVar(ERROR_MESSAGE, $lookupvalue->getErrorStackAsString());
 					$session->setVar(FORM_VALUES, $formvalues);
+					$result['error'] = $lookupvalue->getErrorStackAsString();
 				} else {
 					try {
 						$lookupvalue->save();
@@ -132,7 +213,7 @@ class ConfigController extends IndexController   {
 								$details = 'Variable - <b>'.$lookupvalue->getlookupvaluedescription().' </b>('.$lookupvalue->getLookupType()->getdisplayname().') updated';
 								$prejson = json_encode($beforesave);
 								$lookupvalue->clearRelated();
-								$after = $lookupvalue->toArray(); debugMessage($after);
+								$after = $lookupvalue->toArray(); // debugMessage($after);
 								$postjson = json_encode($after); // debugMessage($postjson);
 								$diff = array_diff($beforesave, $after);  // debugMessage($diff);
 								$jsondiff = json_encode($diff); // debugMessage($jsondiff);
@@ -156,7 +237,7 @@ class ConfigController extends IndexController   {
 							// debugMessage($audit_values);
 							$this->notify(new sfEvent($this, $type, $audit_values));
 						}
-						$result = array('id'=>$lookupvalue->getlookuptypevalue(), 'name'=>$lookupvalue->getlookupvaluedescription(), 'alias'=>$lookupvalue->getalias());
+						$result = array('id'=>$lookupvalue->getlookuptypevalue(), 'name'=>$lookupvalue->getlookupvaluedescription(), 'alias'=>$lookupvalue->getalias(), 'error'=>'');
 					} catch (Exception $e) {
 						$session->setVar(ERROR_MESSAGE, $e->getMessage()."<br />".$lookupvalue->getErrorStackAsString());
 						$session->setVar(FORM_VALUES, $formvalues);
@@ -235,191 +316,96 @@ class ConfigController extends IndexController   {
 		// exit();
 	}
 	
-	public function processpictureAction() {
-		// disable rendering of the view and layout so that we can just echo the AJAX output 
-	    $this->_helper->layout->disableLayout();
+	function timeoffAction(){
+		
+	}
+	function timeoffcreateAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
-		
-	    $session = SessionWrapper::getInstance(); 	
-	    $config = Zend_Registry::get("config");
-	    $this->_translate = Zend_Registry::get("translate"); 
-		
-	    $formvalues = $this->_getAllParams();
-	    $type = $formvalues['type'];
-	    
-		//debugMessage($this->_getAllParams()); // exit();
-		$appconfig = new AppConfig();
-		$appconfig->populate($this->_getParam('id'));
-		//debugMessage($appconfig->toArray());
-		
-		// only upload a file if the attachment field is specified		
-		$upload = new Zend_File_Transfer();
-		// set the file size in bytes
-		$upload->setOptions(array('useByteString' => false));
-		
-		// Limit the extensions to the specified file extensions
-		$upload->addValidator('Extension', false, $config->uploads->photoallowedformats);
-	 	$upload->addValidator('Size', false, $config->uploads->photomaximumfilesize);
-		
- 		$destination_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."logo";
- 		
-		// create archive folder for each user
-		$archivefolder = $destination_path.DIRECTORY_SEPARATOR."archive";
-		if(!is_dir($archivefolder)){
-			mkdir($archivefolder, 0755);
-		}
-		
-		$oldfilename = $appconfig->getLogo();
-		$upload->setDestination($destination_path);
-		
-		// the profile image info before upload
-		$file = $upload->getFileInfo('profileimage');
-		$uploadedext = findExtension($file['profileimage']['name']);
-		$currenttime = mktime();
-		$currenttime_file = $currenttime.'.'.$uploadedext;
-		// debugMessage($file);
-		
-		$thefilename = $destination_path.DIRECTORY_SEPARATOR.'base_'.$currenttime_file;
-		$thelargefilename = $destination_path.DIRECTORY_SEPARATOR.'large_'.$currenttime_file;
-		$updateablefile = $destination_path.DIRECTORY_SEPARATOR.'base_'.$currenttime;
-		$updateablelarge = $destination_path.DIRECTORY_SEPARATOR.'large_'.$currenttime;
-		
-		// rename the base image file 
-		$upload->addFilter('Rename',  array('target' => $thefilename, 'overwrite' => true));		
-		// exit();
-		// process the file upload
-		if($upload->receive()){
-			// debugMessage('Completed');
-			$file = $upload->getFileInfo('profileimage');
-			// debugMessage($file); exit();
+	
+		// parent::createAction();
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit();
+		$formvalues['id'] = $id = decode($formvalues['id']);
 			
-			$basefile = $thefilename;
-			// convert png to jpg
-			if(in_array(strtolower($uploadedext), array('png','PNG','gif','GIF'))){
-				ak_img_convert_to_jpg($thefilename, $updateablefile.'.jpg', $uploadedext);
-				unlink($thefilename);
-			}
-			$basefile = $updateablefile.'.jpg';
-			
-			// new profilenames
-			$newlargefilename = "large_".$currenttime_file;
-			// generate and save thumbnails for sizes 250, 125 and 50 pixels
-			resizeImage($basefile, $destination_path.DIRECTORY_SEPARATOR.'large_'.$currenttime.'.jpg', 400);
-			// unlink($thefilename);
-			unlink($destination_path.DIRECTORY_SEPARATOR.'base_'.$currenttime.'.jpg');
-			
-			// exit();
-			// update the useraccount with the new profile images
-			try {
-				$appconfig->setDescription($currenttime.'.jpg');
-				$appconfig->save();
-				
-				// check if user already has profile picture and archive it
-				$ftimestamp = current(explode('.', $appconfig->getLogo()));
-				
-				$allfiles = glob($destination_path.DIRECTORY_SEPARATOR.'*.*');
-				$currentfiles = glob($destination_path.DIRECTORY_SEPARATOR.'*'.$ftimestamp.'*.*');
-				// debugMessage($currentfiles);
-				$deletearray = array();
-				foreach ($allfiles as $value) {
-					if(!in_array($value, $currentfiles)){
-						$deletearray[] = $value;
-					}
-				}
-				// debugMessage($deletearray);
-				if(count($deletearray) > 0){
-					foreach ($deletearray as $afile){
-						$afile_filename = basename($afile);
-						rename($afile, $archivefolder.DIRECTORY_SEPARATOR.$afile_filename);
-					}
-				}
-				// debugMessage('uploaded');
-				$session->setVar(SUCCESS_MESSAGE, "Successfully uploaded image. Please crop image to resize.");
-				$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
-			} catch (Exception $e) {
-				$session->setVar(ERROR_MESSAGE, $e->getMessage());
-				$session->setVar(FORM_VALUES, $this->_getAllParams());
-				$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
-			}
+		$timeoff = new TimeoffType();
+		if(!isArrayKeyAnEmptyString('id', $formvalues)){
+			$timeoff->populate($id);
+			$formvalues['lastupdatedby'] = $session->getVar('userid');
 		} else {
-			// debugMessage($upload->getMessages()); exit();
-			$uploaderrors = $upload->getMessages();
-			$customerrors = array();
-			if(!isArrayKeyAnEmptyString('fileUploadErrorNoFile', $uploaderrors)){
-				$customerrors['fileUploadErrorNoFile'] = "Please browse for image on computer";
-			}
-			if(!isArrayKeyAnEmptyString('fileExtensionFalse', $uploaderrors)){
-				$custom_exterr = sprintf($this->_translate->translate('upload_invalid_ext_error'), $config->uploads->photoallowedformats);
-				$customerrors['fileExtensionFalse'] = $custom_exterr;
-			}
-			if(!isArrayKeyAnEmptyString('fileUploadErrorIniSize', $uploaderrors)){
-				$custom_exterr = sprintf($this->_translate->translate('upload_invalid_size_error'), formatBytes($config->uploads->photomaximumfilesize,0));
-				$customerrors['fileUploadErrorIniSize'] = $custom_exterr;
-			}
-			if(!isArrayKeyAnEmptyString('fileSizeTooBig', $uploaderrors)){
-				$custom_exterr = sprintf($this->_translate->translate('upload_invalid_size_error'), formatBytes($config->uploads->photomaximumfilesize,0));
-				$customerrors['fileSizeTooBig'] = $custom_exterr;
-			}
-			$session->setVar(ERROR_MESSAGE, 'The following errors occured <ul><li>'.implode('</li><li>', $customerrors).'</li></ul>');
-			$session->setVar(FORM_VALUES, $this->_getAllParams());
+			$formvalues['createdby'] = $session->getVar('userid');
+		}
 			
+		$timeoff->processPost($formvalues);
+		if($timeoff->hasError()){
+			/* debugMessage($timeoff->toArray());
+			 debugMessage('errors are '.$timeoff->getErrorStackAsString());
+			exit(); */
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
-		// exit();
+		
+		try {
+			$timeoff->save(); //debugMessage($timeoff->toArray());
+			$session->setVar(SUCCESS_MESSAGE, $this->_getParam('successmessage'));
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, $e->getMessage()); 
+			//debugMessage('save error '.$e->getMessage());
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
+		}
+	}
+	function timeoffindexAction(){
+		
+	}
+	function timeofflistsearchAction(){
+		$this->_helper->redirector->gotoSimple("timeoff", "config",
+				$this->getRequest()->getModuleName(),
+				array_remove_empty(array_merge_maintain_keys($this->_getAllParams(), $this->getRequest()->getQuery())));
 	}
 	
-	function croppictureAction(){
-    	$this->_helper->layout->disableLayout();
-		$this->_helper->viewRenderer->setNoRender(TRUE);
+	function shiftsAction(){
+	
+	}
+	function shiftscreateAction(){
 		$session = SessionWrapper::getInstance();
-		
-		$formvalues = $this->_getAllParams();
-		$type = $formvalues['type'];
-		
-		$appconfig = new AppConfig();
-		$appconfig->populate($formvalues['id']);
-		// debugMessage($formvalues);
-		//debugMessage($farmgroup->toArray());
-		
-		$oldfile = "large_".$appconfig->getLogo();
-		$base = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."logo".DIRECTORY_SEPARATOR;
-		
-		$src = $base.$oldfile;
-		// debugMessage($src); exit();
-		
-		$currenttime = mktime();
-		$currenttime_file = $currenttime.'.jpg';
-		$newlargefilename = $base.$currenttime_file;
-		
-		// exit();
-		$image = WideImage::load($src);
-		$cropped1 = $image->crop($formvalues['x1'], $formvalues['y1'], $formvalues['w'], $formvalues['h']);
-		$resized_1 = $cropped1->resize(260, 110, 'fill');
-		$resized_1->saveToFile($newlargefilename);
-		
-		$appconfig->setDescription($currenttime_file);
-		$appconfig->save();
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+	
+		// parent::createAction();
+		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit();
+		$formvalues['id'] = $id = decode($formvalues['id']);
 			
-		// check if user already has profile picture and archive it
-		$ftimestamp = current(explode('.', $appconfig->getLogo()));
-		$allfiles = glob($base.DIRECTORY_SEPARATOR.'*.*');
-		$currentfiles = glob($base.DIRECTORY_SEPARATOR.'*'.$ftimestamp.'*.*');
-		// debugMessage($currentfiles);
-		$deletearray = array();
-		foreach ($allfiles as $value) {
-			if(!in_array($value, $currentfiles)){
-				$deletearray[] = $value;
-			}
+		$shift = new Shift();
+		if(!isArrayKeyAnEmptyString('id', $formvalues)){
+			$shift->populate($id);
+			$formvalues['lastupdatedby'] = $session->getVar('userid');
+		} else {
+			$formvalues['createdby'] = $session->getVar('userid');
 		}
-		// debugMessage($deletearray);
-		if(count($deletearray) > 0){
-			foreach ($deletearray as $afile){
-				$afile_filename = basename($afile);
-				rename($afile, $base.DIRECTORY_SEPARATOR.'archive'.DIRECTORY_SEPARATOR.$afile_filename);
-			}
+			
+		$shift->processPost($formvalues); debugMessage($shift->toArray());
+		if($shift->hasError()){
+			// debugMessage('errors are '.$shift->getErrorStackAsString()); exit();
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
-		$session->setVar(SUCCESS_MESSAGE, "Successfully updated image. Proceed to save changes.");
-		$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
-    }
+		// exit;
+		try {
+			$shift->save(); //debugMessage($timeoff->toArray());
+			$session->setVar(SUCCESS_MESSAGE, $this->_getParam('successmessage'));
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, $e->getMessage());
+			//debugMessage('save error '.$e->getMessage());
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
+		}
+	}
+	function shiftsindexAction(){
+	
+	}
+	function shiftslistsearchAction(){
+		$this->_helper->redirector->gotoSimple("shifts", "config",
+				$this->getRequest()->getModuleName(),
+				array_remove_empty(array_merge_maintain_keys($this->_getAllParams(), $this->getRequest()->getQuery())));
+	}
 }
 

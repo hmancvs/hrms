@@ -1,0 +1,201 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$type = trim($request->type); 
+	$ischeckin = true; $ischeckout = false; $isedit= false;
+	if(isEmptyString($type)){
+		$type = 1;
+	}
+	if($type == 2){
+		$ischeckin = false; $ischeckout = true;
+	}
+	if($type == 3){
+		$isedit = true; $ischeckin = false; $ischeckout = false; 
+	}
+	
+	$timesheet = new Timesheet();
+	if(isEmptyString($request->id)){
+		if(!isEmptyString($request->userid)){
+			// determine the current time minutes to be shown rounded to the last 5min
+			$current = date('i');
+			$mod = $current % 5;
+			if($mod != 0){
+				$minutes = $current - $mod;
+			} else {
+				$minutes = $current;
+			}
+			// add trailing zero to the minutes
+			$minutes  = sprintf("%02d", $minutes);	
+	
+			$timesheet->setUserID(decode($request->userid));
+			$timesheet->setDateIn(date('Y-m-d'));
+			$timesheet->setTimeIn(date('h').':'.$minutes.' '.date('A'));
+			$successmessage = "Check-In Successfull";
+		}
+	} else { 
+		$timesheet->populate(decode($request->id)); 
+		
+		$current = date('i');
+		$mod = $current % 5;
+		if($mod != 0){
+			$minutes = $current - $mod;
+		} else {
+			$minutes = $current;
+		}
+		// add trailing zero to the minutes
+		$minutes  = sprintf("%02d", $minutes);
+		
+		if($ischeckout){
+			$timesheet->setDateOut(date('Y-m-d'));
+			$timesheet->setTimeOut(date('h').':'.$minutes.' '.date('A'));
+		}
+		$successmessage = "Check-Out Successfull";
+		if($isedit){
+			$successmessage = "Updated Successfully";
+			if(!isEmptyString($timesheet->getdatein()) && isEmptyString($timesheet->getdateout()) && (strtotime(date('Y-m-d')) > strtotime($timesheet->getdatein()))) {
+				$timesheet->setStatus('5');
+				$timesheet->setDateOut('');
+				$timesheet->setTimeOut('');
+				$minutes = '';
+			}
+		}
+	}
+	// debugMessage($timesheet->toArray());
+?>
+<?php require APPLICATION_PATH."/views/scripts/index/pgcjs.phtml"; ?>
+<script>
+	$(document).ready(function() {		
+		
+		$("#indexform").validate({		
+			// define the validation rules one field at a time
+			rules: {
+				datein: {
+					required: true
+				},
+				timein: {
+					required: true
+				},
+				status: "required"
+			}, 
+			// the messages for each of the fields being validated
+			messages: {				
+				datein: {
+					required: "<?php echo $this->translate("timesheets_datein_error"); ?>"
+				},
+				timein: {
+					required: "<?php echo $this->translate("timesheets_timein_error"); ?>"
+				},
+				status: "Please select current Status"
+			},
+			// custom error positions
+			errorPlacement: function(error, element) {
+				switch(element.attr("name")){					
+					default:
+						error.appendTo("#"+element.attr("name")+"_error")
+						break;
+				}			
+			}
+		});
+		
+		$('.timepicker').pickatime({
+		   interval: 5
+		});	
+	});
+</script>
+<style>
+.modal-body {
+	padding-top: 10px;
+}
+</style>
+<div class="popupdiv">
+    <form id="indexform" class="form-horizontal profile" role="form" method="post">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+        	<input type="hidden" name="userid" id="userid" value="<?php echo $timesheet->getUserID(); ?>" />
+            <input type="hidden" name="status" id="status" value="<?php echo $timesheet->getStatus(); ?>" />
+            <input name="entityname" id="entityname" type="hidden" value="Attendance" />
+            <input type="hidden" id="id" name="id" value="<?php echo encode($timesheet->getID()); ?>" />
+            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+            <?php if($ischeckin || $ischeckout){ ?>
+            	<input type="hidden" name="datein" id="datein" value="<?php echo $timesheet->getDateIn(); ?>" />
+                <input type="hidden" name="timein" id="timein" value="<?php echo $timesheet->getTimeIn(); ?>" />
+                <input type="hidden" name="dateout" id="dateout" value="<?php echo $timesheet->getDateOut(); ?>" />
+                <input type="hidden" name="timeout" id="timeout" value="<?php echo $timesheet->getTimeOut(); ?>" />
+            <?php } ?>
+            <div class="panel-body well-sm" style="min-height:150px;">
+                <div class="row-fluid marginleft5">
+                    <div class="col-md-12 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-md-3 control-label">Time In<?php // echo $this->translate('timesheet_checkin_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-md-8">
+                            	<?php if($ischeckin || $ischeckout){ ?>
+                            		<span><?php echo changeMySQLDateToPageFormat($timesheet->getDateIn()). ' '.formatTimeCustom($timesheet->getTimeIn()); ?></span>
+                                <?php } ?>
+                                <?php if($isedit){ ?>
+                                	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="datein" id="datein" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateIn()); ?>" />
+                                	<input type="text" name="timein" id="timein" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($timesheet->getTimeIn())); ?>" />
+                                <?php } ?>
+                                <div class="divider10"></div>
+                                <label class="radio radio-inline bolded" style="padding-left:0; margin-left:0; font-size:10px;"><input type="checkbox" name="hasremarksin" id="hasremarksin" class="<?php echo !isEmptyString($timesheet->getInRemarks()) ? 1 : 0; ?>" value="1" /> Remarks</label>
+                                <div class="divider5"></div>
+                                <div class="col-md-12 padding0 margin0">
+                                    <textarea name="inremarks" id="inremarks" class="form-control input-sm expanding"><?php echo $timesheet->getInRemarks(); ?></textarea>
+                                    <div id="inremarks_error"></div><div id="datein_error"></div><div id="timein_error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php if($ischeckout || $isedit){ ?>
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">Time Out<?php // echo $this->translate('timesheet_checkin_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-md-8">
+                                    <?php if($ischeckin || $ischeckout){ ?>
+                                        <span><?php echo changeMySQLDateToPageFormat($timesheet->getDateOut()). ' '.formatTimeCustom($timesheet->getTimeOut()); ?></span>
+                                    <?php } ?>
+                                    <?php if($isedit){ ?>
+                                        <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="dateout" id="dateout" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateOut()); ?>" />
+                                        <input type="text" name="timeout" id="timeout" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($timesheet->getTimeOut())); ?>" />
+                                    <?php } ?>    
+                                    <div class="divider10"></div>
+                                    <label class="radio radio-inline bolded" style="padding-left:0; margin-left:0; font-size:10px;"><input type="checkbox" name="hasremarksout" id="hasremarksout" class="<?php echo !isEmptyString($timesheet->getOutRemarks()) ? 1 : 0; ?>" value="1" /> Remarks</label>
+                                    <div class="divider5"></div>
+                                    <div class="col-md-12 padding0 margin0">
+                                        <textarea name="outremarks" id="outremarks" class="form-control input-sm expanding"><?php echo $timesheet->getOutRemarks(); ?></textarea>
+                                        <div id="outremarks_error"></div><div id="dateout_error"></div><div id="timeout_error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php } ?>
+                        <?php if($isedit){ ?>
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-md-8">
+                                	<?php
+										$allstatuses = getTimesheetStatuses();
+										$dropdown = new Zend_Form_Element_Select('status',
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','width200')
+															)
+										);  
+										$dropdown->setValue($timesheet->getStatus()); 
+										echo $dropdown->render();
+									?><div id="status_error"></div>
+                                </div>
+                          	</div>
+                            <div class="form-group">
+                                <label class="col-md-3 control-label">Hours:</label>
+                                <div class="col-md-8">
+                                	<input type="text" name="hours" id="hours" class="form-control input-sm  isdecimal width100" value="<?php echo $timesheet->getHours(); ?>" />
+                                </div>
+                            </div>
+                        <?php } ?>
+                    </div>
+               	</div>
+            </div>
+      	</fieldset>
+    </form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

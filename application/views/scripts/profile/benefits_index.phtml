@@ -1,42 +1,180 @@
 <div class="row-fluid margin0">
     <div class="col-md-12">
         <fieldset class="fieldsetcontainer minheight200" style="margin-bottom:0;">
-            <legend>Benefit Information</legend>
+            <legend>Recurring Monetary Benefits</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-10 paddingleft10">
-                        <div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_rate_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <label class="control-label">Currency:</label>
-                                    <input type="text" name="ratecurrency" id="ratecurrency" class="form-control input-sm width75 readonly" value="<?php echo $user->getCurrencyName(); ?>" />
-                                </div>
-                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <label class="control-label">Amount:</label>
-                                    <input type="text" name="rate" id="rate" class="form-control input-sm isnumber width75" value="<?php echo $user->getRate(); ?>" />
-                                </div>
-                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <label class="control-label">Frequency:</label>
-                                    <?php
-                                        $allvalues = getDatavariables('EMPLOYEE_RATE_TYPES');
-                                        $dropdown = new Zend_Form_Element_Select('ratetype',
+            	<div class="divider10"></div>
+                <input type="hidden" name="hasbenefits" id="hasbenefits" value="1" />
+               	<table class="table list table-bordered table-striped data-table" style="width:98%; margin-left:15px;">
+                    <thead class="paginationheader">
+                        <th style="width:25%;">Benefit Type</th>
+                        <th style="width:15%;">Rate</th>
+                        <th style="width:20%;">Frequency</th>
+                        <th>Terms</th>
+                        <th style="width:40px;"></th>
+                    </thead>
+                    <tbody>
+                    	<?php 
+							$ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
+							$benefits = getBenefits();
+							$timeoffs = getTimeoffTypes();
+							$otherbenefits = getAllBenefitsDetails(" and id <> 1 ");
+							$timeoffoptions = getAllTimeoffDetails();
+							$usercashbenefits = getEmployeeBenefits($user->getID(), 1); $cashbenefits_data = array();
+							$usertimebenefits = getEmployeeBenefits($user->getID(), 2); $timeoffbenefits_data = array();
+							$allterms = getAllBenefitTerms();
+							$yearmonthvalues = getYearMonthDropdown();
+							foreach($usercashbenefits as $key => $value){ 
+								$cashbenefits_data[$value['benefitid']] = $value;
+							}
+							foreach($usertimebenefits as $key => $value){ 
+								$timeoffbenefits_data[$value['timeofftypeid']] = $value;
+							} 
+						?>
+                        
+                        <tr style="font-weight:bold;">
+                            <td>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('_benefitid_1',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $benefits),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','disabledfield'),
+															'style' => 'border:1px solid #000;'
+                                                        )
+                                    );  
+                                    $dropdown->setValue(1); 
+                                    echo $dropdown->render();
+                                ?>
+                                <input type="hidden" id="benefitid_1" name="benefitid_1" value="1" />
+                                <input type="hidden" id="id_1" name="id_1" value="<?php echo isArrayKeyAnEmptyString(1, $cashbenefits_data) ? '' : $cashbenefits_data[1]['id']; ?>" />
+                            </td>
+                            <td><input type="text" id="rate" name="rate" class="form-control input-sm centeralign" style="border:1px solid #000;" value="<?php echo $user->getRate(); ?>" /></td>
+                            <td>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('ratetype',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $ratetypes),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm'),
+															'style' => 'border:1px solid #000;'
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getRateType()); 
+                                    echo $dropdown->render();
+                                ?>
+                            </td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    	<?php
+							// debugMessage($cashbenefits_data);
+							$i = 2;
+							foreach($otherbenefits as $key => $abenefit){ 
+								// debugMessage($abenefit);
+								$id = $abenefit['id'];
+								$amount = '';
+								$ratetype = '';
+								$terms = '';
+								$editid = '';
+								if(!isEmptyString($abenefit['defaultamount'])){
+									// $amount = $abenefit['defaultamount'];
+								}
+								if(!isEmptyString($abenefit['amounttype'])){
+									$ratetype = $abenefit['amounttype'];
+								}
+								if(!isArrayKeyAnEmptyString($id, $cashbenefits_data)){
+									$amount = $cashbenefits_data[$id]['amount'];
+									$ratetype = $cashbenefits_data[$id]['benefitfrequency'];
+									$terms = isArrayKeyAnEmptyString($cashbenefits_data[$id]['benefitterms'], $allterms) ? '' : $cashbenefits_data[$id]['benefitterms'];
+									$editid = $cashbenefits_data[$id]['id'];
+								}
+						?>
+                        	<script>
+								$(document).ready(function(){
+									// Add validation rules for maximum characters for content
+									$.validator.addClassRules("frequency_required_<?php echo $i; ?>", {
+										frequency_notempty_<?php echo $i; ?>: true				
+									});
+									
+									$.validator.addMethod("frequency_notempty_<?php echo $i; ?>", function(value, element) {
+										var amount = $("#amount_<?php echo $i; ?>").val();		
+										if(!isEmptyString(amount) && isEmptyString(value)){
+											return false;
+										}
+										return true;
+									}, "Select Frequency");
+									
+									$.validator.addClassRules("terms_required_<?php echo $i; ?>", {
+										terms_notempty_<?php echo $i; ?>: true				
+									});
+									
+									$.validator.addMethod("terms_notempty_<?php echo $i; ?>", function(value, element) {
+										var amount = $("#amount_<?php echo $i; ?>").val();		
+										if(!isEmptyString(amount) && isEmptyString(value)){
+											return false;
+										}
+										return true;
+									}, "Select Terms");
+								});
+							</script>
+                        	<tr>
+                            	<td>
+                                	<?php
+										$dropdown = new Zend_Form_Element_Select('_benefitid_'.$i,
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $benefits),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','readonlyfield','disabledfield')
+															)
+										);  
+										$dropdown->setValue($id); 
+										echo $dropdown->render();
+									?>
+                                    <input type="hidden" id="benefitid_<?php echo $i; ?>" name="benefitid_<?php echo $i; ?>" value="<?php echo $id; ?>" />
+                                    <input type="hidden" id="id_<?php echo $i; ?>" name="id_<?php echo $i; ?>" value="<?php echo $editid; ?>" />
+                                </td>
+                                <td><input type="text" id="amount_<?php echo $i; ?>" name="amount_<?php echo $i; ?>" class="form-control input-sm centeralign" value="<?php echo $amount; ?>" />
+                                	<div id="amount_<?php echo $i; ?>_error"></div>
+                                </td>
+                                <td>
+                                	<?php
+                                        $dropdown = new Zend_Form_Element_Select('benefitfrequency_'.$i,
                                                             array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $ratetypes),
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
-                                                                'class' => array('form-control','input-sm','width100')
+                                                                'class' => array('form-control','input-sm', 'frequency_required_'.$i)
                                                             )
                                         );  
-                                        $dropdown->setValue($user->getRateType()); 
+                                        $dropdown->setValue($ratetype); 
                                         echo $dropdown->render();
                                     ?>
-                                </div>
-                            </div>
-                            <div id="ratetype_error"></div><div id="rate_error"></div>
-                        </div>
-                    </div>
-                </div>
+                                    <div id="benefitfrequency_<?php echo $i; ?>_error"></div>
+                                </td>
+                                <td>
+                                	<?php
+                                        $dropdown = new Zend_Form_Element_Select('benefitterms_'.$i,
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allterms),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm', 'terms_required_'.$i)
+                                                            )
+                                        );  
+                                        $dropdown->setValue($terms); 
+                                        echo $dropdown->render();
+                                    ?>
+                                    <div id="benefitterms_<?php echo $i; ?>_error"></div>
+                                </td>
+                                <td></td>
+                            </tr>
+                        <?php $i++; } ?>
+                    </tbody>
+             	</table>
             </div>
         </fieldset>
     </div>
@@ -44,100 +182,103 @@
 <div class="row-fluid margin0">
     <div class="col-md-12">
         <fieldset class="fieldsetcontainer minheight200" style="margin-bottom:0;">
-            <legend>Holidays and Leave Benefits</legend>
+            <legend>Recurring Time off Benefits</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-10 paddingleft10">
-                    	<div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_leavetype_label'); ?>:</label>
-                            <div class="col-md-8">
-                            	<label class="radio radio-inline"><input type="radio" name="accrualtype" id="accrualtype_1" class="<?php echo $user->getaccrualtype() == '1' ? 1 : 0; ?>" value="1" <?php echo $user->getaccrualtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
-                                <label class="radio radio-inline"><input type="radio" name="accrualtype" id="accrualtype_2" class="<?php echo $user->getaccrualtype() == '2' ? 1 : 0; ?>" value="2" <?php echo $user->getaccrualtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+            	<div class="divider10"></div>
+                <table class="table list table-bordered table-striped data-table" style="width:98%; margin-left:15px;">
+                    <thead class="paginationheader">
+                        <th>Time off Type</th>
+                        <th style="width:20%;">Accrue As</th>
+                        <th style="width:45%;">Hours / Days Assigned</th>
+                        <th style="width:30px;"></th>
+                    </thead>
+                    <tbody>
+                        <?php
+							$x = $i;
+							foreach($timeoffoptions as $key => $abenefit){ 
+								// debugMessage($abenefit);
+								$editid = '';
+								$id = $abenefit['id'];
+								$accrualtype = '1';
+								$accrualfrequency = $abenefit['quantitytype'];
+								$accrualvalue = '';
+								
+								if(!isArrayKeyAnEmptyString($id, $timeoffbenefits_data)){
+									$editid = $timeoffbenefits_data[$id]['id'];
+									$id = $timeoffbenefits_data[$id]['timeofftypeid'];
+									$accrualtype = $timeoffbenefits_data[$id]['accrualtype'];
+									$accrualfrequency = $timeoffbenefits_data[$id]['accrualfrequency'];
+									$accrualvalue = $timeoffbenefits_data[$id]['accrualvalue'];
+								}
+						?>
+                        	<script>
+								$(document).ready(function() {
+									$("#accrualtype_1_<?php echo $x; ?>").click(function(){
+										enableContainerByID('ashours_<?php echo $x; ?>');
+										disableContainerByID('asdays_<?php echo $x; ?>');
+									});
+									$("#accrualtype_2_<?php echo $x; ?>").click(function(){
+										enableContainerByID('asdays_<?php echo $x; ?>');
+										disableContainerByID('ashours_<?php echo $x; ?>');
+									});
+									<?php if($accrualtype == '1'){ ?>
+										enableContainerByID('ashours_<?php echo $x; ?>');
+										disableContainerByID('asdays_<?php echo $x; ?>');
+									<?php } ?>
+									<?php if($accrualtype == '2'){ ?>
+										enableContainerByID('asdays_<?php echo $x; ?>');
+										disableContainerByID('ashours_<?php echo $x; ?>');
+									<?php } ?>
+								});
+                            </script>
+                        	<tr>
+                            	<td>
+                                	<?php
+										$dropdown = new Zend_Form_Element_Select('_timeofftypeid_'.$x,
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffs),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','readonlyfield','disabledfield')
+															)
+										);  
+										$dropdown->setValue($id); 
+										echo $dropdown->render();
+									?>
+                                    <input type="hidden" id="timeofftypeid_<?php echo $x; ?>" name="timeofftypeid_<?php echo $x; ?>" value="<?php echo $id; ?>" />
+                                    <input type="hidden" id="id_<?php echo $x; ?>" name="id_<?php echo $x; ?>" value="<?php echo $editid; ?>" />
+                                </td>
+                                <td style="font-size:12px;">
+                                	<label class="radio radio-inline"><input type="radio" name="accrualtype_<?php echo $x; ?>" id="accrualtype_1_<?php echo $x; ?>" class="<?php echo $accrualtype == '1' ? 1 : 0; ?>" value="1" <?php echo $accrualtype == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                	<label class="radio radio-inline"><input type="radio" name="accrualtype_<?php echo $x; ?>" id="accrualtype_2_<?php echo $x; ?>" class="<?php echo $accrualtype == '2' ? 1 : 0; ?>" value="2" <?php echo $accrualtype == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
                                 <div id="leavetype_error"></div>
-                            </div>
-                        </div>
-                        <div class="form-group ashours">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleave_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<input type="text" name="regularleavehrs" id="regularleavehrs" class="form-control width100 isnumber centeralign" value="<?php echo $user->getregularleavehrs(); ?>" style="display:inline;" />
-                                <div id="regularleavehrs_error"></div>
-                            </div>
-                        </div>
-                        <div class="form-group asdays">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_regularleavedays_label'); ?>:</label>
-                            <div class="col-md-8">
-                            	<div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <input type="text" name="regularleavedays" id="regularleavedays" class="form-control width100 isnumber centeralign" value="<?php echo $user->getregularleavedays(); ?>" style="display:inline;" />
-                                </div>
-                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <?php
-                                        $allvalues = array('1'=>'Per Year', '2'=>'Per Month');
-                                        $dropdown = new Zend_Form_Element_Select('regularleavetype',
-                                                            array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
-                                                                'view' => new Zend_View(),
-                                                                'decorators' => array('ViewHelper'),
-                                                                'class' => array('form-control','input-sm','width100')
-                                                            )
-                                        );  
-                                        $dropdown->setValue($user->getregularleavetype()); 
-                                        echo $dropdown->render();
-                                    ?>
-                                </div>
-                                <div id="regularleavetype_error"></div>
-                            </div>
-                        </div>
-                        <div class="form-group ashours">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleave_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <span class="notbolded" style="font-size:14px; color:#428bca;">Total Number of Hours divided by / </span> &nbsp;<input type="text" name="sickleavehrs" id="sickleavehrs" class="form-control width100 isnumber centeralign" value="<?php echo $user->getsickleavehrs(); ?>" style="display:inline;" />
-                                <div id="sickleavehrs_error"></div>
-                            </div>
-                        </div>
-                        <div class="form-group asdays">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_sickleavedays_label'); ?>:</label>
-                            <div class="col-md-8">
-                            	<div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <input type="text" name="sickleavedays" id="sickleavedays" class="form-control width100 isnumber centeralign" value="<?php echo $user->getsickleavedays(); ?>" style="display:inline;" />
-                                </div>
-                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                    <?php
-                                        $allvalues = array('1'=>'Per Year', '2'=>'Per Month');
-                                        $dropdown = new Zend_Form_Element_Select('sickleavetype',
-                                                            array(
-                                                                'multiOptions' => $allvalues,
-                                                                'view' => new Zend_View(),
-                                                                'decorators' => array('ViewHelper'),
-                                                                'class' => array('form-control','input-sm','width100')
-                                                            )
-                                        );  
-                                        $dropdown->setValue($user->getsickleavetype()); 
-                                        echo $dropdown->render();
-                                    ?>
-                                </div>
-                                <div id="sickleavetype_error"></div>
-                            </div>
-                        </div>
-                        <div class="form-group ashours">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_accrualfrequency_label'); ?>:</label>
-                            <div class="col-md-8">
-                                <?php
-									$allvalues = array('1'=>'End of Day', '2'=>'End of Week', '3'=>'End of Month','4'=>'Timesheet Approval');
-									$dropdown = new Zend_Form_Element_Select('accrualfrequency',
-														array(
-															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
-															'view' => new Zend_View(),
-															'decorators' => array('ViewHelper'),
-															'class' => array('form-control','input-sm','width200')
-														)
-									);  
-									$dropdown->setValue($user->getaccrualfrequency()); 
-									echo $dropdown->render();
-								?>
-                            </div>
-                        </div>
-                    </div>
-               	</div>
+                                </td>
+                                <td>
+                                	<div class="form-group ashours" id="ashours_<?php echo $x; ?>" style="margin:0; padding:0;">
+                                		<span class="notbolded" style="font-size:12px;">Total Hours divided by / </span> &nbsp;<input type="text" name="accrualvalue_<?php echo $x; ?>" id="accrualvalue_<?php echo $x; ?>" class="form-control width80 isdecimal centeralign input-sm" value="<?php echo $accrualvalue; ?>" style="display:inline;" />
+                                    </div>
+                                    <div class="form-group asdays" id="asdays_<?php echo $x; ?>"  style="margin:0; padding:0;">
+                                    	<input type="text" name="accrualvalue_<?php echo $x; ?>" id="accrualvalue_<?php echo $x; ?>" class="form-control width80 input-sm isnumber centeralign" value="<?php echo $accrualvalue; ?>" style="display:inline;" />
+                                        <?php
+											$dropdown = new Zend_Form_Element_Select('accrualfrequency_'.$x,
+																array(
+																	'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $yearmonthvalues),
+																	'view' => new Zend_View(),
+																	'decorators' => array('ViewHelper'),
+																	'class' => array('form-control','input-sm','width100','inline')
+																)
+											);  
+											$dropdown->setValue($accrualfrequency); 
+											echo $dropdown->render();
+										?>
+                                    </div>
+                                    <div id="accrualvalue_<?php echo $x; ?>_error"></div>
+                                </td>
+                                <td></td>
+                            </tr>
+                        <?php $x++; } ?>
+                   	</tbody>
+              	</table>
           	</div>
      	</fieldset>
   	</div>

@@ -1,0 +1,39 @@
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery-ui-1.11.1.min.js')); ?>"></script>
+
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.date.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.time.js')); ?>"></script>
+<link href='<?php echo $this->baseUrl('stylesheets/pickadate.css'); ?>' rel='stylesheet' type='text/css'>
+
+<script type="text/javascript">
+	var datepickerOpts = {
+		showOn: 'both', 
+		buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
+		buttonImageOnly: true,
+		changeMonth: true,
+		changeYear: true,
+		minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
+		maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
+		dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
+		hideIfNoPrevNext: true,
+		showButtonPanel: true, 
+		currentText: 'Now'		
+	}; 	
+
+$(document).ready(function() {	
+	
+	$(".readonly").each(function(){
+		$(this).attr('readonly','readonly');
+	});
+	$(".disabledfield").each(function(){
+		$(this).attr('readonly', true).attr('disabled', true);
+	});
+	
+	var dateofbirthOpts = datepickerOpts;
+	var yearback = '<?php echo intval(date('Y'))-1995; ?>';
+	dateofbirthOpts.yearRange = "-"+yearback+":+3"; 
+	dateofbirthOpts.minDate = "-"+yearback+"Y";
+	datepickerOpts.maxDate = new Date("Dec 31, "+<?php echo intval(date('Y'))+3; ?>);
+	$(".ordinary").datepicker(dateofbirthOpts);
+});	
+</script>	

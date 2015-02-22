@@ -133,6 +133,14 @@
                                 <p class="form-control-static nullifempty view"><?php echo $user->getMaxHoursPerWeek(); ?></p>
                             </div>
                         </div>
+                        <?php if(!$isme){ ?>
+                        	<div class="form-group">
+                                <label class="col-md-4 control-label">Attendance Configuration:</label>
+                                <div class="col-md-8">
+                                    <?php echo $user->getistimesheetuser() == 1 ? 'Employee Must Check In/Out and Submit Timesheets' : 'Employee does NOT Check In/Out or Submit Timesheets'; ?>
+                                </div>
+                            </div>
+                        <?php } ?>
                     </div>
                 </div>
             </div>

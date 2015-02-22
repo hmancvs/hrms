@@ -18,12 +18,15 @@
 	$formid = 'viewform';
 	$formmethod = 'get';
 	
-	$tab = $request->tab;
+	$tab = trim($request->tab); $section = trim($request->section);
 	if(isEmptyString($tab)){
 		$tab = 'overview';
 		if($request->detect == '1'){
 			$posturl = $this->baseUrl($controller."/processgps");
 		}
+	}
+	if(isEmptyString($section)){
+		$section = 'view';
 	}
 	
 	$resourcename = 'User Account';
@@ -222,12 +225,6 @@ $(document).ready(function() {
                                                                         <label class="col-md-4 control-label"><?php echo $this->translate('profile_nationality_label'); ?>:</label>
                                                                         <div class="col-md-8">
                                                                             <p class="form-control-static nullifempty view"><?php echo $user->getCountryName(); ?></p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="form-group">
-                                                                        <label class="col-md-4 control-label"><?php echo $this->translate('profile_ethnicity_label'); ?>:</label>
-                                                                        <div class="col-md-8">
-                                                                            <p class="form-control-static nullifempty view"><?php echo $user->getEthnicity(); ?></p>
                                                                         </div>
                                                                     </div>
                                                                     <div class="form-group">

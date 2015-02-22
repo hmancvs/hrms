@@ -1,0 +1,189 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	# Page title
+	$title = "Work Shifts";
+	
+	$style = '2';
+	if(!isEmptyString($request->style)){
+		$style = $request->style;
+		$session->setVar('style', $request->style);
+	}
+	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
+		$style = $session->getVar('style');
+	}
+	
+	# Create an instance of the class to handle the pagination
+	$paginate = new Pagination();	
+	$paginate->setView($this);
+	# set the search columns to be used on this list
+	$paginate->setSearchColumns(array("s.name"));
+	$paginate->setDefaultSortBy("s.name");	
+	$paginate->setItemCountPerPage("10");
+	
+	# define the letter to be clicked to ease navigation 
+	$where_query = " WHERE s.id <> '' ";
+	$allowclear = false;
+	
+	if(!isEmptyString($request->searchterm)){
+		$allowclear = true;
+	}
+	
+	$paginate->processPost($request->getParams());
+	$all_results_query = "select s.id as id, s.name, s.starttime, s.endtime, s.overduestarttime, s.breakhours, s.hours from shift s WHERE s.name <> '' ".$paginate->getSearchAndFilterSQL()." GROUP BY s.id ".$paginate->getSortSQL();
+	
+	# debugMessage($all_results_query);
+	$paginate->setItemCountFromSQLQuery($all_results_query);
+	
+	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+	//echo $current_results_query;
+	$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+	$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+	
+	$conn = Doctrine_Manager::connection(); 
+	$result = $conn->fetchAll($current_results_query);
+	$has_no_data = (count($result) == 0) ? true : false; 
+	
+	$listurl = $this->baseUrl('config/shifts');
+	$addurl = $this->baseUrl('config/shiftsindex');
+	$moduleitem = "Work Shift";
+	$resource = "System Config"; // $resource = "Department";
+	$icon = "glyphicon glyphicon-cog";
+	
+	$description = '';
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+	$(document).ready(function() {
+		$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+		$('.titlelabel').html('<?php echo $title; ?>');
+		$('.desclabel').html('<?php echo $description; ?>');
+		$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+		
+	});
+</script>
+<style>
+.peoplelist .peoplewrapper {
+	height:150px;
+}
+</style>
+<div class="row margin0">
+    <div class="col-md-12 padding0">
+    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("config/shiftslistsearch"); ?>" method="get" id="listform">
+		<?php if ($sessionhaserror) { ?>
+            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
+        <?php } ?>
+        <div class="row-fluid clearfix">
+        	<div class="col-md-9 paddingleft0">
+            	<ul class="listfilter" style="margin-bottom:0;">
+					<?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                        <li style="margin:0;"><a class="btn btn-primary btn-sm blockanchor" href="<?php echo $this->baseUrl('config/shiftsindex'); ?>"  title="Add Shift"><i class="glyphicon glyphicon-plus"></i> New <?php echo $moduleitem; ?></a>
+                        </li>
+                    <?php } ?>
+                </ul>
+            </div>
+            <div class="col-md-3 padding0">
+            	
+            </div>
+        </div>
+        <div class="divider5"></div>
+        <div class="row-fluid margin0 clearfix" style="background-color:#fff; border-bottom: 1px solid #ddd; padding-top:4px;">
+        	<div class="col-md-4"></div>
+            <div class="col-md-4"></div>
+            <div class="col-md-4 padding0">
+            	<div class="stylewidget" style="position:relative; text-align:right; top:0; float:right;">
+                    <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 1 ? 'active' : ''; ?>" id="style1" rel='1'><i class="glyphicon glyphicon-th-large"></i> Grid</a>
+                    <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 2 ? 'active' : ''; ?>" id="style2" rel='2'><i class="glyphicon glyphicon-list-alt"></i> Table</a>
+                </div>
+            </div>
+        </div>
+        <div class="divider2"></div>
+		<?php if ($has_no_data) { ?>
+            <div class="divider30"></div>
+            <div style="clear:both;" class="alert alert-warning margin5"><?php echo $this->translate("global_list_noentries"); ?></div>
+        <?php } else { ?>
+        	<div class="row-fluid peoplelist clearfix makerelative whitebg" style="margin-bottom: 10px;">
+                <?php if($style == 1){ ?>
+                	<?php
+						foreach($result as $line){
+                            $indexurl = $this->baseUrl('config/shiftsindex/id/'.encode($line['id']));
+					?>
+						<div class="col-xs-12 col-sm-6 xpaddingleft0">
+							<div class="peoplewrapper makerelative">
+                            	<div class="btn-group gridactions">
+                                    <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
+                                    <ul class="dropdown-menu" role="menu" style="left:-102px;">
+                                        <?php if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                            <li><a class="addpopup inline" href="<?php echo $this->baseUrl('config/shiftsindex/id/'.encode($line['id'])); ?>"  title="Update"><i class="glyphicon glyphicon-pencil"></i> Update</a></li>
+                                        <?php } ?>
+                                        <?php if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                            <li><a class="deleteline gonowhere inline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/Shift/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon  glyphicon-trash"></i> Delete</a></li>
+                                        <?php } ?>
+                                    </ul>
+                                </div>
+								<div class="peopleinfo" style="margin-left:0;">
+									<h4><?php echo $line['name']; ?></h4>
+									<div class="col-md-12 padding0">
+                                        <div class="divider5"></div>
+                                        
+									</div>
+								</div>
+							</div>
+						</div>
+					<?php } ?>
+                <?php } ?>
+				<?php if($style == 2){ ?>
+                	<table class="table list table-bordered table-striped data-table" id="datatable">
+						<thead class="paginationheader">
+                            <th style="vertical-align:top;">Name</th>
+                            <th style="width:15%;vertical-align:top;">Start Time</th>
+                            <th style="width:15%;vertical-align:top;">End Time</th>
+                            <th style="width:15%;vertical-align:top;">Overdue Time</th>
+                            <th style="width:15%;vertical-align:top;">Break Duration <br/>(Hrs)</th>
+                            <th style="width:15%;vertical-align:top;">Actual Duration <br/>(Hrs)</th>
+                            <th style="width:8%;vertical-align:top;"></th>
+                        </thead>
+                        <tbody>
+							<?php
+                                foreach($result as $line){
+                            		$indexurl = $this->baseUrl('config/shiftsindex/id/'.encode($line['id']));
+                            ?>
+                                <tr>
+                                    <td class="nullifempty"><?php echo $line['name']; ?></td>
+                                    <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['starttime']); ?></td>
+                                    <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['endtime']); ?></td>
+                                    <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['overduestarttime']); ?></td>
+                                    <td class="nullifempty centeralign"><?php echo formatNumber($line['breakhours']); ?></td>
+                                    <td class="nullifempty centeralign"><?php echo formatNumber($line['hours']); ?></td>
+                                    <td>
+                                        <?php if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                            <a class="inline blockanchor" href="<?php echo $indexurl; ?>"  title="Update"><i class="glyphicon glyphicon-pencil"></i></a> &nbsp;
+                                        <?php } ?>
+                                        <?php if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                            <a class="deleteline gonowhere inline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/Shift/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon  glyphicon-trash"></i></a>
+                                        <?php } ?>
+                                    </td>
+                                </tr>
+                            <?php } ?>
+                        </tbody>
+                 	</table>
+                <?php } ?>        
+            </div>
+            <div class="row-fluid">
+                <div class="table-footer">
+                	<div class="col-md-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                    <div class="col-md-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                    <div class="col-md-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                </div>
+            </div>
+            <div class="divider10"></div>
+        <?php } ?>
+	</form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>
+
