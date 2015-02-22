@@ -648,7 +648,7 @@ ul, ol {
 span.edit, .buttons {
 	display:none;
 }
-.table tbody tr.editable:hover td .buttons {
+.table tbody tr.editable:hover .buttons {
 	display:block;
 }
 .modal-body {
@@ -981,6 +981,9 @@ li.display_box.selected {
 	min-height: 800px;
 	height:auto;
 }
+.listform .wrapper2 {
+	min-height:0;
+}
 .div1 {
 	width:3200px; 
 	height: 20px; 
@@ -1272,4 +1275,22 @@ ul.successmsg li {
 }
 .modal {
 	top:60px;
+}
+span.statuslabel {
+	padding:5px 10px;
+}
+.pager {
+	text-align:center;
+}
+.evo-colorind, .evo-colorind-ie, .evo-colorind-ff {
+	height:24px;
+	width:24px;
+	margin-right: -15px;
+    margin-top: -27px;
+}
+thead.paginationheader th {
+	font-size:12px;
+}
+.headerbox ul.listfilter li {
+	padding-right:5px;
 }

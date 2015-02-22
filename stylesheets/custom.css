@@ -359,7 +359,7 @@ label.error {
 
 .noimglink, .noimgbutton {
 	display:inline-block; 
-	padding:6px 10px;
+	padding:6px 10px 7px 10px;
 }
 .noimgbuttonsmall {
 	display:inline-block; 
