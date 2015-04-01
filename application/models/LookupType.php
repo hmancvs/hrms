@@ -101,8 +101,9 @@ class LookupType extends BaseEntity  {
 	# return all the variable data 
 	function getAllDataValues($type = '') {
 		$conn = Doctrine_Manager::connection();
+		$company_query = "";
 		$companyid = getCompanyID();
-		if($this->getID() == 7){
+		if(in_array($this->getID(), array(7))){
 			if($companyid == DEFAULT_COMPANYID){
 				$company_query = " AND (companyid = '".$companyid."' OR companyid is null) ";
 			} else {
@@ -111,7 +112,7 @@ class LookupType extends BaseEntity  {
 		}
 		$query = "SELECT * FROM lookuptypevalue WHERE lookuptypeid = '".$this->getID()."' ".$company_query." order by lookupvaluedescription asc ";
 		$resultvalues = $conn->fetchAll($query);
-		if($this->getName() == 'BENEFIT_TYPES'){
+		if(in_array($this->getID(), array(9))){
 			if($companyid == DEFAULT_COMPANYID){
 				$company_query = " AND (c.companyid = '".$companyid."' OR c.companyid is null) ";
 			} else {

@@ -1,0 +1,100 @@
+<div class="row makerelative">
+    <div class="col-sm-12 paddingleft0">
+    	<div class="makeabsolute" style="right:25px; top:25px; z-index:1000;">
+			<?php if($allowedit) { ?>
+                <a class="btn btn-primary btn-xs blockanchor" style="z-index:1000;" href="<?php echo $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/account'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+            <?php } ?>
+        </div>
+        <fieldset class="fieldsetcontainer">
+            <legend>Benefits Prefferances</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Setup:</label>
+                            <div class="col-sm-7"><p class="form-control-static nullifempty view"><?php echo $company->getpaysnssf() == 1 ? 'Company remits NSSF for some/all employees' : 'No NSSF remittances apply'; ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Employee <br />Default Percentage Contribution:</label>
+                            <div class="col-sm-7"><p class="form-control-static nullifempty view"><?php echo $company->getnssfemployeerate(); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Employer <br />Default Percentage Contribution:</label>
+                            <div class="col-sm-7"><p class="form-control-static nullifempty view"><?php echo $company->getnssfcompanyrate(); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">PAYE Setup:</label>
+                            <div class="col-sm-7"><p class="form-control-static nullifempty view"><?php echo $company->getpayspaye() == 1 ? 'Company remits PAYE for some/all employees' : 'No PAYE remittances apply'; ?></p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>Attendance Configuration</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-sm-12 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_workingdays_label'); ?>:</label>
+                            <div class="col-sm-12">
+                                <p class="form-control-static nullifempty view"><?php echo $company->getAttendanceDaysOfWeek(); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-sm-4 control-label">Default Work Opening Time:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo formatTimeCustom($company->getopeninghour()); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Default Work Closing Time:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo formatTimeCustom($company->getclosinghour()); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Lunch Break Duration:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getlunchduration(); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getMaxHoursPerDay(); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getMaxHoursPerWeek(); ?></p></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Allowed Check-In/Check-Out <br />IP Addresses / Subnets:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getipsubnets(); ?></p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>General Settings</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Current Accounting Period <br/>Start Date:</label>
+                            <div class="col-sm-8"><?php echo  isEmptyString($company->getyearstart()) ? '' : date('m/d/Y', strtotime($company->getyearstart())); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Current Accounting Period <br/>End Date:</label>
+                            <div class="col-sm-8"><?php echo  isEmptyString($company->getyearend()) ? '' : date('m/d/Y', strtotime($company->getyearend())); ?></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>

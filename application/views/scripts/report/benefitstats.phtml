@@ -50,7 +50,7 @@
 	}
 	$approvedbenefits_query = "SELECT 
 	u.id as id,
-	IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name,
+	IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name,
 	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->today_iso."') AND b.status = 1, b.amount, 0)) as today, 
 	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->yestday_iso."') AND b.status = 1, b.amount, 0)) as yesterday, 
 	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND b.status = 1, b.amount, 0)) as thisweek, 
@@ -97,7 +97,7 @@
 		$group_query = " GROUP BY u.id, YEAR(b.trxndate) ";
 	}
 	
-	$trends_query = "SELECT u.id as id, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, b.trxndate, DAY(b.trxndate) as theday, MONTH(b.trxndate) as themonth, YEAR(b.trxndate) as theyear, YEARWEEK(b.trxndate, 3) as theyearweek, WEEK(b.trxndate,3) as theweek, SUM(b.amount) as amount FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id) ".$where_query." ".$group_query." order by b.trxndate asc, name asc ";
+	$trends_query = "SELECT u.id as id, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, b.trxndate, DAY(b.trxndate) as theday, MONTH(b.trxndate) as themonth, YEAR(b.trxndate) as theyear, YEARWEEK(b.trxndate, 3) as theyearweek, WEEK(b.trxndate,3) as theweek, SUM(b.amount) as amount FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id) ".$where_query." ".$group_query." order by b.trxndate asc, name asc ";
 	// debugMessage($trends_query);
 	$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
 	

@@ -194,7 +194,7 @@ class IndexController extends Zend_Controller_Action  {
     		$session->setVar(FORM_VALUES, $this->_getAllParams());
     		$session->setVar(ERROR_MESSAGE, $e->getMessage()); 
     		$this->_logger->err("Saving Error ".$e->getMessage());
-    		// debugMessage($e->getMessage()); exit();
+    		debugMessage($e->getMessage()); exit();
     		
     		// return to the create page
     		if (isEmptyString($this->_getParam(URL_FAILURE))) {

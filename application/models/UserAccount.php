@@ -83,7 +83,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('accno', 'string', 255);
 		$this->hasColumn('swiftcode', 'string', 255);
 		$this->hasColumn('branchname', 'string', 255);
-		$this->hasColumn('istimesheetuser', 'integer', null, array('default' => 1));
+		$this->hasColumn('istimesheetuser', 'integer', null, array('default' => 0));
 		$this->hasColumn('payrolltype', 'integer', null, array('default' => 4));
 		$this->hasColumn('employmentstatus', 'string', 15, array('default' => 1));
 		
@@ -1317,7 +1317,11 @@ class UserAccount extends BaseEntity {
 	 * @return String The full name of the user
 	 */
 	function getName() {
-		return !isEmptyString($this->getDisplayName()) ? $this->getDisplayName() : $this->getFirstName()." ".$this->getLastName()." ".$this->getOtherName();
+		// return !isEmptyString($this->getDisplayName()) ? $this->getDisplayName() : $this->getFirstName()." ".$this->getLastName()." ".$this->getOtherName();
+		return $this->getFirstName()." ".$this->getLastName()." ".$this->getOtherName();
+	}
+	function getDisplayName(){
+		return $this->getName();
 	}
 	# function to determine the user's profile path
 	function getProfilePath() {

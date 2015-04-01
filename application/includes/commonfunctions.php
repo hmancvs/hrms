@@ -67,11 +67,15 @@ define('DEFAULT_SICK_LEAVE_HRS', 320);
 define('DEFAULT_REGULAR_LEAVE_DAYS', 21);
 define('DEFAULT_SICK_LEAVE_DAYS', 4);
 define('HOURS_IN_DAY', 8);
-define('DEFAULT_COMPANYID', 8);
+define('HOURS_IN_WEEK', 40);
+define('DEFAULT_COMPANYID', 1);
 define('PAYEID', 2);
 define('NSSFID', 3);
 define('ADVANCE', 5);
 define('TPID', 16);
+define('DEFAULT_NSSF_EMP', 5);
+define('DEFAULT_NSSF_COM', 10);
+define('DEFAULT_LUNCH_DURATION', 1);
 
 function getAppName(){
 	$config = Zend_Registry::get("config"); 
@@ -880,7 +884,7 @@ function isCompanyAdmin() {
 # determine if loggedin user is data clerk
 function isTimesheetEmployee() {
 	$session = SessionWrapper::getInstance(); 
-	return $session->getVar('type') == 2 || $session->getVar('istimesheetuser') == 1 || $session->getVar('istimesheetuser') == 2 ? true : false;
+	return $session->getVar('type') == 2 && !isCompanyAdmin() ? true : false;
 }
 function getCompanyID() {
 	$session = SessionWrapper::getInstance(); 

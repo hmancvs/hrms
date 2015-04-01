@@ -107,8 +107,8 @@
 	$paginate->processPost($request->getParams());
 	$all_results_query = "
 		select t.id, t.userid, t.companyid, 
-		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `User`,
-		IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby,
+		IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as `User`,
+		IF(isnull(mc.othername), concat(mc.firstname,' ',mc.lastname), concat(mc.firstname,' ',mc.lastname,' ',mc.othername)) as addedby,
 		IF(p.displayname <> '', p.displayname, concat(p.firstname, ' ', p.lastname, ' ', p.othername)) as approver,
 		t.startdate, t.enddate, t.starttime, t.endtime, t.returndate, t.returntime, t.createdby AS createdby, t.datecreated AS datecreated, t.dateapproved,
 		t.typeid, t.`status`, t.duration, t.durationtype, t.remarks, t.reason

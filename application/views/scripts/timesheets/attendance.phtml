@@ -49,7 +49,7 @@
 	}
 	
 	// check if user is a time based user or is not among approvers
-	if($istimesheetuser || !$acl->checkPermission("Timesheets", ACTION_APPROVE)){
+	if(!isAdmin() && !isCompanyAdmin()){
 		$where_query .= " AND t.`userid` = '".$loggedinuser->getID()."' ";
 	}
 	
@@ -90,7 +90,7 @@
 	// f.orgname as fundername, concat(t.firstname,' ',t.lastname) as supervisorname
 	$paginate->processPost($request->getParams());
 	$all_results_query = "SELECT 
-	t.id as aid, t.userid, t.timesheetdate, t.payrollid, t.isrequest, t.datein, t.timein, t.dateout, t.timeout, t.inremarks, t.outremarks, t.comments, t.payrollid, t.notes, t.hours, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `Name`, t.status
+	t.id as aid, t.userid, t.timesheetdate, t.payrollid, t.isrequest, t.datein, t.timein, t.dateout, t.timeout, t.inremarks, t.outremarks, t.comments, t.payrollid, t.notes, t.hours, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as `Name`, t.status
 	FROM timesheet t
 	inner join useraccount u on t.userid = u.id 
 	 ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$order_query;

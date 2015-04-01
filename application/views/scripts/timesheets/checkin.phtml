@@ -28,6 +28,9 @@
 			$minutes  = sprintf("%02d", $minutes);	
 	
 			$timesheet->setUserID(decode($request->userid));
+			if(isAdmin() || isCompanyAdmin()){
+				$timesheet->setUserID('');
+			}
 			$timesheet->setDateIn(date('Y-m-d'));
 			$timesheet->setTimeIn(date('h').':'.$minutes.' '.date('A'));
 			$successmessage = "Check-In Successfull";
@@ -133,7 +136,7 @@
                             <label class="col-sm-3 control-label">Date / Time In: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
                             	<?php if ($acl->checkPermission("Attendance", ACTION_APPROVE)) { ?> 
-                                    <input type="text" class="form-control input-sm datefield readonly width100 ordinary inline" name="datein" id="datein" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateIn()); ?>" /> &nbsp;
+                                    <input type="text" class="form-control input-sm datefield xreadonly width100 ordinary inline" name="datein" id="datein" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateIn()); ?>" /> &nbsp;
                                     <div class="input-append bootstrap-timepicker inline">
                                      	<input type="text" name="timein" id="timein" class="form-control input-sm timepicker xreadonly width100 inline" value="<?php echo date("h:i A", strtotime($timesheet->getTimeIn())); ?>" /><span class="add-on btn"><i class="glyphicon-clock"></i></span>	
                                 	</div>	
@@ -157,7 +160,7 @@
                                 <label class="col-sm-3 control-label">Date / Time Out: <?php echo $this->translate("global_required_field_marker"); ?></label>
                                 <div class="col-sm-8">
                                     <?php if ($acl->checkPermission("Attendance", ACTION_APPROVE)) { ?>
-                                    	<input type="text" class="form-control input-sm datefield readonly width100 ordinary inline" name="dateout" id="dateout" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateOut()); ?>" /> &nbsp;
+                                    	<input type="text" class="form-control input-sm datefield xreadonly width100 ordinary inline" name="dateout" id="dateout" value="<?php echo changeMySQLDateToPageFormat($timesheet->getDateOut()); ?>" /> &nbsp;
                                         <div class="input-append bootstrap-timepicker inline">
                                      		<input type="text" name="timeout" id="timeout" class="form-control input-sm timepicker xreadonly width100 inline" value="<?php echo date("h:i A", strtotime($timesheet->getTimeOut())); ?>" /><span class="add-on btn"><i class="glyphicon-clock"></i></span>	
                                 		</div>	

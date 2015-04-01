@@ -87,7 +87,7 @@ class Department extends BaseEntity  {
 		if(isEmptyString($name)){
 			$name = $this->getName();
 		}
-		$query = "SELECT id FROM department WHERE name = '".$name."' AND name <> '' ".$id_check;
+		$query = "SELECT id FROM department WHERE name = '".$name."' AND companyid = '".$this->getCompanyID()."' AND name <> '' ".$id_check;
 		// debugMessage($query);
 		$result = $conn->fetchOne($query);
 		// debugMessage($result);

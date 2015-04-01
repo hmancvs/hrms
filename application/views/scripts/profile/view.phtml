@@ -1,9 +1,6 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$loggedinuser = new UserAccount();
-	$loggedinuser->populate($userid); 
-	
 	$user = new UserAccount();
 	$theid = is_numeric($request->id) ? $request->id : decode($request->id);
     $user->populate($theid);
@@ -92,6 +89,7 @@
             <div class="box-title hideonprint">
                 <h3><i class="fa fa-user"></i> <?php echo $pagetitle; ?></h3>
                 <div class="actions">
+                	<!--<a class="btn" data-toggle="modal" href="#dialog2" action=""><i class="fa fa-plus-circle"></i>Add Task</a>-->
                     <?php if($allowedit) { ?>
                         <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a>
                     <?php } ?>

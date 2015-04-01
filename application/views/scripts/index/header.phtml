@@ -86,7 +86,7 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                 <li class="<?php echo $controller == 'timesheets' ? 'active' : ''; ?>">
                     <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Timesheets</span><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <?php if ($acl->checkPermission('Attendance', ACTION_CREATE)) { ?>
+                        <?php if ($acl->checkPermission('Attendance', ACTION_CREATE) || isADmin() || isCompanyAdmin()) { ?>
 							<li><a class="<?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right">Check In</a>
 							</li>
 						<?php } ?>
@@ -125,18 +125,18 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                 <li class="<?php echo $controller == 'ledger' ? 'active' : ''; ?>">
                     <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Benefits</span><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        <?php if($istimesheetuser) { ?>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request">Request Benefit</a></li>
+                        <?php if ($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>"><?php echo $istimesheetuser ? 'Benefits History' : 'Manage Benefits'; ?></a></li>
                         <?php } ?>
-                        <?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
+						<?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
                             <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Benefit</a></li>
                             <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Deduction</a></li>
                         <?php } ?>
+                        <?php if($istimesheetuser && !isCompanyAdmin()) { ?>
+                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request">Request Benefit</a></li>
+                        <?php } ?>
                         <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
                              <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
-                        <?php } ?>
-                        <?php if ($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>"><?php echo $istimesheetuser ? 'Benefits History' : 'Manage Benefits'; ?></a></li>
                         <?php } ?>
                         <li class='dropdown-submenu'>
                             <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Reports</a>
@@ -275,31 +275,39 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                    	</ul>
               	</li>
             <?php } ?>
-            <?php if($acl->checkPermission('System Variables', ACTION_LIST) && !$istimesheetuser) { ?>
+            <?php if(isAdmin() || isCompanyAdmin()) { ?>
                 <li class="<?php echo in_array($controller, array('config','role','department')) ? 'active' : ''; ?>">
                     <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Administration</span><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('department/list'); ?>">Departments</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/7'); ?>">Job Positions</a></li>
-                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/6'); ?>">Contract Statuses</a></li>
+                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/6'); ?>">Contract Types</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/shifts'); ?>">Work Shifts</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/9'); ?>">Benefits Categories</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/timeoff'); ?>">Timeoff Categories</a></li>
+                        <?php if(isAdmin()) { ?>
                         <li class='dropdown-submenu'>
                             <a href="#" data-toggle="dropdown" class='dropdown-toggle'>More Categories</a>
                             <ul class="dropdown-menu">
                             	<li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/3'); ?>">Marital Status Values</a></li>
                                 <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/5'); ?>">Next of Kin Values</a></li>
                                 <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/2'); ?>">Salutation Values</a></li>
+                                <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/2'); ?>">Industry Categories</a></li>
                             </ul>
                        	</li>
+                        <?php } ?>
                         <?php if ($acl->checkPermission('User Account', ACTION_LIST)) { ?>
                         	<li><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>">System Users</a></li>
                         <?php } ?>
                         <?php if ($acl->checkPermission('Role', ACTION_LIST) && isAdmin()) { ?>
                             <li><a class="blockanchor" href="<?php echo $this->baseUrl('role/list'); ?>">User Roles</a></li>
                         <?php } ?>
-                        <li><a href="<?php echo $this->baseUrl('config/globalconfig/section/system/noleft/1'); ?>">Company Settings</a></li>
+                        <?php if ($acl->checkPermission('Company', ACTION_VIEW)) { ?>
+                        	<li><a href="<?php echo $this->baseUrl('company/view/id/'.encode($companyid).'/tab/account'); ?>">Company Settings</a></li>
+                        <?php } ?>
+                        <?php if ($acl->checkPermission('Company', ACTION_LIST) && isAdmin()) { ?>
+                        	<li><a href="<?php echo $this->baseUrl('company/list'); ?>">Manage Companies</a></li>
+                        <?php } ?>
                         <?php if(isAdmin()) { ?>
                             <li class='dropdown-submenu'>
                                 <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Global System Settings</a>
@@ -426,7 +434,7 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
             <?php if(isLoggedIn()){ ?>
             <div class="dropdown">
                 <a href="" class='dropdown-toggle' data-toggle="dropdown">
-                	<span class="hidden-xs"><?php echo $loggedinuser->getName(); ?></span>
+                	<span class="hidden-xs"><?php //echo $loggedinuser->getName(); ?>Account</span>
                     <img class="hidden-xs" style="width:27px; height:27px;" src="<?php echo $loggedinuser->getMediumPicturePath(); ?>">
                     <button class="btn visible-xs"><i class="fa fa-user"></i></button>
                 </a>

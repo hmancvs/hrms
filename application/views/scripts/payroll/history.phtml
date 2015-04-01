@@ -23,7 +23,7 @@
 	}
 	
 	$paginate->processPost($request->getParams());
-	$all_results_query = "select p.id as id, p.type, p.createdby, p.payrolldate, p.startdate, p.enddate, p.middate, p.status, count(d.id) as employeecount, SUM(IF(d.isignored = 0, d.netearning, 0)) as netearning, u.displayname as addedby
+	$all_results_query = "select p.id as id, p.type, p.createdby, p.payrolldate, p.startdate, p.enddate, p.middate, p.status, count(d.id) as employeecount, SUM(IF(d.isignored = 0, d.netearning, 0)) as netearning, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as addedby
 	from payroll p 
 	left join payrolldetail d on d.payrollid = p.id 
 	inner join useraccount u on p.createdby = u.id

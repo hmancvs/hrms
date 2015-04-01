@@ -1,0 +1,175 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$company = new Company();
+	$theid = is_numeric($request->id) ? $request->id : decode($request->id);
+    $company->populate($theid);
+	$id = $company->getID();
+	
+	$posturl = '';
+	$formid = 'viewform';
+	$formmethod = 'get';
+	
+	$tab = trim($request->tab); $section = trim($request->section);
+	if(isEmptyString($tab)){
+		$tab = 'overview';
+	}
+	if(isEmptyString($section)){
+		$section = 'view';
+	}
+	
+	$resourcename = 'Company';
+	$entityname = "Company";
+	$listitems = "Companies";
+	$listurl = $this->baseUrl('company/list');
+	$viewurl = $viewbase = $this->baseUrl('company/view/id/'.encode($company->getID()));
+	$indexurl = $this->baseUrl('company/index/id/'.encode($company->getID()));
+	$title = "Companies";
+	$pagetitle = $company->getName();
+	$description = 'Profile Details';	
+	$icon = 'glyphicon glyphicon-list';
+	$isme = true;
+	if($company->getID() != $companyid){
+		$isme = false;
+		$description = 'My Company Profile';	
+	}
+	
+	if($tab == 'account'){
+		$indexurl = $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/account');
+	}
+	
+	$allowedit = false;
+	if($acl->checkPermission($resourcename, ACTION_EDIT)){
+		$allowedit = true;
+	}
+	
+	$pageid = "company_view";
+	$this->headTitle($title.$browserappend);
+?>
+<?php if(!isEmptyString($request->pgc)){ ?>
+	<?php require APPLICATION_PATH."/views/scripts/index/pgc_top.phtml"; ?>
+<?php } ?>
+<?php if(isEmptyString($request->pgc)){ ?>
+	<script>
+    $(document).ready(function() {
+        $('.titlebreadcrumb').html('<?php echo $homedir.$listitems.' / '.$company->getName(); ?>');
+        $('.titlelabel').html('<?php echo $title; ?>');
+        $('.desclabel').html('<?php echo $description; ?>');
+        $('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+    });
+    </script>
+<?php } ?>
+<style>
+
+</style>    
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+    <form id="<?php echo $formid; ?>" class="form-horizontal" method="<?php echo $formmethod; ?>" action="<?php echo $posturl; ?>">
+    	<div class="box box-bordered box-color">
+            <div class="box-title hideonprint">
+                <h3><i class="fa fa-user"></i> <?php echo $pagetitle; ?></h3>
+                <div class="actions">
+                    <?php if($allowedit) { ?>
+                        <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i> Update</a>
+                    <?php } ?>
+                    
+                    <?php if ($acl->checkPermission($resourcename, ACTION_LIST)) { ?>
+                        <a class="btn btn-primary" href="<?php echo $listurl; ?>" title="List <?php echo $listitems; ?>" rel="tooltip"><i class="fa fa-arrow-right"></i></a>
+                    <?php } ?>
+                </div>
+            </div>
+            <div class="box-content nopadding clearfix" style="min-height:500px; height:auto;">
+                <div class="tabs-container col-sm-3 col-xs-12 padding0  hideonprint">
+                    <ul class="tabs tabs-inline tabs-left">
+                        <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>Profile</a></li>
+                        <li class="<?php echo $tab == 'account' ? 'active' : ''; ?>"><a data-toggle="tab" href="#account"><i class="fa fa-cog"></i>Account</a></li>
+                    </ul>
+                </div>
+                <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0">
+                    <div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
+                        <div class="row">
+                            <div class="col-sm-12 paddingleft0">
+                                <fieldset class="fieldsetcontainer">
+                                    <legend>About</legend>
+                                    <div class="panel-body well-sm">
+                                        <div class="row-fluid">
+                                            <div class="col-sm-11">
+                                                <div class="form-group">
+                                                    <label class="col-sm-3 control-label">Company <?php echo $this->translate('global_name_label'); ?>:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getName(); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-3 control-label">Slogan / Tagline:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getSlogan(); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-3 control-label">Industry Category:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo getDatavariables('INDUSTRY_CATEGORIES', $company->getindustrycode()); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-3 control-label">Business Description:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getDescription(); ?></p></div>
+                                                </div>
+                                            </div>                                         
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12 paddingleft0">
+                                <fieldset class="fieldsetcontainer">
+                                    <legend>Contact Information</legend>
+                                    <div class="panel-body well-sm">
+                                        <div class="row-fluid">
+                                            <div class="col-sm-8">
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label">Contact Person:</label>
+                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($company->getDefaultUserID())); ?>"><?php echo $company->getContactPerson(); ?></a></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label">Contact Email:</label>
+                                                    <div class="col-sm-8">
+                                                    	<p class="form-control-static nullifempty view"><?php echo $company->getEmail(); ?></p>
+                                                        <?php if(!isEmptyString($company->getEmail()) && !isEmptyString($company->getDefaultUserID()) && $company->getDefaultUser()->isUserInActive()){ ?>
+                                                            <a class="btn btn-primary btn-sm confirm-dialog" message="Resend activation instructions to User's Email?" action="<?php echo $this->baseUrl('profile/inviteuser/id/'.$company->getDefaultUserID().'/successurl/'.encode($this->viewurl)); ?>">&nbsp; Resend Activation</a>
+                                                        <?php } ?>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label">Contact Phone:</label>
+                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getPhone(); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_country_label'); ?>:</label>
+                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo getFullCountryName($company->getCountry()); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_citytown_label'); ?>:</label>
+                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getCity(); ?></p></div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label class="col-sm-4 control-label">Address:</label>
+                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $company->getFullAddress(); ?></p></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="account" class="tab-pane <?php echo $tab == 'account' ? 'active' : ''; ?>">
+                        <?php require APPLICATION_PATH."/views/scripts/company/account_view.phtml"; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>    
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>
+<?php if(!isEmptyString($request->pgc)){ ?>
+	<?php require APPLICATION_PATH."/views/scripts/index/pgc_bottom.phtml"; ?>
+<?php } ?>

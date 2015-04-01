@@ -225,20 +225,18 @@
                                 <div id="maxhoursperweek_error"></div>
                             </div>
                         </div>
-                        <?php if(!$isme){ ?>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">Check In/Out Configuration:</label>
-                                <div class="col-sm-9">
-                                	<?php 
-										$attendancetypes = getAttendanceTypes();
-									?>
-                                    <?php foreach($attendancetypes as $key => $value){ ?>
-                                    	<label class="radio radio-blocked notbolded"><input type="radio" name="istimesheetuser" id="istimesheetuser_<?php echo $key; ?>" <?php echo $user->getistimesheetuser() == $key ? 'checked="checked"' : ''; ?> value="<?php echo $key; ?>" /> <?php echo $value; ?></label>
-                                    <?php } ?>
-                                    <div id="maxhoursperweek_error"></div>
-                                </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Check In/Out Configuration:</label>
+                            <div class="col-sm-9">
+                                <?php 
+                                    $attendancetypes = getAttendanceTypes();
+                                ?>
+                                <?php foreach($attendancetypes as $key => $value){ ?>
+                                    <label class="radio radio-blocked notbolded"><input type="radio" name="istimesheetuser" id="istimesheetuser_<?php echo $key; ?>" <?php echo $user->getistimesheetuser() == $key ? 'checked="checked"' : ''; ?> value="<?php echo $key; ?>" /> <?php echo $value; ?></label>
+                                <?php } ?>
+                                <div id="maxhoursperweek_error"></div>
                             </div>
-                        <?php } ?>
+                        </div>
                     </div>
                 </div>
             </div>

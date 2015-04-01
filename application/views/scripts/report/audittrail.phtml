@@ -49,7 +49,7 @@
 		
 		$all_results_query = "SELECT
 		a.*,
-		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as user
+		IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as user
 		from audittrail a
 		left join useraccount u on (a.userid = u.id)
 		WHERE a.id <> '' ".$where_query." GROUP BY a.id	".$order_query;

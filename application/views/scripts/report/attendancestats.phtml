@@ -36,7 +36,7 @@
 	}
 	$approvedhours_query = "SELECT 
 	u.id as id,
-	IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name,
+	IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name,
 	SUM(IF(TO_DAYS(t.timesheetdate) = TO_DAYS('".$this->today_iso."') AND t.status = 3, t.hours, 0)) as today, 
 	SUM(IF(TO_DAYS(t.timesheetdate) = TO_DAYS('".$this->yestday_iso."') AND t.status = 3, t.hours, 0)) as yesterday, 
 	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND t.status = 3, t.hours, 0)) as thisweek, 
@@ -74,7 +74,7 @@
 		$group_query = " GROUP BY u.id, YEAR(t.timesheetdate) ";
 	}
 	
-	$trends_query = "SELECT u.id as id, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, t.timesheetdate, DAY(t.timesheetdate) as theday, MONTH(t.timesheetdate) as themonth, YEAR(t.timesheetdate) as theyear, YEARWEEK(t.timesheetdate, 3) as theyearweek, WEEK(t.timesheetdate,3) as theweek, SUM(t.hours) as hours FROM useraccount AS u LEFT Join timesheet AS t ON (t.userid = u.id) ".$where_query." ".$group_query." order by t.timesheetdate asc, name asc ";
+	$trends_query = "SELECT u.id as id, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, t.timesheetdate, DAY(t.timesheetdate) as theday, MONTH(t.timesheetdate) as themonth, YEAR(t.timesheetdate) as theyear, YEARWEEK(t.timesheetdate, 3) as theyearweek, WEEK(t.timesheetdate,3) as theweek, SUM(t.hours) as hours FROM useraccount AS u LEFT Join timesheet AS t ON (t.userid = u.id) ".$where_query." ".$group_query." order by t.timesheetdate asc, name asc ";
 	// debugMessage($trends_query);
 	$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
 	

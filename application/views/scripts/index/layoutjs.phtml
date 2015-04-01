@@ -327,9 +327,9 @@ $(document).ready(function() {
 	
 	/* Plugin specific initializations */
 	$('#dialog').modal({
-		keyboard: false,
-		backdrop: 'static',
-		autoResize:true
+		//keyboard: false,
+		//backdrop: 'static',
+		//autoResize:true
 	});
 	$('#dialog').modal('hide');
 	
@@ -362,8 +362,8 @@ $(document).ready(function() {
 		$("#dialogcontent").load(href);  	
 		// then show it after the changes have been made
 		$('#dialog').modal('toggle');
-		$('.modal-dialog').css({'padding-top':'0'});
-		$('.modal-dialog').css({'overflow':'hidden'});
+		//$('.modal-dialog').css({'padding-top':'0'});
+		//$('.modal-dialog').css({'overflow':'hidden'});
 		
 		// check for default submit button text
 		if(!isEmptyString(submittext)){
@@ -430,16 +430,17 @@ $(document).ready(function() {
 			$("#dialog").modal('hide');
 			//$(".dialog, body").css("overflow", "auto");
 			$("#dialogcontent").html('');
+			//location.reload(true);
 		});		
 		$('#dialog').on('hidden', function () {
 			// location.reload(true);
-			//$(".dialog, body").css("overflow", "auto");
+			// $(".dialog, body").css("overflow", "auto");
 			$("#dialogcontent").html('');
 		});
 		
 		// $(".dialog, body").css("overflow", "hidden");
 		 
-		return false;
+		return true;
 	});
 	
 	// add farmer to group
@@ -981,6 +982,7 @@ $(document).ready(function() {
 	$(".chosen-select").chosen();
 	// default search text on chosen dropdown
 	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
+	$(".datepicker.datepicker-dropdown.dropdown-menu").css({'z-index':'15000'});
 });
 
 //Use window.load and not document.ready for effective equal heights

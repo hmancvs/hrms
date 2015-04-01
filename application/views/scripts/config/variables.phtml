@@ -231,23 +231,39 @@ $(document).ready(function(){
                                             <td>
                                                 <div style="position:relative;">
                                                     <span class="display" id="text_alias_<?php echo $value['id']; ?>">
-                                                        <?php echo $value['alias']; ?>
-                                                        <?php echo isArrayKeyAnEmptyString($value['alias2'], $allbenefittypes) ? '' : $allbenefittypes[$value['alias2']]; ?>
+                                                        <?php echo in_array($value['id'], array(NSSFID, PAYEID)) ? 'auto' : $value['alias']; ?>
+                                                        <?php echo in_array($value['id'], array(NSSFID, PAYEID)) ? 'auto' : isArrayKeyAnEmptyString($value['alias2'], $allbenefittypes) ? '' : $allbenefittypes[$value['alias2']]; ?>
                                                     </span>
                                                     <span class="edit" id="html_alias_<?php echo $value['id']; ?>">
-                                                        <input type="text" name="newalias_<?php echo $value['id']; ?>" id="newalias_<?php echo $value['id']; ?>" class="form-control inline floatleft updatevariable centeralign input-sm width100" rowid="<?php echo $value['id']; ?>" value="<?php echo $value['alias']; ?>" /> &nbsp;
-                                                        <?php
-                                                            $dropdown = new Zend_Form_Element_Select('alias2_'.$value['id'],
-                                                                                array(
-                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
-                                                                                    'view' => new Zend_View(),
-                                                                                    'decorators' => array('ViewHelper'),
-                                                                                    'class' => array('form-control','input-sm','width100','inline')
-                                                                                )
-                                                            );  
-                                                            $dropdown->setValue($value['alias2']); 
-                                                            echo $dropdown->render();
-                                                        ?>
+                                                        <input type="text" name="newalias_<?php echo $value['id']; ?>" id="newalias_<?php echo $value['id']; ?>" class="form-control inline floatleft updatevariable centeralign input-sm width100 <?php echo in_array($value['id'], array(NSSFID, PAYEID)) ? 'readonly' : ''; ?>" rowid="<?php echo $value['id']; ?>" value="<?php echo in_array($value['id'], array(NSSFID, PAYEID)) ? 'auto' : $value['alias']; ?>" /> &nbsp;
+                                                        <?php if(in_array($value['id'], array(NSSFID, PAYEID))){ ?>
+															<?php
+                                                                $dropdown = new Zend_Form_Element_Select('_alias2_'.$value['id'],
+                                                                                    array(
+                                                                                        'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
+                                                                                        'view' => new Zend_View(),
+                                                                                        'decorators' => array('ViewHelper'),
+                                                                                        'class' => array('form-control','input-sm','width100','inline','disabledfield')
+                                                                                    )
+                                                                );  
+                                                                $dropdown->setValue($value['alias2']); 
+                                                                echo $dropdown->render();
+                                                            ?>
+                                                            <input type="hidden" name="<?php echo 'alias2_'.$value['id']; ?>" id="<?php echo 'alias2_'.$value['id']; ?>" value="<?php echo $value['alias2']; ?>" />
+                                                     	<?php } else { ?>
+                                                        	<?php
+                                                                $dropdown = new Zend_Form_Element_Select('alias2_'.$value['id'],
+                                                                                    array(
+                                                                                        'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
+                                                                                        'view' => new Zend_View(),
+                                                                                        'decorators' => array('ViewHelper'),
+                                                                                        'class' => array('form-control','input-sm','width100','inline')
+                                                                                    )
+                                                                );  
+                                                                $dropdown->setValue($value['alias2']); 
+                                                                echo $dropdown->render();
+                                                            ?>
+                                                        <?php } ?>
                                                     </span>
                                                 </div>
                                             </td>
@@ -269,7 +285,13 @@ $(document).ready(function(){
                                                 <?php if($lookuptype->updatesAllowed()){ ?>
                                                     <a href="javascript:void(0)" id="updatevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="updatevalue btn btn-info btn-sm" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a>
                                                 <?php } ?>    
-                                                <?php if($lookuptype->addNoDeleteAllowed()){ 
+                                                <?php 
+													$allowdelete = true;
+													if($value['id'] == NSSFID || $value['id'] == PAYEID){
+														$allowdelete = false;	
+													}
+												?>
+                                                <?php if($allowdelete){ 
                                                     $classname = "LookupTypeValue";
                                                     $deleteline = $value['id'];
                                                     if($lookupid == 7){
@@ -279,9 +301,9 @@ $(document).ready(function(){
 														$classname = "BenefitType";
 													}
                                                 ?>
-                                                    <a id="deletevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="xdeletevalue btn btn-sm deleteline xremoveline gonowhere" title="Delete Value" rel="tooltip" action="<?php echo $this->baseUrl('config/delete/id/'.$deleteline."/entityname/".$classname."/successurl/".encode($this->baseUrl('config/variables/type/'.$request->type))); ?>"><i class="fa fa-remove"></i></a>
+                                                    	<a id="deletevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="xdeletevalue btn btn-sm deleteline xremoveline gonowhere" title="Delete Value" rel="tooltip" action="<?php echo $this->baseUrl('config/delete/id/'.$deleteline."/entityname/".$classname."/successurl/".encode($this->baseUrl('config/variables/type/'.$request->type))); ?>"><i class="fa fa-remove"></i></a>
                                                 <?php } else { ?>
-                                                    <a class="gonowhere alert-dialog" title="Delete disabled" rel="tooltip" message="<div class='alert alert-danger'>Delete on this resource is disabled. Contact super Admin</div>">--</a>
+                                                    <a class="gonowhere alert-dialog" title="Delete disabled" rel="tooltip" message="<div class='alert alert-danger'>Delete on this resource is disabled. Contact Super Admin</div>">--</a>
                                                 <?php } ?>
                                             </div>
                                         </div>

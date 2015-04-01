@@ -1,0 +1,170 @@
+<div class="row">	
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Benefits Prefferances</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Setup:</label>
+                            <div class="col-sm-7">
+                            	<div style="margin-left:20px;">
+                                    <label class="radio notbolded"><input type="radio" id="paysnssf_1" name="paysnssf" value="1" <?php echo $company->getpaysnssf() == 1 ? 'checked="checked"' : ''; ?>> Company remits NSSF for some/all employees
+                                    </label>
+                                    <label class="radio notbolded"><input type="radio" id="paysnssf_0" name="paysnssf" value="0" <?php echo $company->getpaysnssf() == 0 ? 'checked="checked"' : ''; ?>> No NSSF remittances apply
+                                    </label>
+                               	</div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Employee <br />Default Percentage Contribution:</label>
+                            <div class="col-sm-7">
+                                <input type="text" name="nssfemployeerate" id="nssfemployeerate" class="form-control input-sm isdecimal width100" value="<?php echo $company->getnssfemployeerate(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">NSSF Employer <br />Default Percentage Contribution:</label>
+                            <div class="col-sm-7">
+                                <input type="text" name="nssfcompanyrate" id="nssfcompanyrate" class="form-control input-sm width100" value="<?php echo $company->getnssfcompanyrate(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label">PAYE Setup:</label>
+                            <div class="col-sm-7">
+                            	<div style="margin-left:20px;">
+                                    <label class="radio notbolded"><input type="radio" id="payspaye_1" name="payspaye" value="1" <?php echo $company->getpayspaye() == 1 ? 'checked="checked"' : ''; ?>> Company remits PAYE for some/all employees
+                                    </label>
+                                    <label class="radio notbolded"><input type="radio" id="payspaye_0" name="payspaye" value="0" <?php echo $company->getpayspaye() == 0 ? 'checked="checked"' : ''; ?>> No PAYE remittances apply
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">	
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Attendance Configuration</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid marginleft5">
+                    <div class="col-sm-12 paddingleft10">
+                        <div class="form-group">
+                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_workingdays_label'); ?>:</label>
+                            <div class="col-sm-12">
+                                <?php
+                                    $workshifts = getDaysOfWeek();
+                                    $existing_values = $company->getDaysOfWeekArray();
+                                    foreach($workshifts as $key => $value){
+                                ?>
+                                    <label class="checkbox-inline notbolded">
+                                      <input type="checkbox" id="workingdaysids_<?php echo $key; ?>" name="workingdaysids[]" class="disableoutsidesection" value="<?php echo $key; ?>" <?php echo in_array($key, $existing_values) ? 'checked data-waschecked="true"' : 1; ?>> <?php echo $value; ?>
+                                    </label>
+                                <?php } ?>
+                                <input type="hidden" name="workingdays_old" id="workingdays_old" value="<?php echo $company->getWorkingDays(); ?>" />
+                                <div id="workingdays_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-12 paddingleft10">
+                    	<div class="form-group">
+                            <label class="col-sm-3 control-label">Default Work Opening Time:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="openinghour" id="openinghour" class="form-control timepickr centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getopeninghour()); ?>" />
+                                <div id="openinghour_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Default Work Closing Time:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="closinghour" id="closinghour" class="form-control timepickr centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getclosinghour()); ?>" />
+                                <div id="closinghour_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Lunch Break Duration:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="lunchduration" id="lunchduration" class="form-control input-sm centeralign isdecimal width100 inline" value="<?php echo $company->getlunchduration(); ?>" /> <span class="inline pagedescription">(Hrs)</span>
+                                <div id="closinghour_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="maxhoursperday" id="maxhoursperday" class="form-control isdecimal centeralign input-sm width100" value="<?php echo $company->getMaxHoursPerDay(); ?>" />
+                                <div id="maxhoursperday_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="maxhoursperweek" id="maxhoursperweek" class="form-control isdecimal centeralign input-sm width100" value="<?php echo $company->getMaxHoursPerWeek(); ?>" />
+                                <div id="maxhoursperweek_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Allowed Check-In/Check-Out <br />IP Addresses / Subnets:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="ipsubnets" id="ipsubnets" class="form-control input-width-large" placeholder="e.g 192.168.0.1, 41.250.157.*" value="<?php echo $company->getipsubnets(); ?>" /><div id="ipsubnets_error"></div>
+                                <p class="pagedescription">Specify comma separated list of ip addresses or subnets</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">	
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>General Settings</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Current Accounting Period <br/>Start Date:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="yearstart" id="yearstart" class="form-control input-sm datefield readonly datepick width100 ordinary" value="<?php echo  isEmptyString($company->getyearstart()) ? '' : date('m/d/Y', strtotime($company->getyearstart())); ?>" />
+                                <div id="yearstart_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Current Accounting Period <br/>End Date:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="yearend" id="yearend" class="form-control input-sm datefield readonly datepick width100 ordinary" value="<?php echo  isEmptyString($company->getyearend()) ? '' : date('m/d/Y', strtotime($company->getyearend())); ?>" />
+                                <div id="yearend_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Account Status:</label>
+                            <div class="col-sm-9">
+                               	<?php if(isAdmin()){ ?>
+                                	<?php
+										$allstatuses = getCompanyStatuses();
+										$dropdown = new Zend_Form_Element_Select('status',
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','width200')
+															)
+										);  
+										$dropdown->setValue($company->getStatus()); 
+										echo $dropdown->render();
+									?><div id="status_error"></div>
+                                <?php } else { ?>
+                                	<input type="hidden" name="status" id="status" value="<?php echo $company->getStatus(); ?>" />
+                                <?php } ?>
+                                <div id="status_error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>

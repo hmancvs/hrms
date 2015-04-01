@@ -73,32 +73,30 @@
                 <h3></h3>
             </div>
             <div class="box-content nopadding">
-            	<?php if(!$isdatatable){ ?>
-                	<div class="divider5"></div>
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="col-sm-8">
-                            	<ul class="resetlist listactions">
-                            		<?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
-                                    	<li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/shiftsindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
-                                 	<?php } ?>
-                               	</ul>
-                            </div>
-                            <div class="col-sm-3"></div>
+                <div class="divider5"></div>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="col-sm-8">
+                            <ul class="resetlist listactions">
+                                <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/shiftsindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
+                                <?php //} ?>
+                            </ul>
                         </div>
+                        <div class="col-sm-3"></div>
                     </div>
-                    <div class="divider5"></div>
-                <?php } ?>
-                <table class="table table-nomargin table-bordered table-striped table-hover <?php echo $isdatatable == true ? 'dataTable' : ''; ?>" id="">
+                </div>
+                <div class="divider5"></div>
+                <table class="table table-nomargin table-bordered table-striped table-hover" id="datatable">
 					<thead>
                         <tr>
                             <th style="vertical-align:top;">Session Name</th>
-                            <th style="width:15%; vertical-align:top;">Start Time</th>
-                            <th style="width:15%; vertical-align:top;">End Time</th>
-                            <th style="width:15%; vertical-align:top;">Overdue Time</th>
-                            <th style="width:15%; vertical-align:top;">Break Duration (Hrs)</th>
+                            <th style="width:20%; vertical-align:top;">Start Time</th>
+                            <th style="width:20%; vertical-align:top;">End Time</th>
+                            <th style="width:20%; vertical-align:top;">Checkout Overdue Time</th>
+<!--                            <th style="width:15%; vertical-align:top;">Break Duration (Hrs)</th>
                             <th style="width:15%; vertical-align:top;">Actual Duration (Hrs)</th>
-                            <th style="width:100px; vertical-align:top;"></th>
+-->                            <th style="width:100px; vertical-align:top;"></th>
                         </tr>
 					</thead>
                     <tbody>
@@ -114,15 +112,15 @@
                                 <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['starttime']); ?></td>
                                 <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['endtime']); ?></td>
                                 <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['overduestarttime']); ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatNumber($line['breakhours']); ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatNumber($line['hours']); ?></td>
+                                <!--<td class="nullifempty centeralign"><?php echo formatNumber($line['breakhours']); ?></td>
+                                <td class="nullifempty centeralign"><?php echo formatNumber($line['hours']); ?></td>-->
                                 <td>
-                                    <?php if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                    <?php //if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
                                         <a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
-                                    <?php } ?>
-                                    <?php if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                    <?php //} ?>
+                                    <?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
                                         <a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/Shift/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
-                                    <?php } ?>
+                                    <?php //} ?>
                                 </td>
                             </tr>
                         <?php } ?>

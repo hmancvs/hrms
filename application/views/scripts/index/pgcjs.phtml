@@ -7,35 +7,3 @@
 <script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/bootstrap.min.js')); ?>"></script>
 <script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datepicker/bootstrap-datepicker.js')); ?>"></script>
 <script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/timepicker/bootstrap-timepicker.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/chosen/chosen.jquery.min.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/application.min.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/app.js')); ?>"></script>
-
-<script type="text/javascript">
-$(document).ready(function() {	
-	
-	$(".readonly").each(function(){
-		$(this).attr('readonly','readonly');
-	});
-	$(".disabledfield").each(function(){
-		$(this).attr('readonly', true).attr('disabled', true);
-	});
-	
-	$('.ordinary').datepicker({
-		format: 'M dd, yyyy'
-	});
-	
-	if ($('.timepicker').length > 0) {
-		$('.timepicker').timepicker({
-			template : 'dropdown',
-			defaultTime : 'current',
-			minuteStep  : 1
-		});
-	}
-	
-	$(".chosen-select").chosen();
-	// default search text on chosen dropdown
-	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
-	
-});	
-</script>	

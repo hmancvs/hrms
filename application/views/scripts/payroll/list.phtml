@@ -19,6 +19,8 @@
 	}
 	if(!isEmptyString($payrollid)){
 		$payrolltype = $payroll->getType();
+	} else {
+		$payrollid = '';
 	}
 	$isdaily = false; $isweekly = false; $isbiweekly = false; $ismonthly = false;
 	if($payrolltype == 1){
@@ -128,6 +130,7 @@
 		}
 	}
 	
+	$reloadid = (string)($request->getParam('reloadid'));
 	$ignore_array = array(); $ignorelist = '';
 	if(!isEmptyString($request->ignorelist)){
 		$ignorelist = $request->ignorelist;
@@ -340,7 +343,7 @@ $(document).ready(function() {
                                     <?php } ?>
                                     <div id="restoredata"></div>
                                 </li>
-                                <?php if($isgenerated && !$has_no_data && isEmptyString($payrollid) && isEmptyString($request->reloadid)){ ?>
+                                <?php if($isgenerated && !$has_no_data && isEmptyString($payrollid) && isEmptyString($reloadid)/**/){ ?>
                                     <li>
                                         <button type="submit" class="btn btn-success btn-sm" title="Save Report" id="save"><i class="fa fa-check"></i> Save as Draft</button>
                                     </li>
@@ -351,11 +354,11 @@ $(document).ready(function() {
                                     </li>
                                     <li><a class="btn btn-default btn-sm deleteline gonowhere" action="<?php echo $this->baseUrl('payroll/delete/id/'.encode($payrollid)."/entityname/Payroll/successurl/".encode($this->baseUrl('payroll/list'))); ?>" message="Are you sure you want to Delete this entry?" title="Delete Entry"><i class="fa  fa-times"></i></a></li>
                                 <?php } ?>
-                                <?php if($isgenerated && !$has_no_data && !isEmptyString($request->reloadid)){ ?>
+                                <?php if($isgenerated && !$has_no_data && !isEmptyString($reloadid)){ ?>
                                     <li>
                                         <button type="submit" class="btn btn-success btn-sm" title="Save Changes" id="save"><i class="fa fa-ok"></i> Save Changes</button>
                                     </li>
-                                  <?php } ?>
+                                <?php } ?>
                                 <?php if($isgenerated && !$has_no_data && !isEmptyString($payrollid)){ ?>
                                     <li>
                                         <?php 
@@ -371,7 +374,6 @@ $(document).ready(function() {
                                     </li>
                                 <?php } ?>
                                 <li><a class="btn btn-default btn-sm blockanchor" href="<?php echo $this->baseUrl('payroll/history'); ?>" title="Payroll History"><i class="fa fa-list"></i></a>
-                                <a class="btn addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/userid/28/type/1/ledgercat/1'); ?>" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" rel="Add Benefits" title="Add Benefits (Credit Current Payroll)"><i class="fa fa-plus"></i></a>
                                 </li>
                             </ul>
                         <?php } else { ?>

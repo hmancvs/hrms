@@ -41,7 +41,7 @@ class ErrorController extends Zend_Controller_Action
 					<p class="bg-warning padding10">'.$error_list.'></p>
 			    </div>
 			</div> ';
-            	debugMessage($string); /* */
+            	// debugMessage($string); /* */
                 break;
         }
         

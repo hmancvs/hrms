@@ -124,103 +124,107 @@ class CronController extends IndexController   {
 			// debugMessage($tablesonly_sql);
 		}
 		$backupcommand = "mysqldump -R --add-drop-table --complete-insert --add-locks --quote-names --lock-tables --skip-routines -h ".$ignore_sql." ".$dbhost." -P ".$dbport." -u ".$dbuser." -p".$dbpass." ".$dbname.$tablesonly_sql.' > "'.$sqlscriptpath.'"'; debugMessage($backupcommand); // exit();
-		passthru($backupcommand);
-	
-		// exit();
-		if($showverbose){
-			debugMessage(getAppName()." Database backup completed to ".$sqlscriptpath); 
-		}
-		
-		# create tar archive
-		if($use_gzip=="yes"){		
-			$zipline = "tar -czf ".$zipfilepath." ".$sqlscriptpath;
-			passthru($zipline); debugMessage($zipline);
-			debugMessage("Gzip of backup completed");
-		}
-		// exit();
-		# set email attachment name and path depending on weather to form zip or not
-		if($use_gzip=="yes"){
-			$attachmentpath = $zipfilepath;
-			$attachmentname = $gzipattachmentname;
-			$attachment_mime_type = "application/gzip"; 
-		} else {
-			$attachmentpath = $sqlscriptpath;
-			$attachmentname = $sqlattachmentname;
-		}
-		
-		# send an email with a copy of the backup	
-		if($send_email == "yes" ){
-			$mail = Zend_Registry::get('mail');
-			# build the mailer class 
-			// $mail->addTo($config->get(APPLICATION_ENV)->get("databasebackupemail"));
-			$mail->addTo($backupemail);
-			$mail->setFrom($config->notification->emailmessagesender, $config->notification->notificationsendername);
-			$mail->setSubject(sprintf($this->_translate->_("database_backup_subject"), getAppName(), date("j F Y h:iA"))); #  Subject in the email to be sent.
-			$mail->setBodyHtml(sprintf($this->_translate->_("database_backup_body"), getAppName())); #  Brief Message.
+		try {
+			if(passthru($backupcommand)){
 			
-			# attachmentpath is the full path to the file and attachmentname is the name of the file
-			$at = new Zend_Mime_Part(file_get_contents($attachmentpath));
-			$at->filename = $attachmentname; 
-			$at->disposition = Zend_Mime::DISPOSITION_INLINE;
-			$at->encoding = Zend_Mime::ENCODING_BASE64;
-			$at->type = $attachment_mime_type; 
-			$mail->addAttachment($at);
-			// $mail->send(); 
-			
-			try {
-			$mail->send(); 
-				$message = getAppName()." Database backup sent to ".$backupemail;
-				if($showverbose){
-					debugMessage($message);
-				} else {
-					$result['message'] = $message;
-					$result['result'] = 1;
-				}
-			} catch (Exception $e) {
-				$message = 'Email notification not sent! '.$e->getMessage();
-				if($showverbose){
-					debugMessage($message);
-				} else {
-					debugMessage($message);
-					$result['message'] = $message;
-					$result['result'] = 0;
-				}
+			// exit();
+			if($showverbose){
+				debugMessage(getAppName()." Database backup completed to ".$sqlscriptpath);
 			}
 			
-			$mail->clearRecipients();
-			$mail->clearSubject();
-			$mail->setBodyHtml('');
-			$mail->clearFrom();
+			# create tar archive
+			if($use_gzip=="yes"){
+				$zipline = "tar -czf ".$zipfilepath." ".$sqlscriptpath;
+				passthru($zipline); debugMessage($zipline);
+				debugMessage("Gzip of backup completed");
+			}
+			// exit();
+			# set email attachment name and path depending on weather to form zip or not
+			if($use_gzip=="yes"){
+				$attachmentpath = $zipfilepath;
+				$attachmentname = $gzipattachmentname;
+				$attachment_mime_type = "application/gzip";
+			} else {
+				$attachmentpath = $sqlscriptpath;
+				$attachmentname = $sqlattachmentname;
+			}
+			
+			# send an email with a copy of the backup
+			if($send_email == "yes" ){
+				$mail = Zend_Registry::get('mail');
+				# build the mailer class
+				// $mail->addTo($config->get(APPLICATION_ENV)->get("databasebackupemail"));
+				$mail->addTo($backupemail);
+				$mail->setFrom($config->notification->emailmessagesender, $config->notification->notificationsendername);
+				$mail->setSubject(sprintf($this->_translate->_("database_backup_subject"), getAppName(), date("j F Y h:iA"))); #  Subject in the email to be sent.
+				$mail->setBodyHtml(sprintf($this->_translate->_("database_backup_body"), getAppName())); #  Brief Message.
+					
+				# attachmentpath is the full path to the file and attachmentname is the name of the file
+				$at = new Zend_Mime_Part(file_get_contents($attachmentpath));
+				$at->filename = $attachmentname;
+				$at->disposition = Zend_Mime::DISPOSITION_INLINE;
+				$at->encoding = Zend_Mime::ENCODING_BASE64;
+				$at->type = $attachment_mime_type;
+				$mail->addAttachment($at);
+				// $mail->send();
+					
+				try {
+					$mail->send();
+					$message = getAppName()." Database backup sent to ".$backupemail;
+					if($showverbose){
+						debugMessage($message);
+					} else {
+						$result['message'] = $message;
+					$result['result'] = 1;
+					}
+				} catch (Exception $e) {
+					$message = 'Email notification not sent! '.$e->getMessage();
+					if($showverbose){
+						debugMessage($message);
+					} else {
+						debugMessage($message);
+						$result['message'] = $message;
+						$result['result'] = 0;
+					}
+				}
+					
+				$mail->clearRecipients();
+				$mail->clearSubject();
+				$mail->setBodyHtml('');
+				$mail->clearFrom();
+			}
+			
+			# remove sql file if condition is set
+			if($remove_sql_file=="yes"){
+				passthru("rm -rf ".$sqlscriptpath);
+			}
+			# remove tar file if condition is set
+			if($remove_gzip_file=="yes"){
+				passthru("rm -rf ".$attachmentpath);
+			}
+				
+			if($this->_getParam('download') == '1'){
+				header('Location: '.$this->view->serverUrl($this->view->baseUrl('backup/'.$sqlattachmentname)));
+				exit();
+				// file headers to force a download
+				/*header('Content-Description: File Transfer');
+				header('Content-Type: application/octet-stream');
+				// to handle spaces in the file names
+				header("Content-Disposition: inline; filename=\"$sqlscriptpath\"");
+				header('Content-Transfer-Encoding: binary');
+				header('Expires: 0');
+				header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+				header('Pragma: public');
+				readfile($savepath);*/
+			}
+				
+			if(!$showverbose){
+				echo json_encode($result);
+			}
+			}
+		} catch (Exception $e) {
+			debugMessage($e->getMessage());
 		}
-		
-		# remove sql file if condition is set
-		if($remove_sql_file=="yes"){
-			passthru("rm -rf ".$sqlscriptpath);
-		}
-		# remove tar file if condition is set
-		if($remove_gzip_file=="yes"){
-			passthru("rm -rf ".$attachmentpath);
-		}
-		
-		if($this->_getParam('download') == '1'){
-			header('Location: '.$this->view->serverUrl($this->view->baseUrl('backup/'.$sqlattachmentname)));
-			exit();
-			// file headers to force a download
-			/*header('Content-Description: File Transfer');
-			header('Content-Type: application/octet-stream');
-			// to handle spaces in the file names 
-			header("Content-Disposition: inline; filename=\"$sqlscriptpath\"");
-			header('Content-Transfer-Encoding: binary');
-			header('Expires: 0');
-			header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
-			header('Pragma: public');
-			readfile($savepath);*/
-		} 
-		
-		if(!$showverbose){
-			echo json_encode($result);
-		}
-		
 	}
 	
 	function testAction(){

@@ -461,7 +461,7 @@ $(document).ready(function() {
 							if(!isEmptyString($request->userid)){
 								$where_query .= " AND t.userid = '".$request->userid."' ";
 							}
-							$trends_query = "SELECT u.id as id, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, t.timesheetdate, DAY(t.timesheetdate) as theday, MONTH(t.timesheetdate) as themonth, YEAR(t.timesheetdate) as theyear, YEARWEEK(t.timesheetdate, 3) as theyearweek, WEEK(t.timesheetdate,3) as theweek, SUM(t.hours) as hours FROM useraccount AS u LEFT Join timesheet AS t ON (t.userid = u.id) ".$where_query." GROUP BY u.id, YEAR(t.timesheetdate), MONTH(t.timesheetdate) order by t.timesheetdate asc, name asc ";
+							$trends_query = "SELECT u.id as id, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, t.timesheetdate, DAY(t.timesheetdate) as theday, MONTH(t.timesheetdate) as themonth, YEAR(t.timesheetdate) as theyear, YEARWEEK(t.timesheetdate, 3) as theyearweek, WEEK(t.timesheetdate,3) as theweek, SUM(t.hours) as hours FROM useraccount AS u LEFT Join timesheet AS t ON (t.userid = u.id) ".$where_query." GROUP BY u.id, YEAR(t.timesheetdate), MONTH(t.timesheetdate) order by t.timesheetdate asc, name asc ";
 							// debugMessage($trends_query);
 							$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
 							
@@ -823,7 +823,7 @@ $(document).ready(function() {
                     	<?php
 							$conn = Doctrine_Manager::connection(); 
 							// users onduty
-							$onduty_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timein, t.timeout, t.timesheetdate, t.status, u.profilephoto, u.gender, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.`status` = '0' AND u.companyid = '".$companyid."' AND TO_DAYS(t.datein) = TO_DAYS('".$this->today_iso."') order by t.datein desc, t.timein desc limit 6 ";
+							$onduty_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timein, t.timeout, t.timesheetdate, t.status, u.profilephoto, u.gender, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.`status` = '0' AND u.companyid = '".$companyid."' AND TO_DAYS(t.datein) = TO_DAYS('".$this->today_iso."') order by t.datein desc, t.timein desc limit 6 ";
 							$onduty_result = $conn->fetchAll($onduty_query); // debugMessage($onduty_query); // debugMessage($onduty_result);
 						?>
                     	<div class="box-title">

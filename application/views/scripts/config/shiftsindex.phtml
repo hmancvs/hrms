@@ -9,6 +9,7 @@
 		$button_title = $this->translate('global_button_save'); 
 		$successmessage = $this->translate('global_save_success'); 
 		$posturl = $this->baseUrl("config/shiftscreate");
+		$shift->setcompanyid($companyid);
 	} else {
 		$shift->populate(decode($request->id)); 
 		$pagetitle = 'Update Shift';
@@ -92,6 +93,7 @@ $(document).ready(function() {
                     <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
                         <input name="entityname" id="entityname" type="hidden" value="Shift" />
                         <input type="hidden" id="id" name="id" value="<?php echo encode($shift->getID()); ?>" />
+                        <input type="hidden" id="companyid" name="companyid" value="<?php echo $shift->getCompanyID(); ?>" />
                         <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
                         <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
                         <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 

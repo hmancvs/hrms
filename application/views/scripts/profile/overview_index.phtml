@@ -26,24 +26,6 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_displayname_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-sm-8">
-                                <?php
-                                      $displaynameselect = new Zend_Form_Element_Select('displayname',
-                                              array(
-                                                      'multiOptions' => array(""=>"<Select one>"),
-                                                      'view' => new Zend_View(),
-                                                      'decorators' => array(array('ViewHelper')),
-                                                      'class' => array('form-control','input-sm','xchosen-select')
-                                              )
-                                      );
-                                      
-                                      $displaynameselect->setValue(isEmptyString($user->getDisplayName()) ? $user->getName() : $user->getDisplayName());
-                                      echo $displaynameselect->render();
-                                  ?>
-                            </div>
-                        </div>
-                        <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_gender_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
                                 <label class="radio radio-inline"><input type="radio" name="gender" id="gender_male" class="<?php echo $user->isMale() ? 1 : 0; ?>" value="1" /> Male &nbsp;</label>

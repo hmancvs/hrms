@@ -1,0 +1,216 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$company = new Company();
+	
+	if (isEmptyString($request->id)) {
+		$pagetitle = "New Company";
+		$posturl = $this->baseUrl("company/create");
+		$button_title = $this->translate("global_button_save");
+		$successmessage = $this->translate('global_save_success');
+		$company->setStatus(1);
+	} else {
+		$pagetitle = "Update Profile"; 
+		$company->populate(decode($request->id));		
+		$posturl = $this->baseUrl("company/edit"); 
+		$button_title = $this->translate('global_button_save_changes'); 
+		$successmessage = $this->translate('global_update_success');
+	}
+	
+	$failureurl =  $this->viewurl;
+	$addnewsuccessurl = $this->baseUrl('company/index');
+	
+	$tab = $request->tab;
+	if(isEmptyString($tab)){
+		$tab = 'overview';
+	}
+	
+	$isme = false;
+	if($company->getID() == $loggedinuser->getID()){
+		$isme = true;
+	}
+	
+	if($tab == 'picture'){
+		$posturl = $this->baseUrl("company/uploadpicture");
+		$button_title = "Upload Picture";
+		$successurl = $this->baseUrl("company/index/id/".encode($company->getID())."/tab/picture/crop/1");
+		$failureurl =  $this->baseUrl("company/index/id/".encode($company->getID())."/tab/picture");
+		
+		if($request->crop == 1){
+			$posturl = $this->baseUrl("company/croppicture");
+			$button_title = "Crop Photo";
+			$successurl = $this->baseUrl('company/view/id/'.encode($company->getID()));
+			$failureurl =  $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/picture/crop/1');
+		}
+	}
+	
+	$gotosuccess = false; 
+	if(!isEmptyString($request->successurl)){
+		$successurl = $request->successurl;
+		$gotosuccess = true; 
+	}
+	
+	if($tab == 'account'){
+		$successurl = $this->baseUrl('company/view/id/'.encode($company->getID()).'/tab/account');
+		$gotosuccess = true; 
+	}
+	
+	$isme = true;
+	if($company->getID() != $companyid){
+		$isme = false;
+	}
+	
+	#in case of errors in session, populate the fields from session
+	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+		$company->processPost($session->getVar(FORM_VALUES));
+	}
+	
+	$resourcename = 'Company';
+	$entityname = "Company";
+	$listitems = "Companies";
+	$listurl = $this->baseUrl('company/list');
+	$icon = 'fa fa-bars';
+	$description = "";
+	$title = "New Company";
+	$breadcrumb = "Company / ".$pagetitle;
+	if(!isEmptyString($request->id)){
+		$title = $company->getName();
+		if($tab == 'picture'){
+			$pagetitle = "Upload Profile Photo";
+		}
+		$breadcrumb = "Companies / ".$company->getName()." / ".$pagetitle;
+	}
+	$pageid = "company_index";
+	// $title = "Employees";
+	
+	$allowedit = false;
+	if($acl->checkPermission($resourcename, ACTION_EDIT)){
+		$allowedit = true;
+	}
+	
+	$this->headTitle($title.$browserappend);
+?>
+<?php if(isEmptyString($company->getID())){ ?>
+    <script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/custom/jquery.stepy.js')); ?>"></script>
+<?php } ?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $breadcrumb; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="icon-large <?php echo $icon; ?>"></span>');
+	
+	<?php if(isEmptyString($company->getID())){ ?>
+		$('#indexform').stepy({
+			block: true,
+			validate: true,
+			errorImage:	false,
+			titleClick:	true,
+			backLabel: '<span class="fa fa-arrow-left"></span> Back',
+			nextLabel: 'Next <span class="fa fa-arrow-right"></span>'
+		});
+		
+		$(".button-back").addClass('btn btn-default btn-lg');
+		$(".button-next").addClass('btn btn-primary btn-lg'); 
+		$(".finish").html('').prepend('<span class="fa fa-check"></span> Finish').addClass('btn btn-success btn-lg');
+		$(".step legend").hide();
+	<?php } ?>
+	
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			name: "required",
+			email: {
+				required: true, 
+				email: true
+			},
+			status: "required",
+		}, 
+		// the messages for each of the fields being validated
+		messages: {		
+			name: "<?php echo $this->translate("global_name_error"); ?>",
+			email: {
+				"required": "<?php echo $this->translate("profile_email_error"); ?>", 
+				"email": "<?php echo $this->translate("profile_email_invalid_error"); ?>"
+			},
+			status: "Please select current Status",
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					if(element.hasClass("useid_error")){
+						error.appendTo("#"+element.attr("id")+"_error");
+					} else {
+						error.appendTo("#"+element.attr("name")+"_error");
+					}
+					break;
+			}			
+		}
+	});
+});
+</script>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="box box-color box-bordered">
+                <div class="box-title condensed">
+                    <h3><i class="fa fa-briefcase"></i> <?php echo $pagetitle; ?></h3>
+                </div>
+                <div class="box-content <?php echo !isEmptyString($request->id) ? ' nopadding': ''; ?> clearfix" style="min-height:500px; height:auto;">
+                    <form id="indexform" class="form-horizontal" action="<?php echo $posturl; ?>" method="post" enctype="multipart/form-data">
+                        <input name="entityname" id="entityname" type="hidden" value="<?php echo $entityname; ?>" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($company->getID()); ?>" />
+                        <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                        <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                        <!--<input type="hidden" id="<?php //echo URL_SUCCESS; ?>" name="<?php //echo URL_SUCCESS; ?>" value="<?php //echo encode($successurl); ?>" /> -->
+                        <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                        <input type="hidden" id="status" name="status" value="<?php echo $company->getStatus(); ?>" />
+                    	<?php if(isEmptyString($request->id)){ ?>
+                            <fieldset title="Profile Summary" id="step1summary">
+                                <legend>Step 1</legend>
+                                <?php require APPLICATION_PATH."/views/scripts/company/overview_index.phtml"; ?>
+                            </fieldset>
+                            <fieldset title="Account Setup" id="step4account">
+                                <legend>Step 2</legend>
+                                 <?php require APPLICATION_PATH."/views/scripts/company/account_index.phtml"; ?>
+                            </fieldset>
+                            <button type="submit" class="btn btn-primary finish btn-lg" id="finish">Complete</button> 
+                        <?php } ?>
+                        <?php if(!isEmptyString($company->getID())){ ?>
+                            <div class="tabs-container col-sm-3 col-xs-12 padding0">
+                                <ul class="tabs tabs-inline tabs-left">
+                                    <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>Profile</a></li>
+                                    
+                                    <li class="<?php echo $tab == 'account' ? 'active' : ''; ?>"><a data-toggle="tab" href="#account"><i class="fa fa-cog"></i>Account</a></li>
+                                    <li class="list-group-item padding0 centeralign noround nobg" style="padding:1px;"></li>
+                                </ul>
+                            </div>
+                            <div class="tab-content padding col-sm-9 col-xs-12">
+                            	<div class="form-actions testborder" style="margin-top: -10px;">
+                                    <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                                    <button class="btn btn-primary btn-green xchangesuccessurl savebutton" type="submit" successurl="<?php //echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                                </div>
+                            	<div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
+                                	<?php require APPLICATION_PATH."/views/scripts/company/overview_index.phtml"; ?>
+                                </div>
+                                <div id="account" class="tab-pane <?php echo $tab == 'account' ? 'active' : ''; ?>">
+                                    <?php require APPLICATION_PATH."/views/scripts/company/account_index.phtml"; ?>
+                                </div>
+                                <div class="form-actions testborder">
+                                    <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                                    <button class="btn btn-primary btn-green savebutton" type="submit"><?php echo $button_title; ?></button>
+                                </div>
+                            </div>
+                        <?php } ?>	
+                        <div class="divider15"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>            
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

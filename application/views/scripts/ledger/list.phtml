@@ -126,8 +126,8 @@
 	$paginate->processPost($request->getParams());
 	$all_results_query = "
 		select l.id, l.userid, l.companyid, l.benefitid, l.timeoffid, 
-		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `User`,
-		IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby,
+		IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as `User`,
+		IF(isnull(mc.othername), concat(mc.firstname,' ',mc.lastname), concat(mc.firstname,' ',mc.lastname,' ',mc.othername)) as addedby,
 		l.trxndate, l.startdate AS startdate, l.enddate AS enddate,
 		l.timeofflength, l.lengthtype, l.`status` AS `status`, l.ledgertype, l.trxntype, l.amount, l.istaxable, l.isrequest, l.payrollid, l.filename,
 		l.remarks AS remarks,l.createdby AS createdby,l.datecreated AS datecreated

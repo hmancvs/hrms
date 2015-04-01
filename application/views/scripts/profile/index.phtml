@@ -253,41 +253,6 @@ $(document).ready(function() {
 		}
 	});
 	
-	$(".screentrigger").change(function() {
-		$("#displayname").html('');
-		var first = $("#firstname").val(); 
-		var last = $("#lastname").val();
-		var other = $("#othername").val();
-		var opt1 = first+" "+last;
-		var opt2 = last+" "+first;
-		$("#displayname").append("<option value='"+opt1+"'>"+opt1+"</option>");
-		$("#displayname").append("<option value='"+opt2+"'>"+opt2+"</option>");
-		
-		if(!isEmptyString(other)){
-			var opt3 = first+" "+last+" "+other;
-			var opt4 = last+" "+first+" "+other;
-			var opt5 = first+" "+other+" "+last;
-			var opt6 = last+" "+other+" "+first;
-			$("#displayname").append("<option value='"+opt3+"'>"+opt3+"</option>");
-			$("#displayname").append("<option value='"+opt4+"'>"+opt4+"</option>");
-			$("#displayname").append("<option value='"+opt5+"'>"+opt5+"</option>");
-			$("#displayname").append("<option value='"+opt6+"'>"+opt6+"</option>");
-		}
-		
-		// alert('result is '+$("#displayname option").eq(10));
-		<?php if(!isEmptyString($user->getDisplayName())) { ?>
-			var curval = '<?php echo $user->getDisplayName(); ?>';
-			$("#displayname").val(curval).attr('selected', true);
-		<?php } ?>
-	});
-	 
-	$(".screentrigger").change();
-	
-	<?php if(!isEmptyString($user->getID())) { ?>
-		$('.password').attr('placeholder', 'Leave empty if no password change'); 
-		$('.disableonedit').attr('readonly', true).attr('disabled', true);
-	<?php } ?>
-	
 	//when button is clicked  
 	$('#check_username_availability').click(function(){ 
 		check_user_availability();  

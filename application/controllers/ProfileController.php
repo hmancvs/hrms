@@ -39,7 +39,7 @@ class ProfileController extends SecureController  {
     	$acl = getACLInstance();
     	$id = decode($this->_getParam('id'));
     		
-    	if(!isEmptyString($id) && isTimesheetEmployee()){
+    	if(!isEmptyString($id) && isTimesheetEmployee() && !isCompanyAdmin() && !isAdmin()){
     		if($session->getVar('userid') != $id){
     			$this->_helper->redirector->gotoUrl($failurl);
     		}

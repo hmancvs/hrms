@@ -49,7 +49,7 @@ class LookupTypeValue extends BaseEntity {
 		}
 		
 		# unique value
-		$value_query = "SELECT id FROM lookuptypevalue WHERE lookupvaluedescription = '".$value."' AND lookuptypeid = '".$this->getLookupTypeID()."' ".$id_check;
+		$value_query = "SELECT id FROM lookuptypevalue WHERE lookupvaluedescription = '".$value."' AND lookuptypeid = '".$this->getLookupTypeID()."' AND alias = '".$this->getAlias()."' ".$id_check;
 		// debugMessage($value_query);
 		$value_result = $conn->fetchOne($value_query);
 		// debugMessage($value_result);

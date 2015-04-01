@@ -74,22 +74,20 @@
                 <h3></h3>
             </div>
             <div class="box-content nopadding">
-            	<?php if(!$isdatatable){ ?>
-                	<div class="divider5"></div>
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="col-sm-8">
-                            	<ul class="resetlist listactions">
-                            		<?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
-                                    	<li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/timeoffindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
-                                 	<?php } ?>
-                               	</ul>
-                            </div>
-                            <div class="col-sm-3"></div>
+                <div class="divider5"></div>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="col-sm-8">
+                            <ul class="resetlist listactions">
+                                <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/timeoffindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
+                                <?php //} ?>
+                            </ul>
                         </div>
+                        <div class="col-sm-3"></div>
                     </div>
-                    <div class="divider5"></div>
-                <?php } ?>
+                </div>
+                <div class="divider5"></div>
                 <table class="table table-nomargin table-bordered table-striped table-hover <?php echo $isdatatable == true ? 'dataTable' : ''; ?>" id="">
 					<thead>
                         <tr>
@@ -131,29 +129,27 @@
 								<td class="nullifempty centeralign"><?php echo $line['deductfromallowance'] == 1 ? '<span><button type="button" class="btn btn-xs btn-default"><i class="fa fa-check"</button</span>' : '<span><button type="button" class="btn btn-xs btn-default"><i class="fa fa-remove"</button</span>'; ?></td>
 								<td class="nullifempty centeralign"><?php echo $line['calendarcolor']; ?></td>
 								<td>
-									<?php if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+									<?php //if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
 										<a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
-									<?php } ?>
-									<?php if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+									<?php //} ?>
+									<?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
 										<a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/TimeoffType/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
-									<?php } ?>
+									<?php //} ?>
 								</td>
 							</tr>
 						<?php } ?>
                     </tbody>
              	</table>
-                <?php if(!$isdatatable){ ?>
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="form-actions">
-                                <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
-                                <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
-                                <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
-                            </div>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-actions">
+                            <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                            <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                            <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
                         </div>
                     </div>
-                    <div class="divider5"></div>
-                <?php } ?>
+                </div>
+                <div class="divider5"></div>
            	</div>
      	</div>
 	</div>

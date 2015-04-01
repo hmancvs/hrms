@@ -1,0 +1,126 @@
+<div class="row newuserdetails">
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>About</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-11">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Company <?php echo $this->translate('global_name_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" name="name" id="name" class="form-control" value="<?php echo $company->getName(); ?>" /><div id="name_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Slogan / Tagline:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="slogan" id="slogan" class="form-control input-width-large" value="<?php echo $company->getSlogan(); ?>" /><div id="name_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Industry Category:</label>
+                            <div class="col-sm-3">
+                               <?php 
+							   		$codes = getDatavariables('INDUSTRY_CATEGORIES');
+                                    $dropdown = new Zend_Form_Element_Select('industrycode',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $codes),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($company->getindustrycode()); 
+                                    echo $dropdown->render();
+							   ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Business Description:</label>
+                            <div class="col-sm-9">
+                                <textarea name="description" id="description" class="form-control expanding"><?php echo $company->getDescription(); ?></textarea>
+                            </div>
+                        </div>
+                   	</div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row newuserdetails">
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Contact Info</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Name of Contact Person: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">                               
+                            	<?php if(!isEmptyString($company->getDefaultUserID())){ ?>
+                                	<input type="hidden" id="defaultuserid" name="defaultuserid" value="<?php echo $company->getdefaultuserid(); ?>" />
+                                <?php } ?>
+                                <input type="text" name="contactperson" id="contactperson" class="form-control input-width-medium" value="<?php echo $company->getcontactperson(); ?>" /><div id="contactperson_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Admin Contact Email: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                            	<input type="hidden" name="oldemail" id="oldemail" value="<?php echo $company->getEmail(); ?>" />
+                                <input type="text" name="email" id="email" class="form-control isvalidemail input-width-medium inline" value="<?php echo $company->getEmail(); ?>" />
+                                <?php if(isEmptyString($company->getDefaultUserID()) || (!isEmptyString($company->getDefaultUserID()) && $company->getDefaultUser()->isUserInActive())){ ?>
+                                    <label class="checkbox-inline"><input type="checkbox" name="isinvited" id="isinvited" value="1" <?php // echo !isEmptyString($user->getID()) ? '' : 'checked="checked"'; ?> /> <?php echo isEmptyString($company->getID()) ? 'Send' : 'Resend' ?> activation email now:</label>
+                                <?php } ?>
+                                <div id="email_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Contact Phone:</label>
+                            <div class="col-sm-8">
+                                <input type="text" name="phone" id="phone" class="form-control width150 isnumber inline" value="<?php echo $company->getPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /> 
+                                <div id="phone_error"></div>
+                            </div>
+                        </div>
+						<div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_country_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <?php
+                                    $countries = getCountries();
+                                    $countrydropdown = new Zend_Form_Element_Select('country',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>", "UG"=>"Uganda"), $countries),
+                                                            'view' => new Zend_View(), 
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','xwidth200')                                            	)
+                                                    );
+                                    $countrydropdown->setValue($company->getCountry()); 
+                                    echo $countrydropdown->render(); 
+                                ?><div id="country_error"></div>
+                            </div>
+                        </div>
+						<div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_citytown_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <input type="text" name="city" id="city" class="form-control input-sm" value="<?php echo $company->getCity(); ?>" />
+                                <div id="city_error"></div>
+                            </div>
+                        </div>
+						<div class="form-group">
+                            <label class="col-sm-4 control-label">Address Line 1:</label>
+                            <div class="col-sm-8">
+                                <textarea name="addressline1" id="addressline1" class="form-control expanding" style="height:35px;"><?php echo $company->getAddressLine1(); ?></textarea>
+                           </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Address Line 2:</label>
+                            <div class="col-sm-8">
+                                <textarea name="addressline2" id="addressline2" class="form-control expanding" style="height:35px;"><?php echo $company->getAddressLine1(); ?></textarea>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>

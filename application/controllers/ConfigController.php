@@ -56,7 +56,7 @@ class ConfigController extends SecureController   {
      	$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		
-		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
+		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit;
 		if(isArrayKeyAnEmptyString('noreload', $formvalues)){
 			$hasnoreload = false; 	
 		} else {
@@ -80,17 +80,24 @@ class ConfigController extends SecureController   {
 			}
 		}
 		if($formvalues['lookupid'] == 7){
-			if(!isArrayKeyAnEmptyString('departmentid', $formvalues)){
-				$alias = $formvalues['departmentid'];
+			$alias = decode($formvalues['alias']);
+			if(isArrayKeyAnEmptyString('id', $formvalues)){
+				$alias = $formvalues['alias'];
 			}
 		}
 		// exit;
 		// debugMessage()
 		switch ($formvalues['lookupid']){
 			case 9:
-				$formvalues['defaultamount'] = decode($formvalues['alias']);
+				$formvalues['defaultamount'] = $formvalues['alias'];
+				if(!isArrayKeyAnEmptyString('id', $formvalues)){
+					$formvalues['defaultamount'] = decode($formvalues['alias']);
+				}
 				$formvalues['amounttype'] = $formvalues['alias2'];
 				$formvalues['name'] = decode(trim($formvalues['value']));
+				if(!isArrayKeyAnEmptyString('id', $formvalues)){
+					$formvalues['name'] = $formvalues['name'];
+				}
 				$formvalues['companyid'] = getCompanyID();
 				
 				$benefittype = new BenefitType();
@@ -182,7 +189,7 @@ class ConfigController extends SecureController   {
 									'createdby' => $session->getVar('userid'),
 									'companyid' => getCompanyID()
 							);
-				// debugMessage($dataarray);
+				debugMessage($dataarray);
 				if(!isArrayKeyAnEmptyString('id', $formvalues)){
 					$lookupvalue->populate($formvalues['id']);
 					$beforesave = $lookupvalue->toArray(); // debugMessage($beforesave);

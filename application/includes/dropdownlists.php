@@ -769,7 +769,7 @@
 	# latest system user 
 	function getLatestUsers($limit){
 		$conn = Doctrine_Manager::connection();
-		$all_users = $conn->fetchAll("SELECT u.*, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name FROM useraccount as u WHERE u.id <> '' order by u.datecreated DESC, u.id DESC limit ".$limit);
+		$all_users = $conn->fetchAll("SELECT u.*, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name FROM useraccount as u WHERE u.id <> '' order by u.datecreated DESC, u.id DESC limit ".$limit);
 		return $all_users;
 	}
 	function getUsers($type = '', $limit = '', $ignoretype = '', $ignorelist = '', $wherequery = '', $hasemail = false, $hasphone = false){
@@ -803,26 +803,8 @@
 		if(!isEmptyString($limit)){
 			$limit_query= ' LIMIT '.$limit;
 		}
-		$valuesquery = "SELECT u.id AS optionvalue, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as optiontext FROM useraccount u WHERE u.id <> '' ".$custom_query." GROUP BY u.id ORDER BY optiontext ASC ".$limit_query;
+		$valuesquery = "SELECT u.id AS optionvalue, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as optiontext FROM useraccount u WHERE u.id <> '' ".$custom_query." GROUP BY u.id ORDER BY optiontext ASC ".$limit_query;
 		// debugMessage($valuesquery);
-		return getOptionValuesFromDatabaseQuery($valuesquery);
-	}
-	# fetch all user with an email
-	function getUsersWithEmail($isuser = false){
-		$custom_query = "";
-		if($isuser){
-			$custom_query = " AND (u.type <> '' OR u.type IS NOT NULL) ";
-		}
-		$valuesquery = "SELECT u.id AS optionvalue, IF(u.displayname <> '', concat(u.displayname,' [',u.email,']'), concat(u.firstname, ' ', u.lastname, ' ', u.othername,' [',u.email,']')) as optiontext FROM useraccount as u WHERE u.email <> '' ".$custom_query." ORDER BY optiontext ASC ";
-		return getOptionValuesFromDatabaseQuery($valuesquery);
-	}
-	# fetch all members with a phone
-	function getUsersWithPhone($isuser = false){
-		$custom_query = "";
-		if($isuser){
-			$custom_query = " AND (u.type <> '' OR u.type IS NOT NULL) ";
-		}
-		$valuesquery = "SELECT u.id AS optionvalue, IF(u.displayname <> '', concat(u.displayname,' [',u.phone,']'), concat(u.firstname, ' ', u.lastname, ' ', u.othername,' [',u.phone,']')) as optiontext FROM useraccount as u WHERE u.phone <> '' ".$custom_query." ORDER BY optiontext ASC ";
 		return getOptionValuesFromDatabaseQuery($valuesquery);
 	}
 	function getUserDetails($type = '', $limit = '', $status = 1, $user ='', $start = '', $end ='', $emails=''){
@@ -1262,7 +1244,7 @@
 			$customquery = " AND t.userid = '".$userid."' ";
 		}
 		$query = "SELECT t.id, t.userid, t.typeid, p.name as type, t.`status`, t.duration, t.durationtype, t.startdate as startdate, t.enddate as enddate, t.returndate, t.starttime, t.endtime, t.returntime, p.calendarcolor, 
-		IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `user`
+		IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as `user`
 		from timeoff t 
 		inner join timeofftype p on t.typeid = p.id
 		inner join useraccount u on t.userid = u.id
@@ -1295,5 +1277,8 @@
 		}
 	
 		return $array;
+	}
+	function getCompanyStatuses(){
+		return array('1','Active',0=>'Inactive','2'=>'Pending Approval');
 	}
 ?>

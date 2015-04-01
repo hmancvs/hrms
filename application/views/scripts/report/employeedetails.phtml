@@ -220,8 +220,8 @@
 	}
 
 	$all_results_query = "SELECT u.*, u.id as uid, 
-	IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, 
-	IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby, 
+	IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, 
+	IF(isnull(mc.othername), concat(mc.firstname,' ',mc.lastname), concat(mc.firstname,' ',mc.lastname,' ',mc.othername)) as addedby, 
 	u.datecreated as mdatecreated, 
 	g.groupid as groupid, acg.name as `Group`
 	 FROM useraccount u
@@ -644,7 +644,6 @@ $(document).ready(function() {
                     <div class="col-sm-3">
                     	<div class="divider20"></div>
                         <button type="submit" class="btn btn-primary btn-sm" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button>
-                    	<input type="hidden" name="csv_text" id="csv_text" value="" />
                     </div>
               	</div>
                 <div class="row">

@@ -485,7 +485,6 @@ $(document).ready(function() {
                     <div class="col-sm-3">
                     	<div class="divider20"></div>
                         <button type="submit" class="btn btn-primary btn-sm" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button>
-                    	<input type="hidden" name="csv_text" id="csv_text" value="" />
                     </div>
               	</div>
                 <div class="row">
@@ -561,10 +560,10 @@ $(document).ready(function() {
                                                 <?php } ?>
                                                 <tr style="font-size:12px;">
                                                     <?php if(!$istimesheetuser){ ?>
-                                                        <td class="userid bolded" style="text-align:right;">Totals</td>
+                                                        <td class="userid bolded" style="text-align:right;">x Totals</td>
                                                         <td class="trxndate"></td>
                                                     <?php } else { ?>
-                                                        <td class="trxndate bolded" style="text-align:right;">Totals</td>
+                                                        <td class="trxndate bolded" style="text-align:right;">x Totals</td>
                                                     <?php } ?>
                                                     <td class="trxntype"></td>
                                                     <td class="benefitid"></td>
