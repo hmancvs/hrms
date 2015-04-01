@@ -140,7 +140,7 @@ $(document).ready(function() {
 	$("#send").click(function(e){
 		e.preventDefault();
 		if($("#indexform").valid() == true) {
-			$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
+			// $.blockUI({ message: '<?php //echo $blockcontent; ?>'}); 
 			//$("#indexform").submit();
 			var posturl = $("#indexform").attr('action');
 			$.post(  
@@ -162,7 +162,7 @@ $(document).ready(function() {
 </script>
 <div class="row-fluid margin0 index">
     <form id="indexform" class="form-horizontal row-border" action="<?php echo $posturl; ?>" method="post">
-        <div class="col-md-12 padding0">
+        <div class="col-sm-12 padding0">
             <div class="headerbox">
                 <table class="table border0 nohover margin0">                       
                     <tr>		                    
@@ -181,23 +181,23 @@ $(document).ready(function() {
         <?php } ?>
         <div class="contentcontainer clearfix">
         	<div class="row-fluid marginleft5">
-            	<div class="col-md-12">
+            	<div class="col-sm-12">
                     <fieldset class="fieldsetcontainer">
                         <legend><?php // echo $title; ?></legend>
                         <div class="panel-body well-sm">
 							<div class="row-fluid marginleft5">
-                                <div class="col-md-12 paddingleft10">
+                                <div class="col-sm-12 paddingleft10">
                                     <?php if($ismail && isPublicUser()){ ?>
                                         <div class="form-group">
-                                            <label class="col-md-2 control-label">Sender Email: <?php echo $this->translate("required_field_marker"); ?></label>
-                                            <div class="col-md-8">
+                                            <label class="col-sm-2 control-label">Sender Email: <?php echo $this->translate("required_field_marker"); ?></label>
+                                            <div class="col-sm-8">
                                                 <div class="divider5"></div>
                                                 <input type="text" id="senderemail" name="senderemail" class="form-control halfwidth" value="<?php echo $user->getEmail(); ?>" />
                                             </div>
                                         </div>
                                         <div class="form-group">
-                                            <label class="col-md-2 control-label">Sender Name: <?php echo $this->translate("required_field_marker"); ?></label>
-                                            <div class="col-md-8">
+                                            <label class="col-sm-2 control-label">Sender Name: <?php echo $this->translate("required_field_marker"); ?></label>
+                                            <div class="col-sm-8">
                                                 <div class="divider5"></div>
                                                 <input type="text" id="sendername" name="sendername" class="form-control halfwidth" value="<?php echo $user->getName(); ?>" />
                                             </div>
@@ -208,8 +208,8 @@ $(document).ready(function() {
                                     <?php } ?>
                                     <?php if(isLoggedIn()){ ?>
                                         <div class="form-group">
-                                            <label class="col-md-2 control-label">Recipient(s): <?php echo $this->translate("required_field_marker"); ?></label>
-                                            <div class="col-md-8">
+                                            <label class="col-sm-2 control-label">Recipient(s): <?php echo $this->translate("required_field_marker"); ?></label>
+                                            <div class="col-sm-8">
                                                 <div class="blocked" style="margin-left:0;">
                                                     <label class="radio radio-inline"><input type="radio" class="" name="selecttype" id="selectmember" value="1" checked="checked" /> Select Member(s)</label>
                                                     <label class="radio radio-inline"><input type="radio" class="" name="selecttype" id="selectuser" value="2" /> Select User(s</label>
@@ -327,7 +327,7 @@ $(document).ready(function() {
                                                                                   'multiOptions' => $emailmembers,
                                                                                   'view' => new Zend_View(),
                                                                                   'decorators' => array(array('ViewHelper')),
-                                                                                  'class' => array('chosen-select','multipleselect','col-md-6'),
+                                                                                  'class' => array('chosen-select','multipleselect','col-sm-6'),
                                                                                   'style' => 'width:100%;'
                                                                           )
                                                                   );
@@ -349,7 +349,7 @@ $(document).ready(function() {
                                                                                   'multiOptions' => $phonemembers,
                                                                                   'view' => new Zend_View(),
                                                                                   'decorators' => array(array('ViewHelper')),
-                                                                                  'class' => array('chosen-select','multipleselect','col-md-6'),
+                                                                                  'class' => array('chosen-select','multipleselect','col-sm-6'),
                                                                                   'style' => 'width:100%;'
                                                                           )
                                                                   );
@@ -371,7 +371,7 @@ $(document).ready(function() {
                                                                               'multiOptions' => $emailusers,
                                                                               'view' => new Zend_View(),
                                                                               'decorators' => array(array('ViewHelper')),
-                                                                              'class' => array('chosen-select','multipleselect','col-md-6'),
+                                                                              'class' => array('chosen-select','multipleselect','col-sm-6'),
                                                                               'style' => 'width:100%;'
                                                                       )
                                                               );
@@ -388,7 +388,7 @@ $(document).ready(function() {
                                                                               'multiOptions' => $phoneusers,
                                                                               'view' => new Zend_View(),
                                                                               'decorators' => array(array('ViewHelper')),
-                                                                              'class' => array('chosen-select','multipleselect','col-md-6'),
+                                                                              'class' => array('chosen-select','multipleselect','col-sm-6'),
                                                                               'style' => 'width:100%;'
                                                                       )
                                                               );
@@ -410,8 +410,8 @@ $(document).ready(function() {
                                     <?php } ?>
                                     <?php if($ismail){ ?>
                                         <div class="form-group">
-                                            <label class="col-md-2 control-label"><?php echo $this->translate("message_subject_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
-                                            <div class="col-md-8">
+                                            <label class="col-sm-2 control-label"><?php echo $this->translate("message_subject_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
+                                            <div class="col-sm-8">
                                                 <input type="text" name="subject" id="subject" class="form-control" value="<?php echo $subject; ?>" />
                                                 <input type="hidden" name="subject_prefill" id="" value="<?php echo $subject; ?>" />
                                                 <div id="subject_error"></div>
@@ -419,8 +419,8 @@ $(document).ready(function() {
                                         </div>
                                     <?php } ?>
                                     <div class="form-group">
-                                        <label class="col-md-2 control-label"><?php echo $this->translate("message_contents_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
-                                        <div class="col-md-8">
+                                        <label class="col-sm-2 control-label"><?php echo $this->translate("message_contents_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
+                                        <div class="col-sm-8">
                                         	<?php if($ismail){ ?>
                                                 <textarea class="expanding form-control elastic" name="contents" id="contents" style="min-height:240px;" placeholder="Type message here"><?php echo $message; ?></textarea>
                                             <?php } ?>
@@ -436,8 +436,8 @@ $(document).ready(function() {
                                	</div>
                         	</div>
                             <div class="row">
-                                <div class="col-md-12">
-                                    <div class="col-md-offset-2">
+                                <div class="col-sm-12">
+                                    <div class="col-sm-offset-2">
                                         <a class="btn button-previous" href="<?php echo $this->baseUrl('notifications/list'); ?>"><i class="icon-remove"></i> Back to Inbox</a>
                                         <button type="submit" class="btn btn-success button-submit save" name="save" id="send"><i class="glyphicon glyphicon-ok"></i> <?php echo $button_title; ?></button>
                                         <input type="hidden" id="senderid" name="senderid" value="<?php echo $user->getID(); ?>" />
@@ -448,7 +448,7 @@ $(document).ready(function() {
                             </div>
                         </div>
                         <div class="form-group" style="padding:20px;">
-                            <div class="col-md-12 padding0">
+                            <div class="col-sm-12 padding0">
                             	<?php echo $session->getVar('sentlist'); ?>
                           	</div>
                        	</div>

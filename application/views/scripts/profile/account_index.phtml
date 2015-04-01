@@ -1,15 +1,19 @@
-<div class="row-fluid margin0">
-    <div class="col-md-12">
-        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+<div class="row">
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
             <legend>Account Setup</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-8 paddingleft10">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
                         <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate("profile_type_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
                                 <?php
                                     $allvalues = getUserType();
+									if(isCompanyAdmin()){
+										unset($allvalues[1]);
+										$allvalues[3] = "Administrator";
+									}
                                     $dropdown = new Zend_Form_Element_Select('type',
                                                         array(
                                                             'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
@@ -25,10 +29,10 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-4 control-label"><?php echo $this->translate('profile_email_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?>
-                            <span class="pagedescription blocked nobolded">To be used as Login</span>
+                            <label class="col-sm-4 control-label">Email: <?php //echo $this->translate("global_required_field_marker"); ?>
+                            <span class="pagedescription blocked nobolded">Only if user will have to Login</span>
                             </label>
-                            <div class="col-md-8">
+                            <div class="col-sm-8">
                                 <?php if($user->isUserActive()){ ?>
                                     <?php echo $user->getEmail(); ?>
                                     <input type="hidden" name="email" id="email" value="<?php echo $user->getEmail(); ?>" />
@@ -39,7 +43,7 @@
                                         <div class="divider2"></div>
                                         <div id="email_availability_result"></div>
                                         <?php if($user->isUserInActive()){ ?>
-                                            <label class="checkbox-inline"><input type="checkbox" name="isinvited" id="isinvited" value="1" <?php echo !isEmptyString($user->getID()) ? '' : 'checked="checked"'; ?> /> <?php echo isEmptyString($user->getID()) ? 'Send' : 'Resend' ?> activation Email:</label>
+                                            <label class="checkbox-inline"><input type="checkbox" name="isinvited" id="isinvited" value="1" <?php //echo !isEmptyString($user->getID()) ? '' : 'checked="checked"'; ?> /> <?php echo isEmptyString($user->getID()) ? 'Send' : 'Resend' ?> activation email now:</label>
                                         <?php } ?>
                                         <div id="email_error"></div>
                                 <?php } ?>

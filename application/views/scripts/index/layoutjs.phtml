@@ -23,30 +23,40 @@
 	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
 		$style = $session->getVar('style');
 	}
+	
 ?>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/chosen/chosen.jquery.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/momentjs/jquery.moment.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/momentjs/moment-range.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/jquery.dataTables.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.tableTools.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.colReorder.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.colVis.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.scroller.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.fixedColumns.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.fixedHeader.min.js')); ?>"></script>
 
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery.customscrollbar.min.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery-ui-1.11.1.min.js')); ?>"></script>
 <script type="text/javascript">
 var datepickerOpts = {
-		showOn: 'both', 
-		buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
-		buttonImageOnly: true,
-		changeMonth: true,
-		changeYear: true,
-		minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
-		maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
-		dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
-		hideIfNoPrevNext: true,
-		showButtonPanel: true, 
-		currentText: 'Now'		
-	}; 	
+	showOn: 'both', 
+	buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
+	buttonImageOnly: true,
+	changeMonth: true,
+	changeYear: true,
+	minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
+	maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
+	dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
+	hideIfNoPrevNext: true,
+	showButtonPanel: true, 
+	currentText: 'Now'		
+}; 	
 var uiblockcontent = '<h4><img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" /> Please wait...</h4>';
-
 $(document).ready(function() {
-	
-	// make the datefields readonly
-	// $(".datefield").attr('readOnly', 'true');
+	$('.ordinary').datepicker({
+		format: 'M dd, yyyy'
+	});
+
+	// global styles independent of any jquery plugins come at the top followed by plugin styles 
 	$(".readonly").each(function(){
 		$(this).attr('readonly','readonly');
 	});
@@ -65,13 +75,12 @@ $(document).ready(function() {
 	});
 	
 	// auto submit for list filters with the specified class, and all selects in a container with class filter 
-	$(".autosubmitsearchform, .filtercontainer select, #itemcountperpage, select.autofilter, input.autosearch").not(".autosubmitsearchform").each(function(){
+	$("#itemcountperpage, select.autofilter, input.autosearch").each(function(){
 		$(this).change(function(){
 			// clear the values in the search field
 			clearValue("searchterm"); 
 			// submit the form containing the dropdown
 			$(this).parents("form:first").submit(); 
-			$.blockUI({ message: uiblockcontent}); 
 	        return true;
 		});
 	});
@@ -79,15 +88,9 @@ $(document).ready(function() {
 	// return to previous page for cancel buttons
 	$('a.cancel').click(function(){
         parent.history.back();
-		$.blockUI({ message: uiblockcontent}); 
         return false;
     });
 	
-	// show block ui when transfering to another page
-	$('a.blockanchor, .blockanchor, a.block, .block').click(function(){
-		$.blockUI({ message: uiblockcontent}); 
-        return true;
-    });
 	// reset tab index
     var tabindex = 1;
     $('input,select,textarea').each(function() {
@@ -101,15 +104,12 @@ $(document).ready(function() {
   	// set hidden field for the alphabet and submit the form
 	$(".alphabets a").click(function(){
 		var letter = $(this).attr('id');
-		// alert(letter);
 		$('#letter').val(letter);
 		$("#listform").submit();
-		$.blockUI({ message: uiblockcontent}); 
 		return true;
 	});
 	
 	$("a.gonowhere").each(function(e){
-		// e.preventDefault();
 		$(this).attr('href', 'javascript: void(0)');
 	});
 
@@ -125,17 +125,6 @@ $(document).ready(function() {
 		if(isEmptyString(html)){
 			$(this).html('0');
 		}
-	});
-	
-	// auto grow textareaa with class expanding
-	$(".expanding").elastic();
-	$(".expanding").trigger('update');
-	
-	// initialise chosen select
-	$(".chosen-select").chosen();
-	// revalidate form 
-	$(".chosen-select.allowvalidate").chosen().change(function(){
-		$(this).validate().element(this);
 	});
 	
 	$.validator.addClassRules("greaterthanzero", {
@@ -280,6 +269,63 @@ $(document).ready(function() {
 		return Date.parse(startDate) <= Date.parse(value);        
 	}, "Please select an End Date after the Start Date");
 	
+	// when a user clicks add new display the first hidden firm which is not shown
+	$(".addline").click(function() {
+		showNewLine($(this).attr('id'));
+	});		
+	function showNewLine(type) {
+		$(".hidden_row_"+type+":first").removeClass("hidden_row_"+type).addClass("visible_row_"+type);	
+		
+		// remove disabled attr from the fields
+		$(".visible_row_"+type+" input, .visible_row_"+type+" select, .visible_row_"+type+" textarea").attr("disabled", false);
+			
+		//if the maximum no of rows is added, hide the link to add another row
+		if ($(".visible_row_"+type+"").size() == 10) {
+			$("#"+type).hide();	
+		} else {
+			$("#"+type).show();	
+		}				
+	}
+	
+	// delete rules
+	$(".removeline").click(function() {
+		removeLine($(this).attr('id'), $(this).attr('rel'));
+	});
+	function removeLine(lineid, type) {
+		var row_to_hide = lineid;
+		var message = '<label class="blockcontainer notbolded">Are you sure you want to delete this entry? <br /><br /> Click <b>OK</b> to confirm, and <b>Cancel</b> to ignore</label>';
+		// confirm popup
+		bootbox.confirm(message, function(confirmed) {
+			if(confirmed){
+				$("tr.visible_row_"+type).has('a#'+row_to_hide).addClass("hidden_row_"+type).removeClass("visible_row_"+type);
+				// $("input, select").attr("disabled", true);	
+				$("tr."+row_to_hide+" input, tr."+row_to_hide+" select, tr."+row_to_hide+" textarea").val('').attr("disabled", true);
+				//if the maximum no of rows is added, hide the link to add another row
+				if ($("tr.visible_row_"+type).size() == 10) {
+					$("#"+type).hide();		
+				} else {
+					$("#"+type).show();	
+				}	
+				$(".units, .qty").trigger('keyup');
+			} else {
+				bootbox.hideAll();
+				return false;
+			}
+		});
+	}
+	
+	$("#bottomactions").html($("#topactions").html());
+	
+	// change success url before submitting form
+	$(".changesuccessurl").click(function(e){
+		var successurl = $(this).attr('successurl');
+		if(!isEmptyString(successurl) && successurl != 'undefined'){
+			$("#successurl").val(successurl);
+		}
+		return true;
+	});
+	
+	/* Plugin specific initializations */
 	$('#dialog').modal({
 		keyboard: false,
 		backdrop: 'static',
@@ -292,6 +338,10 @@ $(document).ready(function() {
 		// $("#"+idparam).qtip("hide");
 		e.preventDefault();
 		var title = $(this).attr('rel');
+		var alttitle = $(this).attr('rel2');
+		if(!isEmptyString(alttitle) && alttitle != 'undefined'){
+			title = alttitle;
+		}
 		var href = $(this).attr('href');
 		var formid = $(this).attr('formtitle');
 		var posturl = $(this).attr('action');
@@ -317,7 +367,7 @@ $(document).ready(function() {
 		
 		// check for default submit button text
 		if(!isEmptyString(submittext)){
-			$("#new #save").html('<i class="glyphicon glyphicon-'+submiticon+'"></i> '+submittext);
+			$("#new #save").html(submittext);
 		}
 		if(!isEmptyString(addconfirm)){
 			hasconfirm = true;
@@ -345,7 +395,7 @@ $(document).ready(function() {
 									// alert(data); return false;
 									var url = successurl;    
 									$(location).attr('href',url);
-									$.blockUI({ message: uiblockcontent}); 
+									// $.blockUI({ message: uiblockcontent}); 
 									return true;
 								}  
 							); // close the $.post
@@ -364,7 +414,7 @@ $(document).ready(function() {
 						$("#"+formid).serialize(),  
 						function(data){
 							// alert(data); return false;
-							$.blockUI({ message: uiblockcontent }); 
+							// $.blockUI({ message: uiblockcontent }); 
 							var url = successurl;
 							$(location).attr('href',url);							
 							return true;						
@@ -378,14 +428,16 @@ $(document).ready(function() {
 		// cancel model
 		$(".modelcancel").on('click', function(e){
 			$("#dialog").modal('hide');
-			$(".dialog, body").css("overflow", "auto");
+			//$(".dialog, body").css("overflow", "auto");
+			$("#dialogcontent").html('');
 		});		
 		$('#dialog').on('hidden', function () {
 			// location.reload(true);
-			$(".dialog, body").css("overflow", "auto");
+			//$(".dialog, body").css("overflow", "auto");
+			$("#dialogcontent").html('');
 		});
 		
-		$(".dialog, body").css("overflow", "hidden");
+		// $(".dialog, body").css("overflow", "hidden");
 		 
 		return false;
 	});
@@ -455,6 +507,7 @@ $(document).ready(function() {
 		return false;
 	});
 	
+	
 	// delete rules
 	$("#deleteline, .deleteline").click(function(e) {
 		e.preventDefault();
@@ -473,9 +526,9 @@ $(document).ready(function() {
 	function confirmDialog(message, url) {
 		bootbox.confirm(message, function(confirmed) {
 			if(confirmed){
-				$.blockUI({ message: uiblockcontent}); 
+				// $.blockUI({ message: uiblockcontent}); 
 				window.location.href = url;					
-				$.blockUI({ message: uiblockcontent}); 
+				// $.blockUI({ message: uiblockcontent}); 
 				return true;				
 			} else {
 				bootbox.hideAll();
@@ -493,7 +546,7 @@ $(document).ready(function() {
 					bootbox.alert("Please specify Reason/Comment to continue");       
 				} else {
 					var submiturl = url+'/reason/'+result; // alert(submiturl);
-					$.blockUI({ message: uiblockcontent}); 
+					// $.blockUI({ message: uiblockcontent}); 
 					window.location.href = submiturl;	    
 					return true;    
 				}
@@ -522,36 +575,13 @@ $(document).ready(function() {
 	
 	$(".alert-dialog").click(function(e) {
 		e.preventDefault();
-		var message = '<label class="blockcontainer notbolded"></label>';
+		var custom_style = $(this).attr('containerstyle');
+		var message = '<label class="blockcontainer notbolded" style="'+custom_style+'"></label>';
 		var custom_msg = $(this).attr('message');
 		if(!isEmptyString(custom_msg) && custom_msg != 'undefined'){
-			var message = '<label class="blockcontainer notbolded">'+custom_msg+'</label>';
+			var message = '<label class="blockcontainer notbolded" style="'+custom_style+'">'+custom_msg+'</label>';
 		}
 		bootbox.alert(message); 
-	});
-	
-	// $("#bottomactions").html($("#topactions").html());
-	
-	$(".submitexcel.modified").click(function(e){
-		e.preventDefault();
-		var csv_value = $('#datatable').table2CSV({delivery:'value'});
-		var decoded_value = base64_encode(csv_value);	
-		$("#csv_text").val(decoded_value);	
-		var exceltitle = $(this).attr('reportname');
-		var excelstring = '';
-		if(!isEmptyString(exceltitle) && exceltitle != 'undefined'){
-			excelstring = '/reporttitle/'+exceltitle
-		}
-		$("#priceform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>'+excelstring).attr('method', 'post').submit();
-		return true;
-	});
-	
-	$("#excelform").submit(function(e){
-		e.preventDefault();
-		var csv_value = $('#datatable').table2CSV({delivery:'value'});
-		var decoded_value = base64_encode(csv_value);	
-		$("#csv_text").val(decoded_value);	
-		return true;
 	});
 	
 	$(function(){
@@ -623,208 +653,39 @@ $(document).ready(function() {
 					if(liSelected){
 						var url = $("li.display_box.selected").attr('url'); // alert(url);
 						if(!isEmptyString(url)){
-							$.blockUI({ message: uiblockcontent}); 
+							// $.blockUI({ message: uiblockcontent}); 
 							window.location.href = url;
 						}
 					}
 				}
 				$('a.blockanchor').click(function(){
-					$.blockUI({ message: uiblockcontent}); 
+					// $.blockUI({ message: uiblockcontent}); 
 					return true;
 				});
 			}
 			return false;    
 		});
 		
-		$("#divResult").live("click",function(e){ 
+		$("#divResult").on("click",function(e){ 
 			  var $clicked = $(e.target);
 			  var $name = $clicked.find('.name').html();
 			  var decoded = $("<div/>").html($name).text();
 			  $('#inputSearch').val(decoded);
 			  
 		});
-		$(document).live("click", function(e) { 
+		$(document).on("click", function(e) { 
 			  var $clicked = $(e.target);
 			  if (! $clicked.hasClass("search")){
 			  	$("#divResult").fadeOut(); 
 			  }
 		});
-		$(".display_box").live("click",function(e){ 
+		$(".display_box").on("click",function(e){ 
 			 var url = $(this).attr('url');
-			 // alert(url);
 			 window.location.href = url;
-			 $.blockUI({ message: uiblockcontent}); 
 		});
 		$('#inputSearch').click(function(){
 			  $("#divResult").fadeIn();
 		});
-	});
-	
-	// default search text on chosen dropdown
-	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
-	
-	// UI tabs
-	$("#tabs").tabs();
-	
-	$("#indexform, #signupform, #reportform").submit(function(){
-		if ($(this).valid()) {
-			$.blockUI({ message: uiblockcontent}); 
-		}
-	});
-	
-	// when a user clicks add new display the first hidden firm which is not shown
-	$(".addline").click(function() {
-		showNewLine($(this).attr('id'));
-	});		
-	function showNewLine(type) {
-		$(".hidden_row_"+type+":first").removeClass("hidden_row_"+type).addClass("visible_row_"+type);	
-		
-		// remove disabled attr from the fields
-		$("tr.visible_row_"+type+" input, tr.visible_row_"+type+" select, tr.visible_row_"+type+" textarea").attr("disabled", false);
-			
-		//if the maximum no of rows is added, hide the link to add another row
-		if ($("tr.visible_row_"+type+"").size() == 10) {
-			$("#"+type).hide();	
-		} else {
-			$("#"+type).show();	
-		}				
-	}
-	
-	// delete rules
-	$(".removeline").click(function() {
-		removeLine($(this).attr('id'), $(this).attr('rel'));
-	});
-	function removeLine(lineid, type) {
-		var row_to_hide = lineid;
-		var message = '<label class="blockcontainer notbolded">Are you sure you want to delete this entry? <br /><br /> Click <b>OK</b> to confirm, and <b>Cancel</b> to ignore</label>';
-		// confirm popup
-		bootbox.confirm(message, function(confirmed) {
-			if(confirmed){
-				$("tr.visible_row_"+type).has('a#'+row_to_hide).addClass("hidden_row_"+type).removeClass("visible_row_"+type);
-				// $("input, select").attr("disabled", true);	
-				$("tr."+row_to_hide+" input, tr."+row_to_hide+" select, tr."+row_to_hide+" textarea").val('').attr("disabled", true);
-				//if the maximum no of rows is added, hide the link to add another row
-				if ($("tr.visible_row_"+type).size() == 10) {
-					$("#"+type).hide();		
-				} else {
-					$("#"+type).show();	
-				}	
-				$(".units, .qty").trigger('keyup');
-			} else {
-				bootbox.hideAll();
-				return false;
-			}
-		});
-	}
-	
-	$(".computeamount").keyup(function(){
-		var rate = parseFloat($("#rate").val());
-		var hours = parseFloat($("#hours").val());
-		// alert(rate); alert(hours);
-		$("#amount_computed").html(rate*hours);
-	});
-	$(".computeamount").trigger("keyup");
-	
-	// dynamically add new configurable values to dropdowns
-	$(".configfunder").change(function(){
-		var fieldid = $(this).attr('fieldid');
-		var value = $("#"+fieldid).val(); 
-		var lookupid = $("#"+fieldid).attr('lookupid'); // alert(fieldid+'-'+value+'-'+lookupid);
-		
-		var fieldlabel = $("#"+fieldid).attr('fieldlabel'); // alert(fieldlabel);
-		var hasalias = $("#"+fieldid).attr('hasalias');
-		if(hasalias == '1'){
-			var hasalias = '1';
-		} else {
-			var hasalias = '0';
-		}
-		var doubleappendid = $("#"+fieldid).attr('doubleappendid');
-		var appendclass = $("#"+fieldid).attr('appendclass');
-		if(isEmptyString(doubleappendid) || doubleappendid == 'undefined'){
-			doubleappendid = '';
-		}
-		if(isEmptyString(appendclass) || appendclass == 'undefined'){
-			appendclass = '';
-		}
-		
-		if(!isEmptyString(value) && value == '0'){
-			var title = fieldlabel+' - New Value';
-			var href = '<?php echo $this->baseUrl('config/add/pgc/true/hasalias/'); ?>'+hasalias+'/lookupid/'+lookupid+'/fieldid/'+fieldid+'/doubleappendid/'+doubleappendid+'/appendclass/'+appendclass;
-			var formid = 'configform';
-			var posturl = '<?php echo $this->baseUrl("config/processvariables"); ?>';
-			var submittext = 'Save'; 
-			
-			// popup title
-			$(".modal-title").html(title);
-			// load content
-			$("#dialogcontent").html($("#dialogbody #loading").html());
-			$("#dialogcontent").load(href);  	
-			// then show it after the changes have been made
-			$('#dialog').modal('toggle');
-			$(".modelcancel").show();
-			$("#save").show();
-			
-			// check for default submit button text
-			if(!isEmptyString(submittext)){
-				$("#new #save").html('<i class="icon-ok icon-white"></i> '+submittext);
-			}
-			
-			// save dialog
-			$('#dialog #save').on('click', function(e){
-				var fieldid = $(".popupwindow #fieldid").val();
-				var lookupid = $(".popupwindow #lookupid").val(); 
-				var formid = 'configform';
-				// $('#dialog').modal('hide');	
-				if($(".popupwindow #"+formid).valid() == true) {
-					// alert('>'+fieldid+'>'+doubleappendid+'>'+lookupid+'>'+hasalias);
-					// disable buttons
-					$(".modelcancel").hide();
-					$('#dialog #save').hide();
-					// post form
-					$.post(  
-						posturl,  
-						$("#"+formid).serialize(),  
-						function(data){
-							// alert(data); return false;
-							data = jQuery.parseJSON(data);
-							var labelname = data.name;
-							if(hasalias == '1'){
-								var labelname = data.name;
-							}
-							var newselectoption = '<option label="'+labelname+'" value="'+data.id+'" selected="selected">'+labelname+'</option>';
-							// append the option to the defined fieldid
-							
-							$("#"+fieldid).append(newselectoption);
-							// also append the option to another select if specified
-							if(!isEmptyString(doubleappendid) && doubleappendid != 'undefined'){
-								var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
-								$("#"+doubleappendid).append(altselectoption);
-							}
-							if(!isEmptyString(appendclass) && appendclass != 'undefined'){
-								var altselectoption = '<option label="'+labelname+'" value="'+data.id+'">'+labelname+'</option>';
-								$("."+appendclass+":not(#"+fieldid+")").append(altselectoption);
-							}
-							
-							$("#dialog").modal('hide');
-							enableContainerByID('form-profile');
-						}  
-					); // close the $.post					
-					$("#dialogcontent").html($("#dialogbody #loading").html());
-				}
-			});
-			
-			// cancel model
-			$(".modelcancel, .close").on('click', function(e){
-				$("#dialog").modal('hide');
-				enableContainerByID('indexform');
-				$("#"+fieldid).val('');
-			});		
-			$('#dialog').on('hidden', function () {
-				enableContainerByID('indexform');
-				// $("#"+fieldid).val('');
-			});
-			return false;
-		}
 	});
 	
 	// dynamically add new configurable values to dropdowns
@@ -1028,55 +889,22 @@ $(document).ready(function() {
 		if(value != style){
 			$('#style').val(value);
 			$('#listform').submit();
-			$.blockUI({ message: uiblockcontent}); 
 		}
 	});
 	
-	// dropdown in leftmenu
-	$('#mainNav .dropdown > a').click(function(){
-		var theid = $(this).next().attr('id'); // alert(theid);
-		if(!$(this).next().is(':visible')) {			
-			$(this).next().slideDown('fast').addClass('open').removeClass('closed');
-			$("#mainNav .dropdown .subNav:not(#"+theid+")").slideUp('fast')
-		} else {
-			$(this).next().slideUp('fast').addClass('closed').removeClass('open');
+	$("#indexform").submit(function(e){
+		// e.preventDefault();
+		if($(this).valid()) {
+			$(".savebutton").addClass('disabledfield disabled').html(' <img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" /> saving... ');
 		}
-		return false;
-	});
-	
-	$('#mainNav .dropdown > a').append('<span class="dropdownArrow"></span>');
-	var controller = '<?php echo $request->getControllerName(); ?>';
-	$('#mainNav ul.subNav.'+controller).show();
-	
-	$(".wrapper1").scroll(function(){
-        $(".wrapper2").scrollLeft($(".wrapper1").scrollLeft());
-    });
-	
-    $(".wrapper2").scroll(function(){
-        $(".wrapper1").scrollLeft($(".wrapper2").scrollLeft());
-    });
-	
-	$("#sidebar").mCustomScrollbar({
-		axis:"y",
-		scrollButtons:{enable:true},
-		theme:"rounded-dots",
-		scrollInertia:200,
-		scrollbarPosition:"inside"
+		return true;
 	});
 	
 	// toggle showing the hidden leftcolumn. set value in session so that when pages are reloaded the previous setting is kept in session
-	$("#leftnavtoggler").click(function(){
-		$("#sidebar, #contentcontainer, .breadcrumbs").toggleClass('toggled');
-		var tid = '';
-		if($("#sidebar").hasClass('toggled')){
-			tid = 1;
-			$("#leftnavtoggler span").removeClass('glyphicon glyphicon-backward').addClass('glyphicon glyphicon-forward');
-			$('#mainNav ul.subNav').hide().addClass('closed').removeClass('open');
-		} else {
-			tid = 0;
-			$("#leftnavtoggler span").removeClass('glyphicon glyphicon-forward').addClass('glyphicon glyphicon-backward');
-		}
-		$.get("<?php echo $this->baseUrl('index/leftcolumn/pgc/true'); ?>/value/"+tid, {                        
+	$(".themetrigger").click(function(){
+		var type = $(this).attr('type');
+		var value = $(this).attr('rel');
+		$.get("<?php echo $this->baseUrl('index/themechange/pgc/true'); ?>/type/"+type+"/value/"+value, {                        
 			cachebuster: new Date().getTime()},                            
 			function(data){                        
 				// alert(data);                        
@@ -1084,18 +912,31 @@ $(document).ready(function() {
 		);
 	});
 	
-	<?php if($session->getVar('toggled') == '1'){ ?>
-		$('#mainNav ul.subNav').hide().addClass('closed').removeClass('open');
-	<?php } ?>
+	// toggle showing the hidden leftcolumn. set value in session so that when pages are reloaded the previous setting is kept in session
+	$("#colorswatch span").click(function(){
+		var value = $(this).attr('rel');
+		$.get("<?php echo $this->baseUrl('index/colorchange/pgc/true'); ?>/value/"+value, {                        
+			cachebuster: new Date().getTime()},                            
+			function(data){                        
+				// alert(data);                        
+			}
+		);
+	});
 	
-	$("#bottomactions").html($("#topactions").html());
-	
-	$("#headercontainer #headermenu li a:hover").on("mouseover mouseout", function(e) {
-		if(e.type == "mouseover") {
-			$(this, "span i.icon-large").addClass("white");
-		} else {
-			$(this, "span i.icon-large").removeClass("white");
+	// toggle showing the hidden leftcolumn. set value in session so that when pages are reloaded the previous setting is kept in session
+	$(".toggle-nav").click(function(){
+		$(this).toggleClass('hasbar');
+		value = 0;
+		if($(this).hasClass('hasbar')){
+			value = 1;
 		}
+		
+		$.get("<?php echo $this->baseUrl('index/sidebarconfig/pgc/true'); ?>/value/"+value, {                        
+			cachebuster: new Date().getTime()},                            
+			function(data){                        
+				// alert(data);                        
+			}
+		);
 	});
 	
 	$("ul.nav.nav-tabs li a").click(function(){
@@ -1107,98 +948,44 @@ $(document).ready(function() {
 		}
 	}); 
 	
-	var dateofbirthOpts = datepickerOpts;
-	var yearback = '<?php echo intval(date('Y'))-1995; ?>';
-	dateofbirthOpts.yearRange = "-"+yearback+":+3"; 
-	dateofbirthOpts.minDate = "-"+yearback+"Y";
-	datepickerOpts.maxDate = new Date("Dec 31, "+<?php echo intval(date('Y'))+3; ?>);
-	$(".ordinary").datepicker(dateofbirthOpts);
+	// export list to excel
+	$(".submitexcel").click(function(e){
+		e.preventDefault();
+		$(".replacehtml, .payslipdata").val(''); 
+		var csv_value = $('#datatable').table2CSV({delivery:'value'});
+		var decoded_value = base64_encode(csv_value);
+		$("#csv_text").val(decoded_value); // alert(decoded_value);
+		$("#main form, body.print form").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
+		// on submit reset the form parameters to previous definition
+		$("#main form, body.print form").attr('action', $("#listform").attr('orginalaction')).attr('method', 'get');
+		return true;
+	});
 	
-	var dateofbirthOpts = datepickerOpts;
-	var yearback = '<?php echo intval(date('Y'))-2010; ?>';
-	dateofbirthOpts.yearRange = "-"+yearback+":0"; 
-	dateofbirthOpts.minDate = "-"+yearback+"Y";
-	datepickerOpts.maxDate = new Date();
-	$(".endtoday").datepicker(dateofbirthOpts);
+	$("#changecompany").change(function(e){
+		var id = $(this).val();
+		var valuebefore = '<?php echo getCompanyID(); ?>';
+		var message = '<label class="blockcontainer notbolded">Switch Company? <br /><br /> Click <b>OK</b> to continue, and <b>Cancel</b> to ignore</label>';
+		// confirm popup
+		bootbox.confirm(message, function(confirmed) {
+			if(confirmed){
+				var url = $("#changecompany").attr('action');
+				window.location.href = url+'/companyid/'+id;
+			} else {
+				$("#changecompany").val(valuebefore);
+				bootbox.hideAll();
+				return false;
+			}
+		});
+	});
 	
-	var minage = '<?php echo intval(date('Y-m-d') - (date('Y-m-d') - 2000)); ?>';
-	var yearback = '<?php echo intval(date('Y'))-1900; ?>';
-	var startfrom = minage;
-	dateofbirthOpts.yearRange = "-"+yearback+":-0"; 
-	dateofbirthOpts.minDate = "-"+yearback+"Y";
-	datepickerOpts.maxDate = new Date("Dec 31, "+startfrom);	
-	$(".manyyears").datepicker(dateofbirthOpts);
-	
+	$(".chosen-select").chosen();
+	// default search text on chosen dropdown
+	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
 });
 
 //Use window.load and not document.ready for effective equal heights
 $(window).load(function() {
-	//Make columns equal
-	//equalHeight($("#sidebar, #contentcontainer"));
-	equalHeight($("#location, #contact"));
+	
 });
-
 </script>
-<?php if($request->print == 1 || $request->pdf == 1){ ?>
-<style>
-#centercolumn {
-	width:840px;
-}
-#contentcontainer {
-	margin-left:0;
-}
-#center {
-	float:left;
-	width:100%;
-}
-</style>
-<?php } ?>
-<?php if(strpos($_SERVER['HTTP_USER_AGENT'], 'MSIE') ){ ?>
-	<link rel="stylesheet" type="text/css" href="<?php echo $this->baseUrl('stylesheets/all-ie-only.css'); ?>" />
-<?php } ?>
-<?php if(in_array($thecontroller, $publiccontrollers)){ ?>
-<style>
-#contentcontainer {
-	margin-left:0;
-}
-.headerwrapper {
-	margin:0 auto;
-	width:100%;
-}
-#centercolumn {
-	margin-top:100px;
-}
-.publicnav {
-    height: 50px;
-}
-.navbar-header {
-	width:100%;
-	height:95px;
-}
-.navbar-header #homelink {
-	margin:0 auto;
-	margin-left:41%;
-	width:220px;
-	text-align:center;
-	display:inline-block;
-}
-.navbar-header #homelink #appname {
-	font-size:24px; 
-	color:#fff;
-	display:block;
-	font-weight: normal;
-	line-height: inherit;
-	margin-top:20px;
-	width: auto;
-	float: none;
-	text-align:center;
-}
-.navbar-header #homelink #logoimg {
-	width:110px; 
-	margin:0;
-	text-align:center;
-	float: none;
-	margin-left:22%;
-}
-</style>
-<?php } ?>
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/app.css')); ?>">

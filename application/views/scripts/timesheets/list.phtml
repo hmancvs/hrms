@@ -96,392 +96,393 @@ $(document).ready(function() {
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 	
 	$(".filter, #filter").click(function(e){
-		$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
+		// $.blockUI({ message: '<?php //echo $blockcontent; ?>'}); 
+		return true;
+	});
+	
+	// export list to excel
+	$(".submitexcel").click(function(e){
+		e.preventDefault();
+		var csv_value = $('#datatable').table2CSV({delivery:'value'});
+		var decoded_value = base64_encode(csv_value); 
+		$("#csv_text").val(decoded_value);
+		$("#listform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
+		// on submit reset the form parameters to previous definition
+		$("#listform").attr('action', '<?php echo $this->baseUrl("timesheets/listsearch"); ?>').attr('method', 'get');
+		$("#csv_text").val('');
 		return true;
 	});
 	
 	$("#previousweek").click(function(e){
 		$("#startdate").val('<?php echo changeMySQLDateToPageFormat($previousstartdate); ?>');
 		$("#enddate").val('<?php echo changeMySQLDateToPageFormat($previousenddate); ?>');
-		$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
+		// $.blockUI({ message: '<?php //echo $blockcontent; ?>'}); 
 		$("#listform").submit();
 	});
 	$("#nextweek").click(function(e){
 		$("#startdate").val('<?php echo changeMySQLDateToPageFormat($nextstartdate); ?>');
 		$("#enddate").val('<?php echo changeMySQLDateToPageFormat($nextenddate); ?>');
-		$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
+		// $.blockUI({ message: '<?php //echo $blockcontent; ?>'}); 
 		$("#listform").submit();
 	});	
 }); 
 </script>
-<style>
-.peoplelist .peoplewrapper {
-	height:140px;
-}
-</style>
-<div class="row margin0">
-    <div class="col-md-12 padding0">
-    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("timesheets/listsearch"); ?>" method="get" id="listform">
-		<?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="row-fluid clearfix">
-        	<div class="col-md-9 paddingleft0">
-            	<ul class="listfilter blocked">
-					<?php if ($acl->checkPermission("Timesheet", ACTION_APPROVE) || !$istimesheetuser) { ?>
-                        <li>
-							<?php
-                                $values = getUsers();
-                                $dropdown = new Zend_Form_Element_Select('userid',
-                                                    array(
-                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Employees'), $values),
-                                                        'view' => new Zend_View(),
-                                                        'decorators' => array('ViewHelper'),
-                                                        'class' => array("xautofilter", "form-control", 'chosen-select'),
-                                                        'style' => 'width:170px;'
-                                                    )
-                                );  
-                                $dropdown->setValue($request->getParam('userid')); 
-                                echo $dropdown->render();
-                            ?>
-                        </li>
-                        <li>
-                            <button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
-                        </li>
-                   	<?php } ?>
-                </ul>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+    	<form class="form-horizontal margin0 listform makerelative" action="<?php echo $this->baseUrl("timesheets/listsearch"); ?>" method="get" id="listform">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
             </div>
-            <div class="col-md-3 padding0">
-            	<div class="col-md-12 padding0"></div>
-                <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
-                <input type="hidden" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($startdate); ?>" />
-                <input type="hidden" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($enddate); ?>" />
-                <input type="hidden" name="view" id="view" value="<?php echo $request->view; ?>" />
-            </div>
-        </div>
-        <div class="stylewidget">
-            <?php if ($acl->checkPermission("Timesheet", ACTION_EXPORT)) { ?>
-            	<button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to Excel"><i class='glyphicon glyphicon-download-alt'></i> Export</button>
-                <input type="hidden" name="csv_text" id="csv_text" value="" />
-            <?php } ?>
-        </div>
-        <div class="view minheight250 whitebg">
-        	<?php if ($isweekly) { ?>
-                <div class="row-fluid">
-                    <div class="divider10"></div>
-                    <div class="col-md-3">
-                        <a class="btn btn-default btn-sm gonowhere floatright" id="previousweek"><i class="glyphicon glyphicon-fast-backward"></i> &nbsp;Previous Week</a>
-                    </div>
-                    <div class="col-md-6">
-                        <span class="blocked centeralign bolded" style="font-size:18px; color:#4a38a9;"><?php echo date('l, M d', strtotime($startdate)); ?> <span class="lineblocked" style="margin-left:10px; margin-right:10px;">-</span> <?php echo date('l, M d', strtotime($enddate)); ?></span>
-                    </div>
-                    <div class="col-md-3">
-                        <a class="btn btn-default btn-sm gonowhere floatleft" id="nextweek">Next Week &nbsp;<i class="glyphicon glyphicon-fast-forward"></i></a>
-                    </div>
-                </div>
-                <div class="divider10"></div>
-                <div class="maxwidth padding5">
-                    <table class="table list table-bordered table-striped data-table" id="datatable" style="width:100%;">
-                        <thead class="paginationheader">
-                            <tr>
-                                <?php if($acl->checkPermission("Timesheet", ACTION_APPROVE) || !$istimesheetuser){ ?>
-                                    <th style="vertical-align:top;"><span class="blocked">Employee</span></th>
-                                <?php } ?>
-                                <?php 
-                                    $days = getShortWeekDays(); 
-                                    $nextday = $startdate;
-                                    $nextstamp = strtotime($startdate);
-                                    foreach($days as $key => $day){ 
-                                        $nextstamp = $nextstamp + 86400;
-                                        $nextday = date('Y-m-d', $nextstamp);
-                                        if($key == 1){
-                                            $nextday = $startdate;
-                                            $nextstamp = strtotime($startdate);
-                                        }
-                                ?>    
-                                    <th class="centeralign notbolded"><?php echo $day; ?> <span class="blocked"><?php echo date('d M', $nextstamp); ?></span></th>
-                                <?php } ?>
-                                <th class="centeralign">Hours <span class="blocked">On Duty</span></th>
-                                <th class="centeralign">Hours <span class="blocked">Approved</span></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if($istimesheetuser){ ?>
-                                <tr>
-                                    <?php 
-                                        $timesheets = getWeekTimesheetsForUser($loggedinuser->getID(), $startdate, $enddate); // debugMessage($timesheets);
-                                        $countsheets = count($timesheets); $timesheetsarray = array();
-                                        foreach($timesheets as $key => $timesheet){ 
-                                            $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
-                                        }
-                                        
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                            <?php if ($acl->checkPermission("Timesheet", ACTION_APPROVE) || !$istimesheetuser) { ?>
+                                <li>
+                                   <?php
+                                        $values = getUsers();
+                                        $dropdown = new Zend_Form_Element_Select('userid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All Users'), $values),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('userid')); 
+                                        echo $dropdown->render();
                                     ?>
-                                    <?php 
-                                        $nextday = $startdate;
-                                        $nextstamp = strtotime($startdate); $totalworked = 0; $totalapproved = 0;
-                                        foreach($days as $key => $day){ 
-                                            $nextstamp = $nextstamp + 86400;
-                                            $nextday = date('Y-m-d', $nextstamp);
-                                            if($key == 1){
+                                </li>
+                                <li>
+                                    <button type="submit" class="btn btn-primary btn-sm blockanchor" id="filter"><i class="fa fa-filter"></i> Filter</button>
+                                    <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
+                                    <input type="hidden" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($startdate); ?>" />
+                                    <input type="hidden" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($enddate); ?>" />
+                                    <input type="hidden" name="view" id="view" value="<?php echo $request->view; ?>" />
+                                </li>
+                            <?php } ?>
+                        </ul>
+                  	</div>
+                    <div class="col-sm-3">
+                        <button type="button" class="btn btn-default btn-sm noround submitexcel pull-right" title="Export to Excel" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</button>
+                		<input type="hidden" name="csv_text" id="csv_text" value="" />
+                    </div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+                    	<?php if ($isweekly) { ?>
+                            <div class="row-fluid">
+                                <div class="divider10"></div>
+                                <div class="col-sm-3">
+                                    <a class="btn btn-default btn-sm gonowhere floatright" id="previousweek"><i class="fa fa-fast-backward"></i> &nbsp;Previous Week</a>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="blocked centeralign bolded" style="font-size:18px; color:#4a38a9;"><?php echo date('l, M d', strtotime($startdate)); ?> <span class="lineblocked" style="margin-left:10px; margin-right:10px;">-</span> <?php echo date('l, M d', strtotime($enddate)); ?></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <a class="btn btn-default btn-sm gonowhere floatleft" id="nextweek">Next Week &nbsp;<i class="fa fa-fast-forward"></i></a>
+                                </div>
+                            </div>
+                            <div class="divider10"></div>
+                            <div class="maxwidth padding5">
+                                <table class="table list table-bordered table-striped data-table" id="datatable" style="width:100%;">
+                                    <thead class="paginationheader">
+                                        <tr>
+                                            <?php if($acl->checkPermission("Timesheet", ACTION_APPROVE) || !$istimesheetuser){ ?>
+                                                <th style="vertical-align:top;"><span class="blocked">Employee</span></th>
+                                            <?php } ?>
+                                            <?php 
+                                                $days = getShortWeekDays(); 
                                                 $nextday = $startdate;
                                                 $nextstamp = strtotime($startdate);
-                                            }
-                                            // debugMessage($nextday);
-                                    ?>    
-                                        <th class="centeralign notbolded">
-                                            <span style="font-size:12px; font-weight:bold;">
-                                                <?php if($countsheets == 0){ ?>
-                                                    <?php echo '0.00'; ?>
-                                                <?php } else {  ?>
-                                                    <?php if(!isArrayKeyAnEmptyString($nextday, $timesheetsarray)){ ?>
-                                                        <?php 
-                                                            $hours = 0.00;
-                                                            if(!isEmptyString($timesheetsarray[$nextday]['timein']) && !isEmptyString($timesheetsarray[$nextday]['timeout'])){
-                                                                $fulldatein = strtotime($timesheetsarray[$nextday]['datein'].' '.$timesheetsarray[$nextday]['timein']);
-                                                                $fulldateout = strtotime($timesheetsarray[$nextday]['dateout'].' '.$timesheetsarray[$nextday]['timeout']);
-                                                                $hours = $fulldateout - $fulldatein;
-                                                                $hours = number_format($hours/3600, 2); // debugMessage($hours);
-                                                            }
-                                                            if(!isEmptyString($timesheetsarray[$nextday]['hours'])){
-                                                                $hours = $timesheetsarray[$nextday]['hours'];
-                                                            }
-                                                            echo number_format($hours,2);
-                                                            
-                                                            $totalworked += $hours;
-                                                            if($timesheetsarray[$nextday]['status'] == 3){
-                                                                $totalapproved += $timesheetsarray[$nextday]['hours'];
-                                                            }
-                                                        ?>
-                                                    <?php } else { ?>
-                                                        <?php echo '0.00'; ?>
-                                                    <?php } ?>
-                                                <?php } ?>
-                                            </span>
-                                        </th>
-                                    <?php } ?>
-                                    <th class="centeralign bolded"><?php echo number_format($totalworked,2); ?></th>
-                                    <th class="centeralign bolded"><?php echo number_format($totalapproved,2); ?></th>
-                                </tr>
-                            <?php } else { ?>
-                                    <?php 
-                                        $timesheetusers = getUsers(2);
-                                        if(!isEmptyString($request->userid)){
-                                            $timesheetusers = getUsers('','','',''," and u.id = '".$request->userid."' ");
-                                        }
-                                    ?>
-                                    <?php 
-                                        foreach($timesheetusers as $key => $value){ 
-                                            $timesheets = getWeekTimesheetsForUser($key, $startdate, $enddate); // debugMessage($timesheets);
-                                            $countsheets = count($timesheets); $timesheetsarray = array();
-                                            foreach($timesheets as $key => $timesheet){ 
-                                                $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
-                                            }
-                                    ?>
-                                    <tr>
-                                        <td>
-                                            <?php echo $value; ?>
-                                        </td>
-                                        <?php 
-                                            $nextday = $startdate;
-                                            $nextstamp = strtotime($startdate); $totalworked = 0; $totalapproved = 0;
-                                            foreach($days as $key => $day){ 
-                                                $nextstamp = $nextstamp + 86400;
-                                                $nextday = date('Y-m-d', $nextstamp);
-                                                if($key == 1){
-                                                    $nextday = $startdate;
-                                                    $nextstamp = strtotime($startdate);
-                                                }
-                                        ?>    
-                                            <th class="centeralign notbolded">
-                                                <?php if($countsheets == 0){ ?>
-                                                    <?php echo '0.00'; ?>
-                                                <?php } else {  ?>
-                                                    <?php if(!isArrayKeyAnEmptyString($nextday, $timesheetsarray)){ ?>
-                                                        <?php 
-                                                            $hours = 0.00;
-                                                            if(!isEmptyString($timesheetsarray[$nextday]['timein']) && !isEmptyString($timesheetsarray[$nextday]['timeout'])){
-                                                                $fulldatein = strtotime($timesheetsarray[$nextday]['datein'].' '.$timesheetsarray[$nextday]['timein']);
-                                                                $fulldateout = strtotime($timesheetsarray[$nextday]['dateout'].' '.$timesheetsarray[$nextday]['timeout']);
-                                                                $hours = $fulldateout - $fulldatein;
-                                                                $hours = number_format($hours/3600, 2); // debugMessage($hours);
-                                                            }
-                                                            if(!isEmptyString($timesheetsarray[$nextday]['hours'])){
-                                                                $hours = $timesheetsarray[$nextday]['hours'];
-                                                            }
-                                                            echo number_format($hours,2);
-                                                            
-                                                            $totalworked += $hours;
-                                                            if($timesheetsarray[$nextday]['status'] == 3){
-                                                                $totalapproved += $timesheetsarray[$nextday]['hours'];
-                                                            }
-                                                        ?>
-                                                    <?php } else { ?>
-                                                        <?php echo '0.00'; ?>
-                                                    <?php } ?>
-                                                <?php } ?>
-                                            </th>
-                                        <?php } ?>
-                                        <th class="centeralign bolded"><?php echo number_format($totalworked,2); ?></th>
-                                        <th class="centeralign bolded"><?php echo number_format($totalapproved,2); ?></th>
-                                    </tr>
-                                <?php } ?>
-                            <?php } ?>
-                        </tbody>
-                    </table>
-                </div>
-          	<?php } ?>
-            <?php if ($ismonthly) { ?>
-            	<div class="row-fluid">
-                    <div class="divider10"></div>
-                    <div class="col-md-3">
-                        <a class="btn btn-default btn-sm gonowhere floatright" id="previousweek"><i class="glyphicon glyphicon-fast-backward"></i> &nbsp;Previous Month</a>
-                    </div>
-                    <div class="col-md-6">
-                        <span class="blocked centeralign bolded" style="font-size:18px; color:#4a38a9;"><?php echo date('F Y', strtotime($enddate)); ?></span>
-                    </div>
-                    <div class="col-md-3">
-                        <a class="btn btn-default btn-sm gonowhere floatleft" id="nextweek">Next Month &nbsp;<i class="glyphicon glyphicon-fast-forward"></i></a>
-                    </div>
-                </div>
-                <div class="divider10"></div>
-                <div class="maxwidth padding5">
-                	<?php if(isEmptyString($timesheetuserid)){ ?>
-                    	<label class="labeldescription noresults">Select Employee and click Filter to Generate</label>
-                    <?php } else { ?>
-                        <table class="table list table-bordered table-striped data-table" id="datatable" style="width:100%;">
-                            <thead class="paginationheader">
-                                <tr>
-                                    <th>Week</th>
-                                    <th style="width:10%;">Date</th>
-                                    <th style="width:15%;">Day of Week</th>
-                                    <th style="width:15%;">Time on Duty</th>
-                                    <th class="centeralign" style="width:15%; text-align:center;">Hours on Duty</th>
-                                    <th style="width:15%;">Hours Approved</th>
-                                    <th style="width:15%;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php
-                                    $allstatuses = getTimesheetStatuses();
-                                    $timesheets = getWeekTimesheetsForUser($timesheetuserid, $startdate, $enddate); 
-                                    $countsheets = count($timesheets); $timesheetsarray = array(); $subtotalworkedarray = array(); $subtotalapprovedarray = array();
-                                    foreach($timesheets as $key => $timesheet){ 
-                                        $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
-                                    }
-                                    // debugMessage($timesheetsarray);
-                                ?>
-                                <?php
-                                    $year = date('Y', strtotime($startdate));
-                                    $month = date('m', strtotime($startdate));
-                                    $day = ''; 
-                                    $totalworked = 0; $totalapproved = 0;
-                                    for($i = date('j', strtotime($startdate)); $i<= date('j', strtotime($enddate)); $i++){
-                                        $currentdate = $year.'-'.$month.'-'.number_pad($i,2);
-                                        $weekno = date('W', strtotime($currentdate));
-                                        $wkending = '';
-                                        $monday = getMondayOfWeek($weekno, $year); // debugMessage($currentdate);
-                                        $sunday = getSundayOfWeek($weekno, $year); // debugMessage($sunday);
-                                        
-                                        $hasdata = false; $timeworked = ''; $hours = '0.00'; $hrsapproved = '0.00'; $style = ''; $customclass = ''; $status = '';
-                                        if(!isArrayKeyAnEmptyString($currentdate, $timesheetsarray)){
-                                            $hasdata = true;
-                                            if(!isEmptyString($timesheetsarray[$currentdate]['timein'])){
-                                                $timeworked = formatTimeCustom($timesheetsarray[$currentdate]['timein']).' - ';
-                                            }
-                                            if(!isEmptyString($timesheetsarray[$currentdate]['timein']) && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
-                                                $timeworked = formatTimeCustom($timesheetsarray[$currentdate]['timein']).' - '.formatTimeCustom($timesheetsarray[$currentdate]['timeout']);
-                                            }
-                                            
-                                            $status = isArrayKeyAnEmptyString($timesheetsarray[$currentdate]['status'], $allstatuses) ? '' : $allstatuses[$timesheetsarray[$currentdate]['status']]; 
-                                            if($timesheetsarray[$currentdate]['status'] == 0 && isEmptyString($timesheetsarray[$currentdate]['timeout'])){ 
-                                                $style = 'style="background-color:#2d6ca2; color:#fff;"';
-                                            }
-                                            if($timesheetsarray[$currentdate]['status'] == 1 && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
-                                                $style = 'style="background-color:#d4d6fc; color:#000;"';
-                                            }
-                                            if($timesheetsarray[$currentdate]['status'] == 2){
-                                                $customclass = ' alert-warning';
-                                            }
-                                            if($timesheetsarray[$currentdate]['status'] == 3){
-                                                $customclass = ' alert-success';
-                                            }
-                                            if($timesheetsarray[$currentdate]['status'] == 4){
-                                                $customclass = ' alert-danger';
-                                            }
-                                            $isoverdue = false;
-                                            if(!isEmptyString($timesheetsarray[$currentdate]['datein']) && isEmptyString($timesheetsarray[$currentdate]['dateout']) && (strtotime(date('Y-m-d')) > strtotime($timesheetsarray[$currentdate]['datein']))) {
-                                                $timesheetsarray[$currentdate]['status'] = 5;
-                                                $status = $allstatuses[$timesheetsarray[$currentdate]['status']]; 
-                                                $style = 'style="background-color:#f8ea07; color:#000;"';
-                                                $isoverdue = true;
-                                            } 
-                                            
-                                            if(!isEmptyString($timesheetsarray[$currentdate]['timein']) && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
-                                                $fulldatein = strtotime($timesheetsarray[$currentdate]['datein'].' '.$timesheetsarray[$currentdate]['timein']);
-                                                $fulldateout = strtotime($timesheetsarray[$currentdate]['dateout'].' '.$timesheetsarray[$currentdate]['timeout']);
-                                                $hours = $fulldateout - $fulldatein;
-                                                $hours = number_format($hours/3600, 2); // debugMessage($hours);
-                                            }
-                                            if(!isEmptyString($timesheetsarray[$currentdate]['hours'])){
-                                                $hours = $timesheetsarray[$currentdate]['hours'];
-                                            }
-                                            
-                                            $totalworked += $hours;
-                                            if($timesheetsarray[$currentdate]['status'] == 3){
-                                                $hrsapproved = $hours;
-                                                $totalapproved += $timesheetsarray[$currentdate]['hours'];
-                                            } 
-                                            
-                                            $subtotalworkedarray[$sunday][$i] = $hours; 
-                                            $subtotalapprovedarray[$sunday][$i] = $hrsapproved;            
-                                        }
-                                ?>
-                                    <tr>
-                                        <td>
-                                            <?php if(strtotime($currentdate) == strtotime($monday)){ ?>
-                                                <?php echo date('M d', strtotime(getWeekStartDate($currentdate))).' - '.date('M d', strtotime(getWeekEndDate($currentdate))); ?>
-                                            <?php }  ?>
-                                        </td>
-                                        <td><?php echo date('M d', strtotime($currentdate)); ?></td>
-                                        <td><?php echo date('l', strtotime($currentdate)); ?></td>
-                                        <td class="centeralign" style="font-size:12px;"><?php echo $timeworked; ?></td>
-                                        <td style="text-align:right; font-size:13px;"><?php echo $hours; ?></td>
-                                        <td style="text-align:right; font-size:13px;"><?php echo $hrsapproved; ?> </td>
-                                        <td class="nullifempty <?php echo $customclass; ?>"<?php echo $style; ?>><?php echo $status; ?></td>
-                                    </tr>
-                                    <?php if(strtotime($currentdate) == strtotime($sunday) || ($currentdate == $enddate && date('w', strtotime($enddate)) != 7)){ ?>
-                                        <tr>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td style="text-align:right;">Sub Total</td>
-                                            <td style="text-align:right; font-weight:bold;"><?php echo isArrayKeyAnEmptyString($sunday, $subtotalworkedarray) ? '0.00' : array_sum($subtotalworkedarray[$sunday]); ?></td>
-                                            <td style="text-align:right; font-weight:bold;"><?php echo isArrayKeyAnEmptyString($sunday, $subtotalapprovedarray) ? '0.00' : array_sum($subtotalapprovedarray[$sunday]); ?></td>
-                                            <td></td>
+                                                foreach($days as $key => $day){ 
+                                                    $nextstamp = $nextstamp + 86400;
+                                                    $nextday = date('Y-m-d', $nextstamp);
+                                                    if($key == 1){
+                                                        $nextday = $startdate;
+                                                        $nextstamp = strtotime($startdate);
+                                                    }
+                                            ?>    
+                                                <th class="centeralign notbolded"><?php echo $day; ?> <span class="blocked"><?php echo date('d M', $nextstamp); ?></span></th>
+                                            <?php } ?>
+                                            <th class="centeralign">Hours <span class="blocked">On Duty</span></th>
+                                            <th class="centeralign">Hours <span class="blocked">Approved</span></th>
                                         </tr>
-                                    <?php } ?>
+                                    </thead>
+                                    <tbody>
+                                        <?php if($istimesheetuser){ ?>
+                                            <tr>
+                                                <?php 
+                                                    $timesheets = getWeekTimesheetsForUser($loggedinuser->getID(), $startdate, $enddate); // debugMessage($timesheets);
+                                                    $countsheets = count($timesheets); $timesheetsarray = array();
+                                                    foreach($timesheets as $key => $timesheet){ 
+                                                        $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
+                                                    }
+                                                    
+                                                ?>
+                                                <?php 
+                                                    $nextday = $startdate;
+                                                    $nextstamp = strtotime($startdate); $totalworked = 0; $totalapproved = 0;
+                                                    foreach($days as $key => $day){ 
+                                                        $nextstamp = $nextstamp + 86400;
+                                                        $nextday = date('Y-m-d', $nextstamp);
+                                                        if($key == 1){
+                                                            $nextday = $startdate;
+                                                            $nextstamp = strtotime($startdate);
+                                                        }
+														
+														$hours = '';
+														if($countsheets == 0){
+															$hours = '0';
+														} else {
+															$hours = 0;
+															if(!isArrayKeyAnEmptyString($nextday, $timesheetsarray)){
+																if(!isEmptyString($timesheetsarray[$nextday]['timein']) && !isEmptyString($timesheetsarray[$nextday]['timeout'])){
+																	$fulldatein = strtotime($timesheetsarray[$nextday]['datein'].' '.$timesheetsarray[$nextday]['timein']);
+																	$fulldateout = strtotime($timesheetsarray[$nextday]['dateout'].' '.$timesheetsarray[$nextday]['timeout']);
+																	$hours = $fulldateout - $fulldatein;
+																	$hours = formatNumber($hours/3600, 2); // debugMessage($hours);
+																}
+																if(!isEmptyString($timesheetsarray[$nextday]['hours'])){
+																	$hours = $timesheetsarray[$nextday]['hours'];
+																}
+																$hours = formatNumber($hours);
+																
+																$totalworked += $hours;
+																if($timesheetsarray[$nextday]['status'] == 3){
+																	$totalapproved += $timesheetsarray[$nextday]['hours'];
+																}
+															}
+														}
+                                                        // debugMessage($nextday);
+                                                ?>    
+                                                    <td class="centeralign notbolded"><span style="font-size:12px; font-weight:bold;"><?php echo $hours; ?></span></td>
+                                                <?php } ?>
+                                                <td class="centeralign bolded"><?php echo formatNumber($totalworked); ?></td>
+                                                <td class="centeralign bolded"><?php echo formatNumber($totalapproved); ?></td>
+                                            </tr>
+                                        <?php } else { ?>
+                                                <?php 
+                                                    $timesheetusers = getUsers(2);
+                                                    if(!isEmptyString($request->userid)){
+                                                        $timesheetusers = getUsers('','','',''," and u.id = '".$request->userid."' ");
+                                                    }
+                                                ?>
+                                                <?php 
+                                                    foreach($timesheetusers as $key => $value){ 
+                                                        $timesheets = getWeekTimesheetsForUser($key, $startdate, $enddate); // debugMessage($timesheets);
+                                                        $countsheets = count($timesheets); $timesheetsarray = array();
+                                                        foreach($timesheets as $key => $timesheet){ 
+                                                            $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
+                                                        }
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo $value; ?></td>
+                                                    <?php 
+                                                        $nextday = $startdate;
+                                                        $nextstamp = strtotime($startdate); $totalworked = 0; $totalapproved = 0;
+                                                        foreach($days as $key => $day){ 
+                                                            $nextstamp = $nextstamp + 86400;
+                                                            $nextday = date('Y-m-d', $nextstamp);
+                                                            if($key == 1){
+                                                                $nextday = $startdate;
+                                                                $nextstamp = strtotime($startdate);
+                                                            }
+                                                            
+                                                            $hours = '';
+                                                            if($countsheets == 0){
+                                                                $hours = '0.00';
+                                                            } else {
+                                                                if(!isArrayKeyAnEmptyString($nextday, $timesheetsarray)){
+                                                                    $hours = 0.00;
+                                                                    if(!isEmptyString($timesheetsarray[$nextday]['timein']) && !isEmptyString($timesheetsarray[$nextday]['timeout'])){
+                                                                        $fulldatein = strtotime($timesheetsarray[$nextday]['datein'].' '.$timesheetsarray[$nextday]['timein']);
+                                                                        $fulldateout = strtotime($timesheetsarray[$nextday]['dateout'].' '.$timesheetsarray[$nextday]['timeout']);
+                                                                        $hours = $fulldateout - $fulldatein;
+                                                                        $hours = formatNumber($hours/3600, 2); // debugMessage($hours);
+                                                                    }
+                                                                    if(!isEmptyString($timesheetsarray[$nextday]['hours'])){
+                                                                        $hours = $timesheetsarray[$nextday]['hours'];
+                                                                    }
+                                                                    $hours = formatNumber($hours);
+                                                                    
+                                                                    $totalworked += $hours;
+                                                                    if($timesheetsarray[$nextday]['status'] == 3){
+                                                                        $totalapproved += $timesheetsarray[$nextday]['hours'];
+                                                                    }
+                                                                } else {
+                                                                    $hours = '0.00';
+                                                                }
+                                                            }
+                                                    ?>    
+                                                        <td class="centeralign notbolded"><?php echo formatNumber($hours); ?></td>
+                                                    <?php } ?>
+                                                    <td class="centeralign bolded"><?php echo formatNumber($totalworked); ?></td>
+                                                    <td class="centeralign bolded"><?php echo formatNumber($totalapproved); ?></td>
+                                                </tr>
+                                            <?php } ?>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php } ?>
+                        
+                        <?php if ($ismonthly) { ?>
+                            <div class="row-fluid">
+                                <div class="divider10"></div>
+                                <div class="col-sm-3">
+                                    <a class="btn btn-default btn-sm gonowhere floatright" id="previousweek"><i class="fa fa-fast-backward"></i> &nbsp;Previous Month</a>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="blocked centeralign bolded" style="font-size:18px; color:#4a38a9;"><?php echo date('F Y', strtotime($enddate)); ?></span>
+                                </div>
+                                <div class="col-sm-3">
+                                    <a class="btn btn-default btn-sm gonowhere floatleft" id="nextweek">Next Month &nbsp;<i class="fa fa-fast-forward"></i></a>
+                                </div>
+                            </div>
+                            <div class="divider10"></div>
+                            <div class="maxwidth padding5">
+                                <?php if(isEmptyString($timesheetuserid)){ ?>
+                                    <label class="labeldescription noresults">Select Employee and click Filter to Generate</label>
+                                <?php } else { ?>
+                                    <table class="table list table-bordered table-striped data-table" id="datatable" style="width:100%;">
+                                        <thead class="paginationheader">
+                                            <tr>
+                                                <th>Week</th>
+                                                <th style="width:10%;">Date</th>
+                                                <th style="width:15%;">Day of Week</th>
+                                                <th style="width:15%;">Time on Duty</th>
+                                                <th class="centeralign" style="width:15%; text-align:center;">Hours on Duty</th>
+                                                <th style="width:15%;">Hours Approved</th>
+                                                <th style="width:15%;">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody style="font-size:12px !important;">
+                                            <?php
+                                                $allstatuses = getTimesheetStatuses();
+                                                $timesheets = getWeekTimesheetsForUser($timesheetuserid, $startdate, $enddate); 
+                                                $countsheets = count($timesheets); $timesheetsarray = array(); $subtotalworkedarray = array(); $subtotalapprovedarray = array();
+                                                foreach($timesheets as $key => $timesheet){ 
+                                                    $timesheetsarray[$timesheet['timesheetdate']] = $timesheet;
+                                                }
+                                                // debugMessage($timesheetsarray);
+                                            ?>
+                                            <?php
+                                                $year = date('Y', strtotime($startdate));
+                                                $month = date('m', strtotime($startdate));
+                                                $day = ''; 
+                                                $totalworked = 0; $totalapproved = 0;
+                                                for($i = date('j', strtotime($startdate)); $i<= date('j', strtotime($enddate)); $i++){
+                                                    $currentdate = $year.'-'.$month.'-'.number_pad($i,0);
+                                                    $weekno = date('W', strtotime($currentdate));
+                                                    $wkending = '';
+                                                    $monday = getMondayOfWeek($weekno, $year); // debugMessage($currentdate);
+                                                    $sunday = getSundayOfWeek($weekno, $year); // debugMessage($sunday);
+                                                    
+                                                    $hasdata = false; $timeworked = ''; $hours = '0.00'; $hrsapproved = '0.00'; $style = ''; $customclass = ''; $status = '';
+                                                    if(!isArrayKeyAnEmptyString($currentdate, $timesheetsarray)){
+                                                        $hasdata = true;
+                                                        if(!isEmptyString($timesheetsarray[$currentdate]['timein'])){
+                                                            $timeworked = formatTimeCustom($timesheetsarray[$currentdate]['timein']).' - ';
+                                                        }
+                                                        if(!isEmptyString($timesheetsarray[$currentdate]['timein']) && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
+                                                            $timeworked = formatTimeCustom($timesheetsarray[$currentdate]['timein']).' - '.formatTimeCustom($timesheetsarray[$currentdate]['timeout']);
+                                                        }
+                                                        
+                                                        $status = isArrayKeyAnEmptyString($timesheetsarray[$currentdate]['status'], $allstatuses) ? '' : $allstatuses[$timesheetsarray[$currentdate]['status']]; 
+                                                        if($timesheetsarray[$currentdate]['status'] == 0 && isEmptyString($timesheetsarray[$currentdate]['timeout'])){ 
+                                                            $style = 'style="background-color:#2d6ca2; color:#fff;"';
+                                                        }
+                                                        if($timesheetsarray[$currentdate]['status'] == 1 && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
+                                                            $style = 'style="background-color:#d4d6fc; color:#000;"';
+                                                        }
+                                                        if($timesheetsarray[$currentdate]['status'] == 2){
+                                                            $customclass = ' alert-warning';
+                                                        }
+                                                        if($timesheetsarray[$currentdate]['status'] == 3){
+                                                            $customclass = ' alert-success';
+                                                        }
+                                                        if($timesheetsarray[$currentdate]['status'] == 4){
+                                                            $customclass = ' alert-danger';
+                                                        }
+                                                        $isoverdue = false;
+                                                        if(!isEmptyString($timesheetsarray[$currentdate]['datein']) && isEmptyString($timesheetsarray[$currentdate]['dateout']) && (strtotime(date('Y-m-d')) > strtotime($timesheetsarray[$currentdate]['datein']))) {
+                                                            $timesheetsarray[$currentdate]['status'] = 5;
+                                                            $status = $allstatuses[$timesheetsarray[$currentdate]['status']]; 
+                                                            $style = 'style="background-color:#f8ea07; color:#000;"';
+                                                            $isoverdue = true;
+                                                        } 
+                                                        
+                                                        if(!isEmptyString($timesheetsarray[$currentdate]['timein']) && !isEmptyString($timesheetsarray[$currentdate]['timeout'])){
+                                                            $fulldatein = strtotime($timesheetsarray[$currentdate]['datein'].' '.$timesheetsarray[$currentdate]['timein']);
+                                                            $fulldateout = strtotime($timesheetsarray[$currentdate]['dateout'].' '.$timesheetsarray[$currentdate]['timeout']);
+                                                            $hours = $fulldateout - $fulldatein;
+                                                            $hours = formatNumber($hours/3600, 2); // debugMessage($hours);
+                                                        }
+                                                        if(!isEmptyString($timesheetsarray[$currentdate]['hours'])){
+                                                            $hours = $timesheetsarray[$currentdate]['hours'];
+                                                        }
+                                                        
+                                                        $totalworked += $hours;
+                                                        if($timesheetsarray[$currentdate]['status'] == 3){
+                                                            $hrsapproved = $hours;
+                                                            $totalapproved += $timesheetsarray[$currentdate]['hours'];
+                                                        } 
+                                                        
+                                                        $subtotalworkedarray[$sunday][$i] = $hours; 
+                                                        $subtotalapprovedarray[$sunday][$i] = $hrsapproved;            
+                                                    }
+                                                    
+                                                    $thedate = "";
+                                                    if(strtotime($currentdate) == strtotime($monday)){
+                                                        $thedate = date('M d', strtotime(getWeekStartDate($currentdate))).' - '.date('M d', strtotime(getWeekEndDate($currentdate)));
+                                                    }
+                                            ?>
+                                                <tr>
+                                                    <td><?php echo $thedate; ?></td>
+                                                    <td><?php echo date('M d', strtotime($currentdate)); ?></td>
+                                                    <td><?php echo date('l', strtotime($currentdate)); ?></td>
+                                                    <td class="centeralign" style="font-size:12px;"><?php echo formatNumber($timeworked); ?></td>
+                                                    <td style="text-align:right; font-size:13px;"><?php echo formatNumber($hours); ?></td>
+                                                    <td style="text-align:right; font-size:13px;"><?php echo formatNumber($hrsapproved); ?> </td>
+                                                    <td class="nullifempty <?php echo $customclass; ?>"<?php echo $style; ?>><?php echo $status; ?></td>
+                                                </tr>
+                                                <?php if(strtotime($currentdate) == strtotime($sunday) || ($currentdate == $enddate && date('w', strtotime($enddate)) != 7)){ ?>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td style="text-align:right;">Sub Total</td>
+                                                        <td style="text-align:right; font-weight:bold;"><?php echo isArrayKeyAnEmptyString($sunday, $subtotalworkedarray) ? '0.00' : array_sum($subtotalworkedarray[$sunday]); ?></td>
+                                                        <td style="text-align:right; font-weight:bold;"><?php echo isArrayKeyAnEmptyString($sunday, $subtotalapprovedarray) ? '0.00' : array_sum($subtotalapprovedarray[$sunday]); ?></td>
+                                                        <td></td>
+                                                    </tr>
+                                                <?php } ?>
+                                            <?php } ?>
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td style="text-align:right; font-weight:bold;">Month Total</td>
+                                                <td style="text-align:right; font-weight:bold;"><?php echo formatNumber($totalworked); ?></td>
+                                                <td style="text-align:right; font-weight:bold;"><?php echo formatNumber($totalapproved); ?></td>
+                                                <td></td>
+                                            </tr>
+                                            <?php // debugMessage($subtotalarray); debugMessage(); ?>
+                                        </tbody>
+                                    </table>
                                 <?php } ?>
-                                <tr>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td style="text-align:right; font-weight:bold;">Month Total</td>
-                                    <td style="text-align:right; font-weight:bold;"><?php echo $totalworked; ?></td>
-                                    <td style="text-align:right; font-weight:bold;"><?php echo $totalapproved; ?></td>
-                                    <td></td>
-                                </tr>
-                                <?php // debugMessage($subtotalarray); debugMessage(); ?>
-                            </tbody>
-                        </table>
-                    <?php } ?>
+                            </div>
+                        <?php } ?>
+                    </div>
                	</div>
-            <?php } ?>
-        </div>
-	</form>
-</div>            
+         	</div>
+     	</div>
+    	</form>
+    </div>
+</div>    
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

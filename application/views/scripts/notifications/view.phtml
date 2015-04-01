@@ -29,7 +29,7 @@ $(document).ready(function() {
 });
 </script>
 <div class="row-fluid margin0 view">
-    <div class="col-md-12 padding0">
+    <div class="col-sm-12 padding0">
     	<div class="headerbox">
             <table class="table border0 nohover margin0">                       
                 <tr>		                    
@@ -55,20 +55,20 @@ $(document).ready(function() {
     	<form id="viewform" class="form-horizontal" role="form" method="get">
         	<div class="divider10"></div>
             <div class="row-fluid margin0">
-            	<div class="col-md-12">
+            	<div class="col-sm-12">
                     <fieldset class="fieldsetcontainer">
                         <legend><?php echo $message->getMessage()->getSender()->getName(); ?></legend>
                         <div class="panel-body well-sm">
                             <div class="row-fluid marginleft5">
-                                <div class="col-md-2">
+                                <div class="col-sm-2">
                                     <div class="divider10"></div>
                                     <img class="imagecontainer" src="<?php echo $message->getMessage()->getSender()->getMediumPicturePath(); ?>" />
                                 </div>
-                                <div class="col-md-10" style="padding-right:50px; padding-left:50px;">
+                                <div class="col-sm-10" style="padding-right:50px; padding-left:50px;">
                                 	<div class="divider15"></div>
-                                    <div class="col-md-12 padding0"><p style="margin-bottom:10px;"><?php echo nl2br($message->getMessage()->getContents()); ?></p></div>
+                                    <div class="col-sm-12 padding0"><p style="margin-bottom:10px;"><?php echo nl2br($message->getMessage()->getContents()); ?></p></div>
                                     <div class="divider10"></div>
-                                    <div class="col-md-12 padding0" style="font-size:10px;">Sent on <?php echo date('m/d/Y - g:i A', strtotime($message->getMessage()->getDateCreated())); ?></div>
+                                    <div class="col-sm-12 padding0" style="font-size:10px;">Sent on <?php echo date('m/d/Y - g:i A', strtotime($message->getMessage()->getDateCreated())); ?></div>
                                 </div>
                             </div>
                 		</div>

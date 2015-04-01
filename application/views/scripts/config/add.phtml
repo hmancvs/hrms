@@ -46,18 +46,18 @@ $(document).ready(function() {
         <input type="hidden" id="appendclass" name="appendclass" value="<?php echo $request->appendclass; ?>" />
         <input type="hidden" id="createdby" name="createdby" value="<?php echo $session->getVar('userid'); ?>" />
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-sm-12">
                 <div class="form-group">
-                    <label class="col-md-3 control-label"><?php echo $valuelabel; ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                    <div class="col-md-8 padding0">
+                    <label class="col-sm-3 control-label"><?php echo $valuelabel; ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                    <div class="col-sm-8 padding0">
                         <input type="text" name="value" id="value" class="form-control input-sm" value="" />
                     </div>
-                    <div id="value_error" class="col-md-offset-3"></div>
+                    <div id="value_error" class="col-sm-offset-3"></div>
                 </div>
                 <?php if($request->hasalias == '1' && $request->lookupid == 7){ ?>
                     <div class="form-group" id="aliasrow">
-                        <label class="col-md-3 control-label"><?php echo $this->translate('profile_department_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                        <div class="col-md-8 padding0">
+                        <label class="col-sm-3 control-label"><?php echo $this->translate('profile_department_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                        <div class="col-sm-8 padding0">
                             <?php
                                 $allvalues = getDepartments();
                                 $dropdown = new Zend_Form_Element_Select('departmentid',
@@ -72,7 +72,7 @@ $(document).ready(function() {
                                 echo $dropdown->render();
                             ?><div id="departmentid_error"></div>
                         </div>
-                        <div id="departmentid_error" class="col-md-offset-3"></div>
+                        <div id="departmentid_error" class="col-sm-offset-3"></div>
                     </div>
                 <?php } ?>
             </div>

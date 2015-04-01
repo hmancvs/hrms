@@ -1,25 +1,17 @@
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/jquery-ui-1.11.1.min.js')); ?>"></script>
+<link href='<?php echo $this->baseUrl('stylesheets/plugins/datepicker/datepicker.css'); ?>' rel='stylesheet' type='text/css'>
+<link href='<?php echo $this->baseUrl('stylesheets/plugins/timepicker/bootstrap-timepicker.min.css'); ?>' rel='stylesheet' type='text/css'>
+<link href='<?php echo $this->baseUrl('stylesheets/plugins/chosen/chosen.css'); ?>' rel='stylesheet' type='text/css'>
+<link href='<?php echo $this->baseUrl('stylesheets/custom.css'); ?>' rel='stylesheet' type='text/css'>
+<link href='<?php echo $this->baseUrl('stylesheets/app.css'); ?>' rel='stylesheet' type='text/css'>
 
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.date.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.time.js')); ?>"></script>
-<link href='<?php echo $this->baseUrl('stylesheets/pickadate.css'); ?>' rel='stylesheet' type='text/css'>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/bootstrap.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datepicker/bootstrap-datepicker.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/timepicker/bootstrap-timepicker.min.js')); ?>"></script>
+<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/chosen/chosen.jquery.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/application.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/app.js')); ?>"></script>
 
 <script type="text/javascript">
-	var datepickerOpts = {
-		showOn: 'both', 
-		buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
-		buttonImageOnly: true,
-		changeMonth: true,
-		changeYear: true,
-		minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
-		maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
-		dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
-		hideIfNoPrevNext: true,
-		showButtonPanel: true, 
-		currentText: 'Now'		
-	}; 	
-
 $(document).ready(function() {	
 	
 	$(".readonly").each(function(){
@@ -29,11 +21,21 @@ $(document).ready(function() {
 		$(this).attr('readonly', true).attr('disabled', true);
 	});
 	
-	var dateofbirthOpts = datepickerOpts;
-	var yearback = '<?php echo intval(date('Y'))-1995; ?>';
-	dateofbirthOpts.yearRange = "-"+yearback+":+3"; 
-	dateofbirthOpts.minDate = "-"+yearback+"Y";
-	datepickerOpts.maxDate = new Date("Dec 31, "+<?php echo intval(date('Y'))+3; ?>);
-	$(".ordinary").datepicker(dateofbirthOpts);
+	$('.ordinary').datepicker({
+		format: 'M dd, yyyy'
+	});
+	
+	if ($('.timepicker').length > 0) {
+		$('.timepicker').timepicker({
+			template : 'dropdown',
+			defaultTime : 'current',
+			minuteStep  : 1
+		});
+	}
+	
+	$(".chosen-select").chosen();
+	// default search text on chosen dropdown
+	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
+	
 });	
 </script>	

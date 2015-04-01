@@ -4,10 +4,6 @@
 	$loggedinuser = new UserAccount();
 	$loggedinuser->populate($userid);
 	$customlabel = "";
-	$istimesheetuser = false;
-	if(isTimesheetEmployee()){
-		$istimesheetuser = true;
-	}
 	
 	$title = "Attendance History"; 
 	$listitems = "Records";
@@ -46,7 +42,7 @@
 	$paginate->setItemCountPerPage("25");
 	
 	# define the letter to be clicked to ease navigation 
-	$where_query = " WHERE t.id <> '' ";
+	$where_query = " WHERE t.id <> '' AND u.companyid = '".$companyid."' ";
 	$allowclear = false;
 	if(!isEmptyString($request->searchterm)){
 		$allowclear = true;
@@ -84,7 +80,7 @@
 	}
 		
 	$order = trim($request->order);
-	$order_query = " ORDER BY t.datein DESC, t.id desc ";
+	$order_query = " ORDER BY t.timesheetdate DESC, t.id desc ";
 	
 	$sortcolumn = $request->sortby;
 	$sortorder = $request->sortorder;
@@ -94,7 +90,7 @@
 	// f.orgname as fundername, concat(t.firstname,' ',t.lastname) as supervisorname
 	$paginate->processPost($request->getParams());
 	$all_results_query = "SELECT 
-	t.id as aid, t.userid, t.datein, t.timein, t.dateout, t.timeout, t.inremarks, t.outremarks, t.hours, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `Name`, t.status
+	t.id as aid, t.userid, t.timesheetdate, t.payrollid, t.isrequest, t.datein, t.timein, t.dateout, t.timeout, t.inremarks, t.outremarks, t.comments, t.payrollid, t.notes, t.hours, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as `Name`, t.status
 	FROM timesheet t
 	inner join useraccount u on t.userid = u.id 
 	 ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$order_query;
@@ -102,7 +98,7 @@
 	
 	// determine total number of records found
 	$conn = Doctrine_Manager::connection(); 
-	$count_query = "SELECT count(t.id) as total FROM timesheet t
+	$count_query = "SELECT count(t.id) as total FROM timesheet t inner join useraccount u on t.userid = u.id 
 	".$where_query." ".$paginate->getSearchAndFilterSQL(); // debugMessage($count_query); exit;
 	$total = $conn->fetchOne($count_query);
 	$paginate->setItemCount($total); //debugMessage('>> '.$total);	
@@ -112,6 +108,7 @@
 	$result = $conn->fetchAll($current_results_query);
 	$has_no_data = (count($result) == 0) ? true : false;
 	
+	$resource = "Attendance";
 	$listurl = $this->baseUrl('timesheets/attendance');
 	$addurl = $this->baseUrl('timesheets/checkin');
 	$description = '';
@@ -128,31 +125,19 @@ $(document).ready(function() {
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 	
-	// export list to excel
 	$(".submitexcel").click(function(e){
-		<?php if($style == 1){ ?>
-			$("#exporttrigger").val('1');
-			$("#style").val('2');
-			$("#listform").submit();
-		<?php } else { ?>
-			e.preventDefault();
-			var csv_value = $('#datatable').table2CSV({delivery:'value'});
-			var decoded_value = base64_encode(csv_value);
-			$("#csv_text").val(decoded_value);
-			$("#listform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
-			// on submit reset the form parameters to previous definition
-			$("#listform").attr('action', '<?php echo $this->baseUrl("timesheet/attendancesearch"); ?>').attr('method', 'get');
-			$("#csv_text").val('');
-			return true;
-		<?php } ?>
+		e.preventDefault();
+		var csv_value = $('#datatable').table2CSV({delivery:'value'});
+		var decoded_value = base64_encode(csv_value);
+		$("#csv_text").val(decoded_value);
+		$("#listform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
+		// on submit reset the form parameters to previous definition
+		$("#listform").attr('action', '<?php echo $this->baseUrl("timesheet/attendancesearch"); ?>').attr('method', 'get');
+		$("#csv_text").val('');
+		return true;
 	});
 	
-	<?php if($request->exporttrigger == '1'){ ?>
-		$(".submitexcel").trigger('click');
-	<?php } ?>
-	
 	$(".filter, #filter").click(function(e){
-		$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
 		return true;
 	});
 	
@@ -172,428 +157,265 @@ $(document).ready(function() {
 	$(".isclicked, #selectall").click(function(){
 		$("#actions").val('');
 	});
-	
-	$("#actions").change(function(){
-		var thevalue = $(this).val();
-		// if no message is selected, prompt user to select atleast one	
-		if(thevalue != '' && $("input[name=selector]:checked").size() == 0){
-			if(thevalue == 1){
-				bootbox.alert('<label class="blockcontainer bolded centeralign">Please select atleast one record to Submit');
-			}
-			if(thevalue == 2){
-				bootbox.alert('<label class="blockcontainer bolded centeralign">Please select atleast one record to Delete');
-			}
-			$("#actions").val('');
-			return false;
-		} else {
-			var idslist = '';
-			
-			$("input[name=selector]:checked").each(function(){	
-				idslist += $(this).val()+',';
-				// alert($(this).val());		
-			});	
-			
-			if(thevalue == 1){
-				bootbox.confirm('<label class="blockcontainer notbolded">Are you sure you want to Submit all selected Hours for Approval? <br /><br /> Click <b>OK</b> to confirm or <b>Cancel</b> to stay on this page', function(confirmed) {
-					if(confirmed){
-						$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
-						var url = "<?php echo $this->baseUrl('timesheets/submit/successurl/'.encode($this->viewurl)).'/ids/'; ?>"+idslist; // alert(url);		
-						$(location).attr('href',url);							
-						return true;
-					} else {
-						$("#actions").val('');
-						bootbox.hideAll();
-						return false;
-					}
-				});
-			}
-			
-			if(thevalue == 3 || thevalue == 4){
-				bootbox.confirm('<label class="blockcontainer notbolded">Are you sure you want to Approve all selected Hours for Approval? <br /><br /> Click <b>OK</b> to confirm or <b>Cancel</b> to stay on this page', function(confirmed) {
-					if(confirmed){
-						$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
-						var url = "<?php echo $this->baseUrl('timesheets/approve/successurl/'.encode($this->viewurl)).'/ids/'; ?>"+idslist+'/status/'+thevalue; // alert(url);		
-						$(location).attr('href',url);							
-						return true;
-					} else {
-						$("#actions").val('');
-						bootbox.hideAll();
-						return false;
-					}
-				});
-			}
-		}
-	}); 	
 }); 
 </script>
-<style>
-.peoplelist .peoplewrapper {
-	height:140px;
-}
-</style>
-<div class="row margin0">
-    <div class="col-md-12 padding0">
-    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("timesheets/attendancesearch"); ?>" method="get" id="listform">
-		<?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="row-fluid clearfix">
-        	<div class="col-md-9 paddingleft0">
-            	<ul class="listfilter blocked">
-                	<?php if ($acl->checkPermission("Attendance", ACTION_CREATE) && $istimesheetuser) { ?>
-                        <li><a class="btn btn-primary btn-sm <?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right"><i class="glyphicon glyphicon-arrow-right"></i> Check In</a></li>
-                    <?php } ?>
-                    <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width80" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
-                    <li><input name="enddate" id="enddate" type="text" class="form-control input-sm datefield ordinary readonly width80" placeholder="To:" value="<?php echo $request->enddate; ?>" /></li>
-					<?php if ($acl->checkPermission("Attendance", ACTION_DELETE)) { ?>
-                        <li>
-							<?php
-                                $values = getUsers();
-                                $dropdown = new Zend_Form_Element_Select('userid',
-                                                    array(
-                                                        'multiOptions' => array_merge_maintain_keys(array('' => 'All Users'), $values),
-                                                        'view' => new Zend_View(),
-                                                        'decorators' => array('ViewHelper'),
-                                                        'class' => array("xautofilter", "form-control", 'chosen-select'),
-                                                        'style' => 'width:170px;'
-                                                    )
-                                );  
-                                $dropdown->setValue($request->getParam('userid')); 
-                                echo $dropdown->render();
-                            ?>
-                        </li>
-                   	<?php } ?>
-                    <li>
-                        <?php
-                            $allstatuses = getTimesheetStatuses();
-                            $dropdown = new Zend_Form_Element_Select('status',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $allstatuses),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('status')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                	<li>
-                        <button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
-                    </li>
-                </ul>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+    	<form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("timesheets/attendancesearch"); ?>" method="get" id="listform">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
             </div>
-            <div class="col-md-3 padding0">
-            	<div class="col-md-12 padding0"></div>
-                <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
-                <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
-                <?php if($allowclear){ ?>
-                    <a href="<?php echo $listurl; ?>" title="Clear Search and Filters" class="reset close button btn resetlink blockanchor">&times;</a>
-                <?php } ?>
-            </div>
-        </div>
-        <div class="stylewidget">
-        	<?php if($allowclear){ ?>
-	        	<a class="btn btn-xs blockanchor" href="<?php echo $listurl; ?>" title="Clear Search and Filters"><i class="glyphicon glyphicon-refresh"></i> Reset List</a>
-            <?php } ?>
-            <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 1 ? 'active' : ''; ?>" id="style1" rel='1'><i class="glyphicon glyphicon-th-large"></i> Grid</a>
-            <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 2 ? 'active' : ''; ?>" id="style2" rel='2'><i class="glyphicon glyphicon-list-alt"></i> Table</a>
-            <?php if ($acl->checkPermission("Attendance", ACTION_EXPORT)) { ?>
-            	<button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to Excel"><i class='glyphicon glyphicon-download-alt'></i> Export</button>
-                <input type="hidden" name="csv_text" id="csv_text" value="" />
-            <?php } ?>
-        </div>
-		<?php if ($has_no_data) { ?>
-            <div class="divider30"></div>
-            <div style="clear:both;" class="alert alert-warning margin5"><?php echo $this->translate("global_list_noentries"); ?></div>
-        <?php } else { ?>
-        	<div class="col-md-2 padding0" style="width:auto !important;">
-                <ul class="clearfix managelist">
-                    <li>
-                        <?php
-							$data = array("" => "<Batch Actions>");
-							if($acl->checkPermission("Attendance", ACTION_CREATE)){
-								$data[1] = "Submit All Selected";
-							}
-							if ($acl->checkPermission("Timesheets", ACTION_APPROVE)){
-								$data[3] = "Approve All Selected";
-							}
-							if ($acl->checkPermission("Timesheets", ACTION_APPROVE)){
-								$data[4] = "Reject All Selected";
-							}
-							/*if ($acl->checkPermission("Attendance", ACTION_DELETE)){
-								$data[5] = "Delete All Selected"; 
-							}*/
-                            $read = new Zend_Form_Element_Select('actions',
-                                        array(
-                                            'multiOptions' => $data, 
-                                            'view' => new Zend_View(),
-                                            'decorators' => array('ViewHelper'),
-                                            'class' => array("removesorttitle","form-control","input-sm","inline"),
-                                            'style' => 'width:150px;'
-                                        )
-                            );
-                            $read->setValue(''); 
-                            echo $read->render();	
-                        ?>
-                    </li>
-                </ul>
-            </div>    
-            <div class="col-md-4 padding0 inline">
-				
-            </div>
-            <div class="col-md-6 padding0 inline">
-                
-            </div>
-            <div class="divider2"></div>
-            <div class="errors"><div id="errormessage"></div></div>
-        	<div class="row-fluid peoplelist clearfix <?php echo $style == '2' ? 'whitebg' : ''; ?>">
-            	<?php if($style == 1){ ?>		
-                	<div class="divider10"></div>
-					<?php
-						foreach($result as $line){
-							$viewurl = stripUrl($this->baseUrl('profile/view/id/'.encode($line['userid'])));
-							$outstr = '';
-							if($line['datein'] != $line['dateout'] && !isEmptyString($line['dateout'])){
-								$outstr = ' <b>['.changeMySQLDateToPageFormat($line['dateout']).']</b>';
-							}
-							$hours = ''; $fulldatein = ''; $fulldateout = ''; 
-							if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout'])){
-								$hours = 0;
-								$fulldatein = strtotime($line['datein'].' '.$line['timein']);
-								$fulldateout = strtotime($line['dateout'].' '.$line['timeout']);
-								$hours = $fulldateout - $fulldatein;
-								$hours = number_format($hours/3600, 2);
-							}
-							if(!isEmptyString($line['hours'])){
-								$hours = $line['hours'];
-							}
-							
-							$style = ''; $customclass = '';
-							$status = isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; 
-							if($line['status'] == 0 && isEmptyString($line['timeout'])){ 
-								$style = 'style="background-color:#2d6ca2; color:#fff;"';
-							}
-							if($line['status'] == 1 && !isEmptyString($line['timeout'])){
-								$style = 'style="background-color:#d4d6fc; color:#000;"';
-							}
-							if($line['status'] == 2){
-								$customclass = ' alert-warning';
-							}
-							if($line['status'] == 3){
-								$customclass = ' alert-success';
-							}
-							if($line['status'] == 4){
-								$customclass = ' alert-danger';
-							}
-							$isoverdue = false;
-							if(!isEmptyString($line['datein']) && isEmptyString($line['dateout']) && (strtotime(date('Y-m-d')) > strtotime($line['datein']))) {
-								$line['status'] = 5;
-								$status = $allstatuses[$line['status']]; 
-								$style = 'style="background-color:#f8ea07; color:#000;"';
-								$isoverdue = true;
-							}
-					?>
-                    	 <div class="col-xs-12 col-sm-6">
-                            <div class="peoplewrapper makerelative">
-                            	<div style="position:absolute; right:60px; top:0px;">
-                                	<span <?php echo $style; ?> class="label floatleft statuslabel <?php echo $customclass; ?> noround"><?php echo $status; ?></span>
-                                </div>
-                                <div style="position:absolute; bottom: 5px; left: 20px;">
-									<?php if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout'])){ ?>
-                                        <label class="checkbox inline floatleft notbolded"><input type="checkbox" class="isclicked linechecker" id="record_<?php echo $line['aid']; ?>" name="selector" value="<?php echo $line['aid']; ?>" /> Select</label>
-                                    <?php } ?>
-                                </div>
-                                <div class="btn-group gridactions">
-                                    <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
-                                    <ul class="dropdown-menu" role="menu" style="left:-102px;">
-                                        <?php if(!isEmptyString($line['timein']) && isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID()){ ?>
-                                            <li><a class="inline <?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/2/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout is overdue and has been disabled. Contact Admin or a Supervisor.">Check out</a></li>
-                                        <?php } ?>
-                                        <?php if(!isEmptyString($line['timein']) && $line['userid'] != $loggedinuser->getID() && $acl->checkPermission("Attendance", ACTION_DELETE) && ($line['status'] == '4' || $line['status'] == '5')){ ?>
-                                            <li><a class="addpopup inline" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/3/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Update Attendance" rel="Update Attendance" id="update" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Save Changes">Update</a></li>
-                                        <?php } ?>
-                                        <?php if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID() && $line['status'] == '1'){ ?>
-                                            <li><a class="confirm-dialog" title="Submit for Approval" action="<?php echo $this->baseUrl('timesheets/submit/id/'.encode($line['aid']).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Submit <?php echo $hours; ?> Hours for <?php echo changeMySQLDateToPageFormat($line['datein']); ?> for Approval">Submit for Approval</a></li>
-                                        <?php } ?>
-                                        <?php if($line['userid'] != $loggedinuser->getID() && ($line['status'] == '2' || $line['status'] == '4') && $acl->checkPermission("Timesheets", ACTION_APPROVE)){ ?>
-                                            <li><a class="confirm-dialog" title="Approve" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]">Approve</a></li>
-                                        <?php } ?>    
-                                        <?php if($line['userid'] != $loggedinuser->getID() && ($line['status'] == '2' || $line['status'] == '3') && $acl->checkPermission("Timesheets", ACTION_APPROVE)){ ?>
-                                            <li><a class="confirm-dialog noimgbutton" title="Reject" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Reject <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]" style="padding:3px 6px 2px 6px; display:inline;">Reject</a></li>
-                                        <?php } ?>
-                                    </ul>
-                                </div>
-                                <div class="thumb img-thumbnail">
-                                	<div class="gonowhere imagecontainer blocked centeralign">
-                                    	<div class="divider10"></div>
-                                    	<span style="font-weight:bold; font-size:20px; color:#9e9e9e;"><?php echo date('M', strtotime($line['datein'])) ; ?></span>
-                                        <div class="divider10"></div>
-                                        <span style="font-weight:bold; font-size:18px; color:#ccc;"><?php echo date('d', strtotime($line['datein'])) ; ?></span>
-                                    </div>
-                                </div>
-                                <div class="peopleinfo" style="margin-left:105px;">
-                                	<?php if($line['userid'] != $loggedinuser->getID()){ ?>
-                                    	<h4 style="margin-top:15px;"><a href="<?php echo $viewurl; ?>" class="blanklink"><?php echo $line['Name']; ?></a></h4>
-                                    <?php } else { ?>
-                                    	<h4 style="margin-top:5px;">&nbsp;</h4>
-                                    <?php } ?>
-                                    <div class="row-fluid margin0">
-                                    	<div class="col-md-6 padding0">
-                                        	<ul>
-                                                <li><span class="bolded">Time In:</span> <span class="nullifempty"><?php echo formatTimeCustom($line['timein']); ?></span></li>
-                                                <li><span class="bolded blocked">Remarks:</span> <span class="nullifempty"><?php echo snippet($line['inremarks'], 100, '...'); ?></span></li>
-                                            </ul>
-                                        </div>
-                                        <div class="col-md-6 padding0">
-                                            <ul>
-                                                <li><span class="bolded">Time Out:</span> <span class="nullifempty"><?php echo formatTimeCustom($line['timeout']).$outstr; ?></span></li>
-                                                <li><span class="bolded blocked">Remarks:</span> <span class="nullifempty"><?php echo snippet($line['outremarks'], 100, '...'); ?></span></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    
-                                </div>
-                            </div>
-                        </div>
-                   <?php } ?> 
-               	<?php } ?>
-                <?php if($style == 2){ ?>
-
-                        <div class="maxwidth">
-                			<table class="table list table-bordered table-striped data-table" id="datatable" style="width:100%;">
-                                <thead class="paginationheader">
-                                	<tr>
-                                        <?php if(!$acl->checkPermission("Attendance", ACTION_CREATE)){ ?>
-                                        	<th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('',  'Employeee'); ?></th>
-                                        <?php } ?>    
-                                        <th><?php echo $paginate->getSortLinkForColumn('', 'Date In'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        <th><?php echo $paginate->getSortLinkForColumn('', 'Time In'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        <th><?php echo $paginate->getSortLinkForColumn('', 'Date Out'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                       	<th><?php echo $paginate->getSortLinkForColumn('', 'Time Out'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        <th><?php echo $paginate->getSortLinkForColumn('', 'Hours'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                       	<th style="width:120px;"><?php echo $paginate->getSortLinkForColumn('', 'Remarks'); ?>
-                                            <img style="width:70px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        <th><?php echo $paginate->getSortLinkForColumn('', 'Status'); ?> <img style="width:60px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        <th class="wrapping" style="padding-left:5px; width: <?php echo $acl->checkPermission("Attendance", ACTION_CREATE) ? '120px' : '110px'; ?> !important;">
-                                            Actions <input type="checkbox" id="selectall" name="selectall" value="" class="floatright" />
-                                        </th>
-                                    </tr>
-                              	</thead>
-                                <tbody>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <ul class="resetlist listactions">
+                        	<?php if ($acl->checkPermission("Attendance", ACTION_CREATE)) { ?>
+                                <li><a class="btn btn-primary btn-sm <?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now">Check In</a></li>
+                                <li><a class="btn btn-primary btn-sm addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Add Timesheet Request" rel="Add Timesheet Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('timesheets/attendance'); ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a>
+                                </li>
+                            <?php } ?>
+                            <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
+                    		<li><input name="enddate" id="enddate" type="text" class="form-control input-sm datefield ordinary readonly width100" placeholder="To:" value="<?php echo $request->enddate; ?>" /></li>
+                            <?php if ($acl->checkPermission("Attendance", ACTION_APPROVE)) { ?>
+                                <li>
                                     <?php
-                                        foreach($result as $line){
-                                            $viewurl = stripUrl($this->baseUrl('profile/view/id/'.encode($line['userid'])));
-											$outstr = '';
-											if($line['datein'] != $line['dateout'] && !isEmptyString($line['dateout'])){
-												$outstr = ' <b>['.changeMySQLDateToPageFormat($line['dateout']).']</b>';
-											}
-											$hours = ''; $fulldatein = ''; $fulldateout = ''; 
-											if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout'])){
-												$fulldatein = strtotime($line['datein'].' '.$line['timein']);
-												$fulldateout = strtotime($line['dateout'].' '.$line['timeout']);
-												$hours = $fulldateout - $fulldatein;
-												$hours = number_format($hours/3600, 2);
-											}
-											if(!isEmptyString($line['hours'])){
-												$hours = $line['hours'];
-											}
-											
-											$style = ''; $customclass = '';
-											$status = isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; 
-											if($line['status'] == 0 && isEmptyString($line['timeout'])){ 
-												$style = 'style="background-color:#2d6ca2; color:#fff;"';
-											}
-											if($line['status'] == 1 && !isEmptyString($line['timeout'])){
-												$style = 'style="background-color:#d4d6fc; color:#000;"';
-											}
-											if($line['status'] == 2){
-												$customclass = ' alert-warning';
-											}
-											if($line['status'] == 3){
-												$customclass = ' alert-success';
-											}
-											if($line['status'] == 4){
-												$customclass = ' alert-danger';
-											}
-											$isoverdue = false;
-											if(!isEmptyString($line['datein']) && isEmptyString($line['dateout']) && (strtotime(date('Y-m-d')) > strtotime($line['datein']))) {
-												$line['status'] = 5;
-												$status = $allstatuses[$line['status']]; 
-												$style = 'style="background-color:#f8ea07; color:#000;"';
-												$isoverdue = true;
-											}
-											
+                                        $values = getUsers();
+                                        $dropdown = new Zend_Form_Element_Select('userid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All Users'), $values),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('userid')); 
+                                        echo $dropdown->render();
                                     ?>
-                                        <tr id="line_<?php echo $line['aid']; ?>">
-                                            <?php if(!$acl->checkPermission("Attendance", ACTION_CREATE) && $line['userid'] != $loggedinuser->getID()){ ?>
-                                            	<td class="nullifempty"><a href="<?php echo $viewurl; ?>" class="blanklink"><?php echo $line['Name']; ?></a></td>
-                                            <?php } ?>     
-                                            <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['datein']); ?></td>
-                                            <td class="nullifempty"><?php echo formatTimeCustom($line['timein']); ?></td>
-                                            <td class="nullifempty">
-                                            	<?php if(!isEmptyString($line['dateout'])){ ?>
-													<?php echo changeMySQLDateToPageFormat($line['dateout']); ?>
-                                                <?php } ?>
-                                            </td>
-                                            <td class="nullifempty">
-                                            	<?php if(!isEmptyString($line['timeout'])){ ?>
-													<?php echo formatTimeCustom($line['timeout']); ?>
-                                                <?php } ?>
-                                            </td>
-                                            <td class="nullifempty"><?php echo $hours == 0 || isEmptyString($hours) ? '' : $hours; ?></td>
-                                            <td>
-                                            	<?php if(!isEmptyString($line['inremarks'])){ ?>
-													<span class="floatleft"><a title="Click to view Details" class="alert-dialog gonowhere" message="<?php echo nl2br($line['inremarks']); ?>" style="margin-left:10px;">In</a></span>
-                                                <?php } ?>
-                                                <?php if(!isEmptyString($line['outremarks'])){ ?>
-                                                	<span class="floatright"><a title="Click to view Details" class="alert-dialog gonowhere" message="<?php echo nl2br($line['outremarks']); ?>" style="margin-right:10px;">Out</a></span>
-                                                <?php } ?>
-                                            </td>
-                                            <td class="nullifempty <?php echo $customclass; ?>" <?php echo $style; ?>><?php echo $status; ?></td>
-                                            <td style="padding-left:5px;">
-                                                <?php if(!isEmptyString($line['timein']) && isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID()){ ?>
-                                                    <a class="btn btn-sm btn-primary inline <?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/2/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout  overdue and has been disabled. Contact Admin or a Supervisor.">Check out</a>
-                                                <?php } ?>
-                                                <?php if(!isEmptyString($line['timein']) && $line['userid'] != $loggedinuser->getID() && $acl->checkPermission("Attendance", ACTION_DELETE) && ($line['status'] == '4' || $line['status'] == '5')){ ?>
-                                                    <a class="btn btn-xs btn-default addpopup inline" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/3/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Update Attendance" rel="Update Attendance" id="update" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Save Changes"><i class="glyphicon glyphicon-pencil"></i></a>
-                                                <?php } ?>
-                                                <?php if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID() && $line['status'] == '1'){ ?>
-                                                    <a class="btn btn-success btn-xs confirm-dialog" title="Submit for Approval" action="<?php echo $this->baseUrl('timesheets/submit/id/'.encode($line['aid']).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Submit <?php echo $hours; ?> Hours for <?php echo changeMySQLDateToPageFormat($line['datein']); ?> for Approval">Submit for Approval</a>
-                                                <?php } ?>
-                                                <?php if($line['userid'] != $loggedinuser->getID() && ($line['status'] == '2' || $line['status'] == '4') && $acl->checkPermission("Timesheets", ACTION_APPROVE)){ ?>
-                                                    <a class="btn btn-success btn-xs confirm-dialog" title="Approve" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]">Approve</a> 
-                                                <?php } ?>    
-                                                <?php if($line['userid'] != $loggedinuser->getID() && ($line['status'] == '2' || $line['status'] == '3') && $acl->checkPermission("Timesheets", ACTION_APPROVE)){ ?>
-                                                    <a class="btn btn-default btn-xs confirm-dialog noimgbutton" title="Reject" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Reject <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]" style="padding:3px 6px 2px 6px; display:inline;"><i class="glyphicon glyphicon-remove"></i></a>
-                                                <?php } ?>
-                                                <?php if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout'])){ ?>
-                                                    <input type="checkbox" class="isclicked linechecker floatright" id="record_<?php echo $line['aid']; ?>" name="selector" value="<?php echo $line['aid']; ?>" />
-                                                <?php } ?>
-                                            </td>
-                                        </tr>
+                                </li>
+                            <?php } ?>
+                            <li>
+                                <?php
+                                    $allstatuses = getTimesheetStatuses();
+                                    $dropdown = new Zend_Form_Element_Select('status',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $allstatuses),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('status')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                            <li>
+                                <button type="submit" class="btn btn-primary btn-sm blockanchor" id="filter"><i class="fa fa-filter"></i> Filter</button>
+                            </li>
+                        </ul>
+                  	</div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+						<div class="box box-color box-bordered">
+							<div class="box-title condensed">
+								<h3><i class="fa fa-calendar"></i> Timesheets</h3>
+                                <div class="actions">
+                                	<a href="<?php echo $listurl; ?>" title="Reset List and Clear all Filters" rel="tooltip"><i class="fa fa-refresh"></i></a> &nbsp;
+                                	<?php if ($acl->checkPermission($resource, ACTION_EXPORT)) { ?>
+                                        <button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</button>
+                                        <input type="hidden" name="csv_text" id="csv_text" value="" />
                                     <?php } ?>
-                                </tbody>
-                           	</table>
+                                	 <?php
+										$data = array("" => "<Batch Actions>");
+										if($acl->checkPermission("Attendance", ACTION_CREATE)){
+											$data[1] = "Submit All Selected";
+										}
+										if ($acl->checkPermission("Timesheets", ACTION_APPROVE)){
+											$data[3] = "Approve All Selected";
+										}
+										if ($acl->checkPermission("Timesheets", ACTION_APPROVE)){
+											$data[4] = "Reject All Selected";
+										}
+										/*if ($acl->checkPermission("Attendance", ACTION_DELETE)){
+											$data[5] = "Delete All Selected"; 
+										}*/
+										$read = new Zend_Form_Element_Select('actions',
+													array(
+														'multiOptions' => $data, 
+														'view' => new Zend_View(),
+														'decorators' => array('ViewHelper'),
+														'class' => array("removesorttitle","form-control","input-sm","inline"),
+														'style' => 'width:130px;'
+													)
+										);
+										$read->setValue(''); 
+										echo $read->render();	
+									?>
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+                            	<?php if($has_no_data) { ?>
+                                    <div class="alert alert-warning">There are no entries to display</div>
+                                <?php } else { ?>
+                                    <table class="table table-hover table-nomargin" id="datatable">
+                                        <thead>
+                                            <tr>
+                                                <?php if($acl->checkPermission("Attendance", ACTION_APPROVE)){ ?>
+                                                    <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('',  'Employeee'); ?></th>
+                                                <?php } ?>    
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Date In'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Time In'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Date Out'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Time Out'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Hours'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop" style="width:120px;"><?php echo $paginate->getSortLinkForColumn('', 'Remarks'); ?></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Status'); ?> <img style="width:60px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping" style="padding-left:5px; width: <?php echo $acl->checkPermission("Attendance", ACTION_CREATE) ? '130px' : '110px'; ?> !important;">
+                                                    <span class="floatleft">Actions</span> <input type="checkbox" id="selectall" name="selectall" value="" class="floatright" />
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php
+                                                foreach($result as $line){
+                                                    $viewurl = stripUrl($this->baseUrl('profile/view/id/'.encode($line['userid'])));
+                                                    $outstr = '';
+                                                    if($line['datein'] != $line['dateout'] && !isEmptyString($line['dateout'])){
+                                                        $outstr = ' <b>['.changeMySQLDateToPageFormat($line['dateout']).']</b>';
+                                                    }
+                                                    $hours = ''; $fulldatein = ''; $fulldateout = ''; 
+                                                    if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout'])){
+                                                        $fulldatein = strtotime($line['datein'].' '.$line['timein']);
+                                                        $fulldateout = strtotime($line['dateout'].' '.$line['timeout']);
+                                                        $hours = $fulldateout - $fulldatein;
+                                                        $hours = formatNumber($hours/3600);
+                                                    }
+                                                    if(!isEmptyString($line['hours'])){
+                                                        $hours = $line['hours'];
+                                                    }
+                                                    
+                                                    $style = ''; $customclass = '';
+                                                    $status = isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; 
+                                                    if($line['status'] == 0 && isEmptyString($line['timeout'])){ 
+                                                        $style = 'style="background-color:#2d6ca2; color:#fff;"';
+                                                    }
+                                                    if($line['status'] == 1 && !isEmptyString($line['timeout'])){
+                                                        $style = 'style="background-color:#d4d6fc; color:#000;"';
+                                                    }
+                                                    if($line['status'] == 2){
+                                                        $customclass = ' alert-warning';
+                                                    }
+                                                    if($line['status'] == 3){
+                                                        $customclass = ' alert-success';
+                                                    }
+                                                    if($line['status'] == 4){
+                                                        $customclass = ' alert-danger';
+                                                    }
+                                                    $isoverdue = false;
+                                                    if(!isEmptyString($line['datein']) && isEmptyString($line['dateout']) && (strtotime(date('Y-m-d')) > strtotime($line['datein']))) {
+                                                        $line['status'] = 5;
+                                                        $status = $allstatuses[$line['status']]; 
+                                                        $style = 'style="background-color:#f8ea07; color:#000;"';
+                                                        $isoverdue = true;
+                                                    }
+                                                    
+                                                    $viewnotes = '';
+                                                    if(!isEmptyString($line['inremarks'])){
+                                                        $viewnotes = '<b>In:</b> '.nl2br($line['inremarks']);
+                                                    }
+                                                    if(!isEmptyString($line['outremarks'])){
+                                                        $viewnotes = '<b>Out:</b> '.nl2br($line['outremarks']);
+                                                    }
+                                                    if(!isEmptyString($line['comments'])){
+                                                        $viewnotes = '<b>Remarks:</b> '.nl2br($line['comments']);
+                                                    }
+                                                    
+                                                    $cancheckout = false; $cansubmit = false; $canupdate = false; $candelete = false; $canapprove = false; $canreject = false;  $canselect = false;
+                                                    $isonpayroll = false;
+                                                    if(!isEmptyString($line['payrollid'])){
+                                                        $isonpayroll = true;
+                                                    }
+                                                    if(!isEmptyString($line['timein']) && isEmptyString($line['timeout']) &&  !$isoverdue && ($acl->checkPermission("Attendance", ACTION_APPROVE))){
+                                                        $cancheckout = true;
+                                                    }
+                                                    if(!isEmptyString($line['timein']) && $line['userid'] != $loggedinuser->getID() && !$isonpayroll && $acl->checkPermission("Attendance", ACTION_APPROVE)){
+                                                        $canupdate = true;
+                                                    }
+                                                    if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID() && $line['status'] == '1'){
+                                                        $cansubmit = true;
+                                                    }
+                                                    if(($line['status'] == '2' || $line['status'] == '4') && $acl->checkPermission("Timesheets", ACTION_APPROVE) && !$isonpayroll){
+                                                        $canapprove = true;
+                                                    }
+                                                    if(($line['status'] == '2' || $line['status'] == '3') && $acl->checkPermission("Timesheets", ACTION_APPROVE) && !$isonpayroll){
+                                                        $canreject = true; 
+                                                    }
+                                                    if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) && !$isonpayroll){
+                                                        $canselect = true;
+                                                    }
+                                                ?>
+                                                    <tr id="line_<?php echo $line['aid']; ?>">
+                                                        <?php if($acl->checkPermission("Attendance", ACTION_APPROVE)){ ?>
+                                                            <td class="nullifempty"><a href="<?php echo $viewurl; ?>" class="blanklink"><?php echo $line['Name']; ?></a></td>
+                                                        <?php } ?>     
+                                                        <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?></td>
+                                                        <td class="nullifempty"><?php echo isEmptyString($line['timein']) ? '' : formatTimeCustom($line['timein']); ?></td>
+                                                        <td class="nullifempty"><?php echo isEmptyString($line['dateout']) ? '' : changeMySQLDateToPageFormat($line['dateout']); ?></td>
+                                                        <td class="nullifempty"><?php echo isEmptyString($line['timeout']) ? '' : formatTimeCustom($line['timeout']); ?></td>
+                                                        <td class="nullifempty"><?php echo $hours == 0 || isEmptyString($hours) ? '' : $hours; ?></td>
+                                                        <td><?php if(!isEmptyString($viewnotes)){ ?>
+                                                                <span class="floatleft"><a title="Click to view Details" class="alert-dialog gonowhere" containerstyle="text-align:left;"message="<?php echo $viewnotes; ?>" style="margin-left:10px;">View</a></span>
+                                                            <?php } ?>
+                                                        </td>
+                                                        <td class="nullifempty <?php echo $customclass; ?>" <?php echo $style; ?>><?php echo $status; ?></td>
+                                                        <td style="padding-left:5px;">
+                                                            <?php if($cancheckout){ ?>
+                                                                <a class="btn btn-sm btn-primary inline <?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/2/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout  overdue and has been disabled. Contact Admin or a Supervisor.">Check out</a>
+                                                            <?php } ?>
+                                                            <?php if($canupdate){ ?>
+                                                                <a class="btn btn-primary addpopup inline" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/3/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Update Attendance" rel="Update Attendance" id="update" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Save Changes"><i class="fa fa-pencil"></i></a>
+                                                            <?php } ?>
+                                                            <?php if($cansubmit){ ?>
+                                                                <a class="btn btn-success btn-xs confirm-dialog" title="Submit for Approval" action="<?php echo $this->baseUrl('timesheets/submit/id/'.encode($line['aid']).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Submit <?php echo $hours; ?> Hours for <?php echo changeMySQLDateToPageFormat($line['datein']); ?> for Approval">Submit for Approval</a>
+                                                            <?php } ?>
+                                                            <?php if($canapprove){ ?>
+                                                                <a class="btn btn-success btn-xs confirm-dialog" title="Approve" rel="tooltip" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]"><i class="fa fa-check"></i></a> 
+                                                            <?php } ?>    
+                                                            <?php if($canreject){ ?>
+                                                                <a class="btn btn-default confirm-dialog" title="Reject" rel="tooltip" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Reject <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]"><i class="fa fa-times"></i></a>
+                                                            <?php } ?>
+                                                            <?php if($canselect){ ?>
+                                                                <input type="checkbox" class="isclicked linechecker floatright" id="record_<?php echo $line['aid']; ?>" name="selector" value="<?php echo $line['aid']; ?>" />
+                                                            <?php } ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php } ?>
+                                        </tbody>
+                                    </table>	
+                                <?php } ?>
+                            </div>
+                      	</div>
+                   	</div>
+              	</div>
+                <?php if(!$has_no_data) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-actions">
+                            <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                            <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                            <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
                         </div>
-                  		<!--</div>
-                    </div>-->
-                <?php } ?> 
-            </div>
-            <div class="col-md-4 padding0">
-                <div class="leftalign"><label class="form-control"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></label></div>
-            </div>
-            <div class="col-md-8 padding0">
-                <div class="inline floatleft"><?php echo $paginate->getPaginationLinks(); ?></div>
-                <div class="inline floatright"><?php echo $this->listcountdropdown; ?></div>
-            </div>
-        <?php } ?>
-	</form>
-</div>            
-
+                    </div>
+                </div>
+                <div class="divider5"></div>
+                <?php } ?>
+          	</div>
+      	</div>
+        </form>
+   	</div>
+</div>    
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

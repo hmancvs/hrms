@@ -91,6 +91,7 @@ class ConfigController extends SecureController   {
 				$formvalues['defaultamount'] = decode($formvalues['alias']);
 				$formvalues['amounttype'] = $formvalues['alias2'];
 				$formvalues['name'] = decode(trim($formvalues['value']));
+				$formvalues['companyid'] = getCompanyID();
 				
 				$benefittype = new BenefitType();
 				if(!isArrayKeyAnEmptyString('id', $formvalues)){
@@ -131,6 +132,7 @@ class ConfigController extends SecureController   {
 				} else {
 					$formvalues['createdby'] = $session->getVar('userid');
 				}
+				$formvalues['companyid'] = getCompanyID();
 				$department->processPost($formvalues);
 				/* debugMessage($department->toArray());
 				debugMessage('errors are '.$department->getErrorStackAsString()); // exit(); */
@@ -177,7 +179,8 @@ class ConfigController extends SecureController   {
 									'lookuptypevalue' => $index, 
 									'lookupvaluedescription' => $value,
 									'alias' => $alias,
-									'createdby' => $session->getVar('userid')
+									'createdby' => $session->getVar('userid'),
+									'companyid' => getCompanyID()
 							);
 				// debugMessage($dataarray);
 				if(!isArrayKeyAnEmptyString('id', $formvalues)){
@@ -372,7 +375,7 @@ class ConfigController extends SecureController   {
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 	
 		// parent::createAction();
-		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit();
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit();
 		$formvalues['id'] = $id = decode($formvalues['id']);
 			
 		$shift = new Shift();

@@ -1,0 +1,131 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$timesheet = new Timesheet();
+	if(isEmptyString($request->id)){
+		if(!isEmptyString($request->userid)){
+			$timesheet->setUserID(decode($request->userid));
+		}
+		$timesheet->setTimesheetDate('');
+		$timesheet->setHours('');
+		$timesheet->setStatus('2');
+		$successmessage = "Successfull Submitted for Approval";
+	} else { 
+		$timesheet->populate(decode($request->id)); 
+		$successmessage = "Update Successfull";
+	}
+	
+	$allstatuses = getTimesheetStatuses();
+	// debugMessage($timesheet->toArray());
+?>
+<?php require APPLICATION_PATH."/views/scripts/index/pgcjs.phtml"; ?>
+<script>
+$(document).ready(function() {		
+	$(".readonly").each(function(){
+		$(this).attr('readonly','readonly');
+	});
+	$(".disabledfield").each(function(){
+		$(this).attr('readonly', true).attr('disabled', true);
+	});
+	
+	
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			timesheetdate: "required",
+			hours: {
+				required: true,
+				min:0.1
+			},
+			inremarks: "required"
+		}, 
+		// the messages for each of the fields being validated
+		messages: {				
+			timesheetdate: "Please select a Date",
+			hours: {
+				required: "Please enter Hours",
+				min: "Should be greater than zero"
+			},
+			inremarks: "Please specify Remarks"
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					error.appendTo("#"+element.attr("name")+"_error")
+					break;
+			}			
+		}
+	});
+	
+});
+</script>
+<style>
+.modal-body {
+	padding-top: 10px;
+}
+</style>
+<div class="alert alert-info" style="clear:both; margin:0; margin-top:-5px;">Use this form to request additional timesheet hours. Note that Approval is required!</div>
+<div class="popupdiv">
+    <form id="indexform" class="form-horizontal profile" role="form" method="post">
+        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
+        	<input name="entityname" id="entityname" type="hidden" value="Timesheet" />
+        	<input type="hidden" name="userid" id="userid" value="<?php echo $timesheet->getUserID(); ?>" />
+            <input type="hidden" name="status" id="status" value="<?php echo $timesheet->getStatus(); ?>" />
+            <input type="hidden" id="id" name="id" value="<?php echo encode($timesheet->getID()); ?>" />
+            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+            <input name="isrequest" id="isrequest" type="hidden" value="1" />  
+            <div class="panel-body well-sm" style="min-height:150px;">
+                
+                <div class="row-fluid marginleft5">
+                    <div class="col-sm-12 paddingleft10">
+                    	<?php if ($acl->checkPermission("Attendance", ACTION_APPROVE)) { ?>
+                        	<div class="form-group">
+                                <label class="col-sm-3 control-label">Employee: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                    <?php
+                                        $allvalues = getUsers();
+                                        $dropdown = new Zend_Form_Element_Select('userid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width200','chosen-select')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($timesheet->getUserID()); 
+                                        echo $dropdown->render();
+                                    ?><div id="userid_error"></div>
+                                </div>
+                            </div>
+                       	<?php } ?>
+                    	<div class="form-group">
+                            <label class="col-sm-3 control-label">Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                            	<input type="text" class="form-control input-sm datefield readonly width125 ordinary" name="timesheetdate" id="timesheetdate" value="<?php echo changeMySQLDateToPageFormat($timesheet->getTimesheetDate()); ?>" />
+                                <div id="timesheetdate_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Hours: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                            	<input type="text" name="hours" id="hours" class="form-control input-sm isdecimal width100" value="<?php echo $timesheet->getHours(); ?>" />
+                                <div id="hours_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Remarks: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                            	<textarea name="inremarks" id="inremarks" class="form-control input-sm expanding"><?php echo $timesheet->getInRemarks(); ?></textarea>
+                                <div id="inremarks_error"></div>
+                            </div>
+                        </div>
+                    </div>
+               	</div>
+            </div>
+      	</fieldset>
+    </form>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

@@ -12,7 +12,6 @@ class TimesheetsController extends SecureController  {
 		if($action == "checkin" || $action == "checkout" || $action == "attendance" || $action == "attendancesearch") {
 			return "Attendance";
 		}
-		
 		return "Timesheets";
 	}
 	
@@ -25,7 +24,7 @@ class TimesheetsController extends SecureController  {
 	 */
 	public function getActionforACL() {
 		$action = strtolower($this->getRequest()->getActionName());
-		if($action == "checkin" || $action == "checkout" || $action == "processattendance" || $action == "submit") {
+		if($action == "checkin" || $action == "checkout" || $action == "processattendance" || $action == "submit" || $action == "request") {
 			if($action == "checkin" && $this->_getParam('type') == 3){
 				return ACTION_DELETE;
 			}
@@ -58,16 +57,30 @@ class TimesheetsController extends SecureController  {
     	$timesheet = new Timesheet();
     	if(isEmptyString($id)){
     		$formvalues['createdby'] = $session->getVar('userid');
-    		$formvalues['status'] = 0;
-    		$formvalues['timesheetdate'] = changeDateFromPageToMySQLFormat($formvalues['datein']);
+    		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
+    			$formvalues['isrequest'] = 0;
+    			$formvalues['status'] = 0;
+    			$formvalues['timesheetdate'] = date('Y-m-d', strtotime($formvalues['datein']));
+    		} else {
+    			$formvalues['isrequest'] = 1;
+    			if(isArrayKeyAnEmptyString('status', $formvalues)){
+    				$formvalues['status'] = 2;
+    			}
+    		}
     	} else {
     		$timesheet->populate($id);
     		$formvalues['lastupdatedby'] = $session->getVar('userid');
-    		if(!isArrayKeyAnEmptyString('timein', $formvalues) && !isArrayKeyAnEmptyString('timeout', $formvalues)){
-    			$formvalues['status'] = 1;
-    		}
-    		if(isEmptyString($timesheet->getHours())){
-    			$timesheet->setHours($timesheet->getComputedHours());
+    		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
+    			/* $formvalues['status'] = 1;
+	    		if(!isArrayKeyAnEmptyString('timein', $formvalues) && !isArrayKeyAnEmptyString('timeout', $formvalues)){
+	    			$formvalues['status'] = 1;
+	    		} */
+	    		if(isEmptyString($timesheet->getHours())){
+	    			$timesheet->setHours($timesheet->getComputedHours());
+	    		}
+	    		$formvalues['isrequest'] = 0;
+    		} else {
+    			$formvalues['isrequest'] = 1;
     		}
     	}
     	
@@ -123,7 +136,7 @@ class TimesheetsController extends SecureController  {
 		}
 		
 		if(!isArrayKeyAnEmptyString('ids', $formvalues)){
-			debugMessage($formvalues);
+			// debugMessage($formvalues);
 			$idsarray = array_remove_empty(explode(',', $formvalues['ids'])); // debugMessage($idsarray);
 			$formvalues['status'] = 2;
 			
@@ -197,7 +210,11 @@ class TimesheetsController extends SecureController  {
 				
 				try {
 					$timesheet_collection->save();
-					$session->setVar(SUCCESS_MESSAGE, "Successfully Approved");
+					$msg = "Successfully Approved";
+					if($formvalues['status'] == 4){
+						$msg = "Successfully Rejected";
+					}
+					$session->setVar(SUCCESS_MESSAGE, $msg);
 				} catch (Exception $e) {
 					$session->setVar(ERROR_MESSAGE, $e->getMessage());
 				}
@@ -207,6 +224,9 @@ class TimesheetsController extends SecureController  {
 	}
 	
 	function forapprovalAction(){
+	
+	}
+	function requestAction(){
 	
 	}
 }

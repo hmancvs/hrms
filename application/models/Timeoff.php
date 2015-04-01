@@ -71,6 +71,8 @@ class Timeoff extends BaseEntity  {
 	 * Pre process model data
 	 */
 	function processPost($formvalues) {
+		$config = Zend_Registry::get("config");
+		
 		// trim spaces from the name field
 		if(isArrayKeyAnEmptyString('status', $formvalues)){
 			unset($formvalues['status']);
@@ -80,6 +82,11 @@ class Timeoff extends BaseEntity  {
 		}
 		if(isArrayKeyAnEmptyString('durationtype', $formvalues)){
 			unset($formvalues['durationtype']);
+		} else {
+			if($formvalues['durationtype'] == 2){
+				$formvalues['duration'] = $formvalues['duration'] * $config->system->hoursinday;
+				$formvalues['durationtype'] = 1;
+			}
 		}
 		if(isArrayKeyAnEmptyString('dateapproved', $formvalues)){
 			unset($formvalues['dateapproved']);
@@ -102,7 +109,11 @@ class Timeoff extends BaseEntity  {
 		} else {
 			$formvalues['returntime'] = date("H:i:s", strtotime($formvalues['returntime']));
 		}
-		// debugMessage($formvalues); // exit();
+		
+		if(!isArrayKeyAnEmptyString('istaken', $formvalues)){
+			$formvalues['status'] = 4;
+		}
+		// debugMessage($formvalues); //exit();
 		parent::processPost($formvalues);
 	}
 	

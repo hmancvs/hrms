@@ -1,25 +1,24 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$loggedinuser = new UserAccount();
-	$loggedinuser->populate($userid);
-	
 	$timeoff = new Timeoff();
 	$id = decode($request->id);
 	$resource = "Time off";
 	$description = '';
-	$icon = "glyphicon glyphicon-time";
+	$icon = "fa fa-clock";
 	
 	if(isEmptyString($request->id)){
-		$title = 'Request Time-off';
+		$pagetitle = 'Request Timeoff';
 		$button_title = "Submit for Approval"; 
 		$successmessage = "Successfully submitted for approval";
 		$posturl = $this->baseUrl("timeoff/create");
 		$timeoff->setStatus('0');
 		$timeoff->setDuration('');
+		$timeoff->setDurationType('2');
 		$timeoff->setUserID($loggedinuser->getID());
 		if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){
 			$timeoff->setUserID('');
+			$button_title = "Save"; 
 		}
 		if(!isEmptyString($request->userid)){
 			$timeoff->setUserID($request->userid);
@@ -28,12 +27,12 @@
 		if(!isEmptyString($request->typeid)){
 			$timeoff->setTypeID($request->typeid);
 		}
-		$timeoff->setStartTime('08:00:00');
-		$timeoff->setEndTime('17:00:00');
-		$timeoff->setReturnTime('08:00:00');
+		$timeoff->setStartTime('08:00');
+		$timeoff->setEndTime('17:00');
+		$timeoff->setReturnTime('08:00');
 	} else {
 		$timeoff->populate(decode($request->id));
-		$title = 'Update Request';
+		$pagetitle = 'Update Request';
 		$button_title = "Update and Request Approval";
 		$successmessage = "Successfully updated";
 		$posturl = $this->baseUrl("timeoff/create");
@@ -41,28 +40,32 @@
 			$timeoff->setStatus('0');
 			$successmessage = "Successfully updated and pending approval";
 		}
+		if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){
+			$button_title = "Save Changes"; 
+		}
 	}
+	
+	$successurl = $this->baseUrl('timeoff/view');
+	$addnewsuccessurl = $this->baseUrl('timeoff/index');
+	$failureurl = $this->viewurl;
 	
 	// $hoursavailable = '16';
 	$hoursavailable = getHoursAvailable($timeoff->getUserID(), $timeoff->getTypeID(), $config->system->yearstart, $config->system->yearend); //debugMessage($hoursavailable);
-	$daysavailable = $hoursavailable == 0 ? 0 : number_format($hoursavailable/8,2); // debugMessage($daysavailable);
+	$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/$config->system->hoursinday); // debugMessage($daysavailable);
 		
 	#in case of errors in session, populate the fields from session
 	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
 		$timeoff->processPost($session->getVar(FORM_VALUES));	
 	}
 	
+	$pageid = "timeoff_index";
 	$timeoffs = getTimeoffTypes();
-	
+	$title = 'Timeoff Requests';
 	$this->headTitle($title.$browserappend);
 ?>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.date.js')); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/pickadate/picker.time.js')); ?>"></script>
-<link href='<?php echo $this->baseUrl('stylesheets/pickadate.css'); ?>' rel='stylesheet' type='text/css'>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo $homedir.'Time-off / '.$title; ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title.' / '.$pagetitle; ?>');
 	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
@@ -80,9 +83,12 @@ $(document).ready(function() {
 			returntime: "required",
 			duration: {
 				required: true,
+				notime_validation: true,
+				min_validation: true,
 				duration_validation: true,
-				min:0.1
-			}
+				wholenumber_validation: true
+			},
+			status: "required"
 		}, 
 		// the messages for each of the fields being validated
 		messages: {		
@@ -96,8 +102,8 @@ $(document).ready(function() {
 			returntime: "Please select Time",
 			duration: {
 				required: "Please enter Hours",
-				min: "Value should be greater than 0"
-			}
+			},
+			status: "Please select current Status"
 		},
 		// custom error positions
 		errorPlacement: function(error, element) {
@@ -114,24 +120,63 @@ $(document).ready(function() {
 		ignore: ":hidden:not(select)"
 	});
 	
-	// function to validate the enddate being greater than the start date
+	// validate that hours are available
+	$.validator.addMethod("notime_validation", function(value, element) {            
+		var duration = value; 
+		var durationtype = $('[name=durationtype]:checked').val();  // alert(durationtype);
+		var availablehrs = '<?php echo $hoursavailable; ?>';  
+		var availabledays = '<?php echo $daysavailable; ?>';  
+		if(durationtype == 1 && parseFloat(availablehrs) == 0){
+			return false;
+		}
+		if(durationtype == 2 && parseFloat(availabledays) == 0){
+			return false;
+		}
+		return true;        
+	}, "No accrued time available");
+	
+	// validate minimum
+	$.validator.addMethod("min_validation", function(value, element) {            
+		var duration = value; 
+		var durationtype = $('[name=durationtype]:checked').val();  // alert(durationtype);
+		var availablehrs = '<?php echo $hoursavailable; ?>';  
+		var availabledays = '<?php echo $daysavailable; ?>';  
+		if(durationtype == 1 && parseInt(duration) == 0){
+			return false;
+		}
+		if(durationtype == 2 && parseInt(duration) == 0){
+			return false;
+		}
+		return true;        
+	}, "Minimum allowed is <?php echo $config->system->hoursinday; ?> Hours (1 Day) ");
+	
+	// validate that user can not request more than is available
 	$.validator.addMethod("duration_validation", function(value, element) {            
 		var duration = value; 
 		var durationtype = $('[name=durationtype]:checked').val();  // alert(durationtype);
 		var availablehrs = '<?php echo $hoursavailable; ?>';  
 		var availabledays = '<?php echo $daysavailable; ?>';  
-		if(durationtype == 1 && duration > availablehrs){
+		if(durationtype == 1 && parseInt(duration) > parseInt(availablehrs)){
 			return false;
 		}
-		if(durationtype == 2 && duration > availabledays){
+		if(durationtype == 2 && parseInt(duration) > parseInt(availabledays)){
 			return false;
 		}
 		return true;        
 	}, "Should be less than <?php echo $hoursavailable.' Hours ('.$daysavailable.' Days)'; ?>");
 	
-	$('.timepicker').pickatime({
-	   interval: 30
-	});
+	// validate that a whole number is being requested
+	$.validator.addMethod("wholenumber_validation", function(value, element) {            
+		var duration = value; 
+		var durationtype = $('[name=durationtype]:checked').val();  // alert(durationtype);
+		var availablehrs = '<?php echo $hoursavailable; ?>';  
+		var availabledays = '<?php echo $daysavailable; ?>';  
+		var hoursinday = '<?php echo $config->system->hoursinday; ?>'; // alert(parseInt(duration) % parseInt(hoursinday))
+		if(durationtype == 1 && parseInt(duration) % parseInt(hoursinday) != 0){
+			return false;
+		}
+		return true;        
+	}, "Should be multiple of <?php echo $config->system->hoursinday; ?> Hours or 1 Day");
 	
 	$("#typeid").change(function(){
 		var url = '<?php echo stripURL($this->viewurl); ?>'; //alert(url);
@@ -143,7 +188,6 @@ $(document).ready(function() {
 		var replacetxt = '/typeid/'+typeid;
 		if(typeid != currenttypeid){
 			newurl = newurl.replace(striptxt, ''); // alert(newurl);
-			$.blockUI({ message: '<?php echo $blockcontent; ?>' });
 			window.location.href = newurl
 		}
 	});
@@ -157,171 +201,181 @@ $(document).ready(function() {
 		var striptxt = '/userid/'+currentuserid;
 		var replacetxt = '/userid/'+userid;
 		if(isEmptyString(currentuserid)){
-			$.blockUI({ message: '<?php echo $blockcontent; ?>' });
 			window.location.href = newurl
 		} else {
 			if(userid != currentuserid){
 				newurl = newurl.replace(striptxt, ''); // alert(newurl);
-				$.blockUI({ message: '<?php echo $blockcontent; ?>' });
 				window.location.href = newurl
 			}
 		}
 	});
+	
+	<?php if($timeoff->getdurationtype() == 2){ ?>
+		$("#durationtype_2").attr('checked', true);
+		$("#durationtype_1").attr('checked', false);
+	<?php } ?>
+	<?php if($timeoff->getdurationtype() == 1){ ?>
+		$("#durationtype_1").attr('checked', true);
+		$("#durationtype_2").attr('checked', false);
+	<?php } ?>
 });
 </script>
-<div class="row-fluid margin0 index">
-    <form id="indexform" class="form-horizontal" role="form" action="<?php echo $posturl; ?>" method="post">
-        <div class="col-md-12 padding0">
-            <div class="headerbox">
-                <table class="table border0 nohover margin0">                       
-                    <tr>		                    
-                        <td class="padding2">
-                            <button type="submit" class="btn btn-primary btn-success savethenview save"><i class="glyphicon glyphicon-ok icon-white"></i> <?php echo $button_title; ?></button>
-                            <a class="btn btn-default cancel gonowhere"><i class="glyphicon glyphicon-remove"></i> <?php echo $this->translate('global_button_cancel'); ?></a>
-                            <input name="entityname" id="entityname" type="hidden" value="Timeoff" />
-        					<input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
-                            <input type="hidden" id="status" name="status" value="<?php echo $timeoff->getStatus(); ?>" />
-                            <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-        <?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="contentcontainer clearfix">
-        	<div class="row-fluid marginleft5">
-            	<div class="col-md-12">
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Summary</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<?php if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
-                                            <div class="form-group">
-                                                <label class="col-sm-2 control-label"><?php echo $this->translate('leave_user_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                                <div class="col-sm-10">
-                                                    <?php if(isEmptyString($timeoff->getID())){ ?>
-                                                    	<?php
-															$allvalues = getUsers();
-															$dropdown = new Zend_Form_Element_Select('userid',
-																				array(
-																					'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
-																					'view' => new Zend_View(),
-																					'decorators' => array('ViewHelper'),
-																					'class' => array('form-control','input-sm','width200')
-																				)
-															);  
-															$dropdown->setValue($timeoff->getUserID()); 
-															echo $dropdown->render();
-														?>
-                                                    <?php } else { ?>
-                                                        <?php echo $timeoff->getUser()->getName(); ?>
-                                                        <input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
-                                                    <?php } ?>
-                                                    <div id="userid_error"></div>
-                                                </div>
-                                            </div>
-                                        <?php } else { ?>
-                                        	<input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
-                                        <?php } ?>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label"><?php echo $this->translate('leave_typeid_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                            	<?php if(isEmptyString($timeoff->getID())){ ?>
-													<?php
-                                                        $dropdown = new Zend_Form_Element_Select('typeid',
-                                                                            array(
-                                                                                'multiOptions' => $timeoffs,
-                                                                                'view' => new Zend_View(),
-                                                                                'decorators' => array('ViewHelper'),
-                                                                                'class' => array('form-control','input-sm','width200')
-                                                                            )
-                                                        );  
-                                                        $dropdown->setValue($timeoff->getTypeID()); 
-                                                        echo $dropdown->render();
-                                                    ?>
-                                                <?php } else { ?>
-                                                	<?php echo $timeoff->getType()->getName(); ?>
-                                                	<input type="hidden" id="typeid" name="typeid" value="<?php echo $timeoff->getTypeID(); ?>" />
-                                                <?php } ?>
-												</span>
-                                                <div id="typeid_error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label"><?php echo $this->translate('leave_description_label'); ?>:</label>
-                                            <div class="col-md-6">
-                                                <textarea class="form-control expanding" id="remarks" name="remarks"><?php echo $timeoff->getRemarks(); ?></textarea>
-                                                <div id="remarks_error"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Duration</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Start Date/Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                            	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?>" />
-                                				<input type="text" name="starttime" id="starttime" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($timeoff->getstarttime())); ?>" />
-                                                <div id="startdate_error"></div><div id="starttime_error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">Time Available:</label>
-                                            <div class="col-sm-10"><span class="width175 blocked bolded"><?php echo $hoursavailable.' Hours ('.$daysavailable.' Days) '; ?></span></div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">Time Requested: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                            	<input type="text" name="duration" id="duration" class="form-control input-sm centeralign isdecimal bolded width100 inline floatleft" value="<?php echo $timeoff->getDuration(); ?>" /> &nbsp;
-                                                <label class="radio radio-inline" style="margin-left:20px;"><input type="radio" name="durationtype" id="durationtype_1" checked="checked" class="<?php echo $timeoff->getdurationtype() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getdurationtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
-                                				<label class="radio radio-inline"><input type="radio" name="durationtype" id="durationtype_2" class="<?php echo $timeoff->getdurationtype() == '2' ? 1 : 0; ?>" value="2" <?php echo $timeoff->getdurationtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
-                                                
-                                                <div id="duration_error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">End Date/Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                            	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?>" />
-                                				<input type="text" name="endtime" id="endtime" class="form-control input-sm timepicker readonly inline width100" value="<?php echo date("h:i A", strtotime($timeoff->getendtime())); ?>" style="xmargin-left:25px;" />
-                                                <span style="font-size:11px;color:#999;"> (Auto-generated from Startdate)</span>
-                                                <div class="divider5"></div>
-                                                <div id="enddate_error"></div><div id="endtime_error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">Return Date/Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                            	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="returndate" id="returndate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getreturndate()); ?>" />
-                                				<input type="text" name="returntime" id="returntime" class="form-control input-sm timepicker inline width100" value="<?php echo date("h:i A", strtotime($timeoff->getreturntime())); ?>" />
-                                                <div id="returndate_error"></div><div id="returntime_error"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+		<div class="col-sm-8">
+        	<div class="box box-color box-bordered">
+                <div class="box-title">
+                    <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
                 </div>
-            </div>
-   		</div>
- 	</form>
-</div>
+                <div class="box-content nopadding">
+                    <form class="form-horizontal form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
+                        <input name="entityname" id="entityname" type="hidden" value="Timeoff" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
+                        <input type="hidden" id="status_old" name="status_old" value="<?php echo $timeoff->getStatus(); ?>" />
+                        <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                        <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                        <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
+                        <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                        <?php if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label"><?php echo $this->translate('leave_user_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-9">
+                                    <?php if(isEmptyString($timeoff->getID())){ ?>
+                                        <?php
+                                            $allvalues = getUsers();
+                                            $dropdown = new Zend_Form_Element_Select('userid',
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array('form-control','input-sm','width200')
+                                                                )
+                                            );  
+                                            $dropdown->setValue($timeoff->getUserID()); 
+                                            echo $dropdown->render();
+                                        ?>
+                                    <?php } else { ?>
+                                        <?php echo $timeoff->getUser()->getName(); ?>
+                                        <input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
+                                    <?php } ?>
+                                    <div id="userid_error"></div>
+                                </div>
+                            </div>
+                        <?php } else { ?>
+                            <input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
+                        <?php } ?>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('leave_typeid_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <?php if(isEmptyString($timeoff->getID())){ ?>
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('typeid',
+                                                            array(
+                                                                'multiOptions' => $timeoffs,
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width200')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($timeoff->getTypeID()); 
+                                        echo $dropdown->render();
+                                    ?>
+                                <?php } else { ?>
+                                    <?php echo $timeoff->getType()->getName(); ?>
+                                    <input type="hidden" id="typeid" name="typeid" value="<?php echo $timeoff->getTypeID(); ?>" />
+                                <?php } ?>
+                                </span>
+                                <div id="typeid_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('leave_description_label'); ?>:</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control expanding" id="remarks" name="remarks"><?php echo $timeoff->getRemarks(); ?></textarea>
+                                <div id="remarks_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"></label>
+                            <div class="col-sm-9"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Start Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?>" />
+                                <div id="startdate_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Time Available:</label>
+                            <div class="col-sm-9"><span class="width175 blocked bolded"><?php echo $hoursavailable.' Hours ('.$daysavailable.' Days) '; ?></span></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Time Requested: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" name="duration" id="duration" class="form-control input-sm centeralign isnumber bolded width100 inline floatleft" value="<?php echo $timeoff->getDuration(); ?>" /> &nbsp;
+                                <label class="radio radio-inline"><input type="radio" name="durationtype" id="durationtype_2" class="" value="2" <?php echo $timeoff->getdurationtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+                                <label class="radio radio-inline" style="margin-left:20px;"><input type="radio" name="durationtype" id="durationtype_1" checked="checked" class="" value="1" <?php echo $timeoff->getdurationtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                <div class="divider5"></div>
+                                <span class="pagedescription bolded">Enter time in multiples of 1 day (<?php echo $config->system->hoursinday; ?> Hours)</span>
+                                <div id="duration_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">End Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?>" />
+                                <span style="font-size:11px;color:#999;"></span>
+                                <div class="divider5"></div>
+                                <div id="enddate_error"></div><div id="endtime_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Return Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="returndate" id="returndate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getreturndate()); ?>" />
+                                <div id="returndate_error"></div>
+                            </div>
+                        </div>
+                        <?php if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-9">
+                                    <?php
+										$timeoffstatuses = getTimeoffStatuses();
+										$dropdown = new Zend_Form_Element_Select('status',
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffstatuses),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','width200')
+															)
+										);  
+										$dropdown->setValue($timeoff->getStatus()); 
+										echo $dropdown->render();
+									?><div id="status_error"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Leave Taken</label>
+                                <div class="col-sm-9">
+                                    <label class="checkbox checkbox-inline"><input type="checkbox" id="istaken" name="istaken" <?php echo $timeoff->getStatus() == 5 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Mark as Taken" /> &nbsp; Mark Timeoff as Taken</label>
+                                </div>
+                            </div>
+                       	<?php } else { ?>
+                        	<input type="hidden" id="status" name="status" value="<?php echo $timeoff->getStatus(); ?>" />
+                        <?php } ?>
+                        <div class="form-actions">
+                            <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                            <button class="btn btn-primary btn-green changesuccessurl savebutton" type="submit" successurl="<?php echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                        </div>
+                    </form>
+               	</div>
+         	</div>
+      	</div>
+ 	</div>
+</div>    
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

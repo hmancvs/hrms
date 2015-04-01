@@ -8,7 +8,7 @@ class Department extends BaseEntity  {
 		parent::setTableDefinition();
 		
 		$this->setTableName('department');
-		$this->hasColumn('name', 'string', 255);
+		$this->hasColumn('name', 'string', 255, array('notblank' => true));
 		$this->hasColumn('headid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('companyid', null, array('default' => NULL));
 		$this->hasColumn('description', 'string', 1000);
@@ -22,7 +22,7 @@ class Department extends BaseEntity  {
 		
 		// set the custom error messages
 		$this->addCustomErrorMessages(array(
-										"name.notblank" => $this->translate->_("department_name_error")
+										"name.notblank" => $this->translate->_("global_name_error")
        	       						));     
 	}
 	/*
@@ -70,7 +70,7 @@ class Department extends BaseEntity  {
 			}
 		}
 		if(isArrayKeyAnEmptyString('companyid', $formvalues)){
-			$formvalues['companyid'] = 1;
+			$formvalues['companyid'] = DEFAULT_COMPANYID;
 		}
 		// debugMessage($formvalues); exit();
 		parent::processPost($formvalues);

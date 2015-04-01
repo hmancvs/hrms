@@ -5,31 +5,37 @@
 	$id = decode($request->id);
 	
 	if(isEmptyString($request->id)){
-		$title = 'New Time off Type';
-		$description = '';
-		$button_title = $this->translate("global_button_save"); 
-		$successmessage = $this->translate('global_save_success');
+		$pagetitle = 'New Category';
+		$button_title = $this->translate('global_button_save'); 
+		$successmessage = $this->translate('global_save_success'); 
+		$posturl = $this->baseUrl("config/timeoffcreate");
 	} else {
-		$timeoff->populate(decode($request->id));
-		$title = 'Update Timeoff Type';
-		$description = '';
-		$button_title = $this->translate("global_button_save");
-		$successmessage = $this->translate('global_update_success');
+		$timeoff->populate(decode($request->id)); 
+		$pagetitle = "Update Category";
+		$button_title = $this->translate('global_button_save_changes'); 
+		$successmessage = $this->translate('global_update_success'); 
+		$posturl = $this->baseUrl("config/timeoffcreate");
 	}
-	$posturl = $this->baseUrl("config/timeoffcreate");
-	$icon = "glyphicon glyphicon-cog";
 	
-	#in case of errors in session, populate the fields from session
+	$successurl = $this->baseUrl('config/timeoff');
+	$addnewsuccessurl = $this->baseUrl('config/timeoffindex');
+	$failureurl = $this->viewurl;
+	
 	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
 		$timeoff->processPost($session->getVar(FORM_VALUES));	
 	}
 	
+	$icon = "";
+	$description = "";
+	$pageid = "timeoff_index";
+	$title = "Timeoff Categories";
 	$this->headTitle($title.$browserappend);
 ?>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/evol.colorpicker.min.js')); ?>"></script>
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/colorpicker/colorpicker.css')); ?>">
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/colorpicker/bootstrap-colorpicker.js')); ?>"></script>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo $homedir.'Timeoff Types / '.$title; ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title.' / '.$pagetitle; ?>');
 	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
@@ -42,143 +48,104 @@ $(document).ready(function() {
 		// the messages for each of the fields being validated
 		messages: {		
 			name: "<?php echo $this->translate("global_name_error"); ?>"
-		},
-		// custom error positions
-		errorPlacement: function(error, element) {
-			switch(element.attr("name")){					
-				default:
-					if(element.hasClass("useid_error")){
-						error.appendTo("#"+element.attr("id")+"_error");
-					} else {
-						error.appendTo("#"+element.attr("name")+"_error");
-					}
-					break;
-			}			
-		},
-		ignore: ":hidden:not(select)"
+		}
 	});
 	
 	// With transparent color
-	$('#calendarcolor').colorpicker({
+	/*$('#calendarcolor').colorpicker({
 		transparentColor: true
-	});
+	});*/
 });
 </script>
-<div class="row-fluid margin0 index">
-    <form id="indexform" class="form-horizontal" role="form" action="<?php echo $posturl; ?>" method="post">
-        <div class="col-md-12 padding0">
-            <div class="headerbox">
-                <table class="table border0 nohover margin0">                       
-                    <tr>		                    
-                        <td class="padding2">
-                            <button type="submit" class="btn btn-primary savethenview save"><i class="glyphicon glyphicon-ok icon-white"></i> <?php echo $button_title; ?></button>
-                            <a class="btn btn-default cancel gonowhere"><i class="glyphicon glyphicon-remove"></i> <?php echo $this->translate('global_button_cancel'); ?></a>
-                            <input name="entityname" id="entityname" type="hidden" value="TimeoffType" />
-        					<input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
-                            <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" />
-                            <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
-                            <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($this->baseUrl('config/timeoff')); ?>" /> 
-                            <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($this->viewurl); ?>" /> 
-                        </td>
-                    </tr>
-                </table>
-            </div>
-        </div>
-        <?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="contentcontainer clearfix">
-        	<div class="row-fluid marginleft5">
-            	<div class="col-md-12">
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Summary</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label"><?php echo $this->translate("global_name_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                                            <div class="col-sm-10">
-                                                <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $timeoff->getName(); ?>" /><div id="name_error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label"><?php echo $this->translate('global_description_label'); ?>:</label>
-                                            <div class="col-md-6">
-                                                <textarea class="form-control expanding" id="description" name="description"><?php echo $timeoff->getDescription(); ?></textarea>
-                                                <div id="description_error"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Settings</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Default Value:</label>
-                                            <div class="col-sm-10">
-                                            	<div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:15px;">
-                                                    <input type="text" name="defaultquantity" id="defaultquantity" class="form-control input-sm width75 centeralign isnumber" value="<?php echo $timeoff->getdefaultquantity(); ?>" />
-                                                </div>
-                                                <div class="xcol-md-4 padding0" style="display:inline-block; float:left; margin-right:5px;">
-                                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_1" class="<?php echo $timeoff->getquantitytype() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getquantitytype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
-                                					<label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_2" class="<?php echo $timeoff->getquantitytype() == '2' ? 1 : 0; ?>" value="2" <?php echo $timeoff->getquantitytype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label">Bookable?:</label>
-                                            <div class="col-md-10">
-                                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_1" class="<?php echo $timeoff->getbookable() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getbookable() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                				<label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_0" class="<?php echo $timeoff->getbookable() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getbookable() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label">Authorised?:</label>
-                                            <div class="col-md-10">
-                                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_1" class="<?php echo $timeoff->getauthorised() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getauthorised() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                				<label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_0" class="<?php echo $timeoff->getauthorised() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getauthorised() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label">Paid?:</label>
-                                            <div class="col-md-10">
-                                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_1" class="<?php echo $timeoff->getpaid() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getpaid() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                				<label class="radio radio-inline"><input type="radio" name="paid" id="paid_0" class="<?php echo $timeoff->getpaid() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getpaid() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label">Deduct From Balance?:</label>
-                                            <div class="col-md-10">
-                                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_1" class="<?php echo $timeoff->getdeductfromallowance() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getdeductfromallowance() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                				<label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_0" class="<?php echo $timeoff->getdeductfromallowance() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getdeductfromallowance() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label">Calendar Color:</label>
-                                            <div class="col-md-10">
-                                                <input type="text" name="calendarcolor" id="calendarcolor" class="form-control input-sm width100" value="<?php echo $timeoff->getcalendarcolor(); ?>" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+		<div class="col-sm-8">
+        	<div class="box box-color box-bordered">
+                <div class="box-title">
+                    <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
                 </div>
-            </div>
-   		</div>
- 	</form>
-</div>
+                <div class="box-content nopadding">
+                    <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
+                        <input name="entityname" id="entityname" type="hidden" value="TimeoffType" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
+                        <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                        <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                        <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
+                        <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" /> 
+                        <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" />
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate("global_name_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $timeoff->getName(); ?>" /><div id="name_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('global_description_label'); ?>:</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control expanding" id="description" name="description"><?php echo $timeoff->getDescription(); ?></textarea>
+                                <div id="description_error"></div>
+                            </div>
+                        </div>
+                       	<div class="form-group">
+                            <label class="col-sm-3 control-label">Default Value:</label>
+                            <div class="col-sm-9">
+                                <div class="xcol-sm-4 padding0" style="display:inline-block; margin-right:15px;">
+                                    <input type="text" name="defaultquantity" id="defaultquantity" class="form-control input-sm width75 centeralign isnumber" value="<?php echo $timeoff->getdefaultquantity(); ?>" />
+                                </div>
+                                <div class="xcol-sm-4 padding0" style="display:inline-block; margin-right:5px;">
+                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_1" class="<?php echo $timeoff->getquantitytype() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getquantitytype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_2" class="<?php echo $timeoff->getquantitytype() == '2' ? 1 : 0; ?>" value="2" <?php echo $timeoff->getquantitytype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Bookable?:</label>
+                            <div class="col-sm-9">
+                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_1" class="<?php echo $timeoff->getbookable() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getbookable() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_0" class="<?php echo $timeoff->getbookable() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getbookable() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Authorised?:</label>
+                            <div class="col-sm-9">
+                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_1" class="<?php echo $timeoff->getauthorised() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getauthorised() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_0" class="<?php echo $timeoff->getauthorised() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getauthorised() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Paid?:</label>
+                            <div class="col-sm-9">
+                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_1" class="<?php echo $timeoff->getpaid() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getpaid() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_0" class="<?php echo $timeoff->getpaid() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getpaid() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Deduct From Balance?:</label>
+                            <div class="col-sm-9">
+                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_1" class="<?php echo $timeoff->getdeductfromallowance() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getdeductfromallowance() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_0" class="<?php echo $timeoff->getdeductfromallowance() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getdeductfromallowance() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Calendar Color:</label>
+                            <div class="col-sm-9">
+                                <input type="text" name="calendarcolor" id="calendarcolor" class="form-control colorpick input-sm width100" value="<?php echo $timeoff->getcalendarcolor(); ?>" />
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                            <?php if(isEmptyString($request->id)){ ?>
+                                <button class="btn btn-primary btn-green changesuccessurl savebutton" successurl="<?php echo encode($addnewsuccessurl); ?>" type="submit">Save and Add New</button>
+                            <?php } ?>
+                            <button class="btn btn-primary btn-green changesuccessurl savebutton" type="submit" successurl="<?php echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                        </div>
+					</form>
+            	</div>
+          	</div>
+       	</div>
+	</div>
+</div>                                    
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

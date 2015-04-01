@@ -12,9 +12,10 @@
 	$this->headTitle($title.$browserappend);
 	
 ?>
-<link href='<?php echo $this->baseUrl('stylesheets/5.fullcalendar.css'); ?>' rel='stylesheet' type='text/css'>
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/5.jquery.fullcalendar.min.js')); ?>"></script>
-
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/fullcalendar/fullcalendar.css')); ?>">
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/fullcalendar/fullcalendar.print.css')); ?>" media="print">
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar/moment.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar/fullcalendar.min.js')); ?>"></script>
 <script>
 $(document).ready(function() {
 	$('.titlebreadcrumb').html('<?php echo 'System / Calender'; ?>');
@@ -22,50 +23,32 @@ $(document).ready(function() {
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="glyphicon glyphicon-time"></span>');
 	
-	$('#calendar').fullCalendar({
-		header: {
-			left: 'prev,next today',
-			center: 'title',
-			right: 'month,basicWeek,basicDay'
-		},
-		defaultView: 'month',
-		eventLimit: true, // allow "more" link when too many events
-		events: "<?php echo $this->baseUrl('timeoff/events/id/'.$currentuserid); ?>"
-	});
+	// Calendar
+	if ($(".calendar").length > 0 && !$(".calendar").parent().hasClass("daterangepicker")) {
+		var date = new Date();
+		var d = date.getDate();
+		var m = date.getMonth();
+		var y = date.getFullYear();
+
+		$('.calendar').fullCalendar(
+			'addEventSource', "<?php echo $this->baseUrl('timeoff/events/id/'.$currentuserid); ?>"
+		);
+	}
+	
 });
 </script>
-<style>
-.fc-event-skin {
-    /*background-color: #92C4E6;
-    border-color: #63abdb;*/
-	background-color: #6A93AD;
-    border-color: #457899;
-}
-</style>
-<?php if ($sessionhaserror) { ?>
-    <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-<?php } ?>
-<?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-    <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-<?php } ?>
-<div class="row row-bg" style="margin-bottom:10px;">
-    <div class="col-sm-12 col-md-12">
-        <div class="widget box hidden-xs">
-            <div class="widget-header">
-                <h4><i class="glyphicon glyphicon-align-justify"></i> Leave Calendar</h4>
-                <div class="toolbar no-padding">
-                    <div class="btn-group">
-                        <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
-                    </div>
-                </div>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="box box-color">
+            <div class="box-title">
+                <h3><i class="fa fa-calendar"></i>Company Calendar</h3>
             </div>
-            <div class="widget-content no-padding whitebg minheight400">
-            	<div id='calendar' class="padding0 margin0 row clearfix" style="margin-top:10px; margin-bottom:10px; width:100%;"></div>
-          	</div>
-      	</div>
-   	</div>
-</div>
-<div class="divider10"></div>                            
+            <div class="box-content nopadding">
+                <div class="calendar"></div>
+            </div>
+		</div>
+	</div>
+</div>          
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

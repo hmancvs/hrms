@@ -31,7 +31,7 @@
 			messages: {				
 				email: {
 					required: "<?php echo $this->translate("useraccount_email_error"); ?>", 
-					email: "<?php echo $this->translate("useraccount_email_invalid_error"); ?>",
+					email: "Please enter valid email",
 					new_not_old: "New Email should be different from current one"
 				}
 			},
@@ -79,10 +79,10 @@
 						// alert(result); // return false;
 						if(result == 1){  
 							//show that the email is available
-							$('#email_availability_result').html(email + ' is NOT available!').addClass('alert').addClass('alert-error').removeClass('alert-success'); 
+							$('#email_availability_result').html(email + ' is NOT available!').addClass('alert').addClass('alert-danger').removeClass('alert-success');
 						} else {  
 							//show that the email is NOT available  
-							$('#email_availability_result').html(email + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-error');
+							$('#email_availability_result').html(email + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-danger'); 
 						}  
 				});  
 			}
@@ -107,8 +107,8 @@
         </tr>
         <tr>
             <td><label class="control-label pull-left">New Login Email: <?php echo $this->translate("global_required_field_marker"); ?></label></td>
-            <td><input style="width:70%;" class="validate_255_string" name="email" id="email" type="text" value="<?php echo $useraccount->getEmail2(); ?>" />
-            	<label class='lineblocked'><a href="javascript: void(0);" class="btn btn-primary btn-mini" id='check_user_availability' title="Check Availability">Check</a></label><div id="email_error"></div><div id="email_availability_result" style="margin-top:5px;"></div>
+            <td><input style="width:70%;" class="validate_255_string form-control inline input-sm" name="email" id="email" type="text" value="<?php echo $useraccount->getEmail2(); ?>" />
+            	<label class='lineblocked'><a href="javascript: void(0);" class="btn btn-primary btn-sm" id='check_user_availability' title="Check Availability">Check</a></label><div id="email_error"></div><div id="email_availability_result" style="margin-top:5px;"></div>
             </td>
         </tr>
 	</table>

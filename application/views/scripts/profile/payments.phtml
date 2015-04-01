@@ -1,11 +1,185 @@
-<div class="row-fluid margin0">
-    <div class="col-md-12">
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
         <fieldset class="fieldsetcontainer minheight200">
-            <legend>Transaction History</legend>
+            <legend><?php echo $isme ? 'My ' : ''; ?>Transaction History</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-12 paddingleft10">
-                       
+                <div class="row-fluid">
+                    <div class="col-sm-12">
+                    	<?php 
+							$ref = $request->ref;
+							if(isEmptyString($request->ref)){
+								$ref = 'list';
+							}
+							
+							$where_query = " WHERE pd.userid = '".$user->getID()."' ";
+							if(!isEmptyString($request->payrollid)){
+								$where_query .= " AND pd.id = '".$request->payrollid."' ";
+							}
+							$all_results_query = "SELECT pd.id FROM payrolldetail pd inner join payroll p on pd.payrollid = p.id inner join useraccount as u on pd.userid = u.id ".$where_query." ORDER BY p.payrolldate DESC ";
+							// debugMessage($all_results_query); // exit;
+							
+							$conn = Doctrine_Manager::connection(); 
+							$result = $conn->fetchAll($all_results_query); // debugMessage($result);
+							$hasdata = count($result) > 0 ? true : false;
+							$countlabel = count($result) == 1 ? " Transaction" : " Transactions";
+							
+							
+						?>
+                        <?php if($hasdata){ ?>
+                            <div class="paginatecustom padding10" style="padding-bottom: 4px; padding-left:0; font-style:italic;"><?php echo "Viewing <b>".count($result)."</b> ".$countlabel." "; ?></div>
+                        <?php } ?>
+                        <table class="table list table-bordered border-cells data-table" id="datatable">
+                            <thead>
+                                <tr style="font-size:12px; font-weight:normal;">
+                                    <th class="nowrapping" style="width:100px;"><label class="control-label">Transaction Date</label></th>
+                                    <th style="width:150px;"><label class="control-label">Payment Period</label></th>
+                                    <th style="width:100px;"><label class="control-label">Gross</label></th>
+                                    <th style="width:100px;"><label class="control-label">Net</label></th>
+                                    <th style="width:130px;"><label class="control-label">Actions</label></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(!$hasdata){ ?>
+                                    <tr>
+                                        <td colspan="5"><div style="clear:both;" class="alert alert-warning margin5">There are currently no transactions</div></td>
+                                    </tr>
+                                <?php } else { ?>
+                                    <?php foreach ($result as $line){ 
+                                        $payrolldetail = new PayrollDetail();
+                                        $payrolldetail->populate($line['id']);
+                                        $payroll = $payrolldetail->getPayroll();
+                                        $period = date('jS', strtotime($payroll->getStartDate())).'-'.date('jS', strtotime($payroll->getPayrollDate())).' '.date('F Y', strtotime($payroll->getPayrollDate()));
+                                    ?>
+                                        <tr style="font-size:12px; font-weight:normal;">
+                                            <td class="nowrapping"><?php echo changeMySQLDateToPageFormat($payroll->getPayrollDate()); ?></td>
+                                            <td><?php echo $period; ?></td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetEarning()); ?></td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetPay()); ?></td>
+                                            <td>
+                                                <?php if($ref == 'list'){ ?>
+                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view'; ?>" class="btn btn-primary btn-xs blockanchor">Payslip Details</a> &nbsp;
+                                                <?php } ?>
+                                                <?php if($ref == 'view'){ ?>
+                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment'; ?>" class="btn btn-default btn-xs blockanchor hideonprint">Back</a> &nbsp;
+                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view/print/1/pgc/1'; ?>" target="_blank" class="btn btn-primary btn-xs hideonprint">Print</a>
+                                                <?php } ?>
+                                            </td>
+                                        </tr>
+                                    <?php } ?>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                        <?php if($ref == "view" && !isEmptyString($request->payrollid)){ 
+                            $benefits = getBenefits();
+                            
+                            // debugMessage($payrolldetail->toArray());
+                            $gross = $payrolldetail->getEndGross();
+                            $allbenefits = $payrolldetail->getTotalBenefits();
+                            $paye = $payrolldetail->getPaye();
+                            $nssf = $payrolldetail->getNssf();
+                            $otherdeductions = $payrolldetail->getOtherDebit();
+                            $netpay = $payrolldetail->getNetPay();
+                            
+                            $results_credits_array = array();
+                            if(decode($payrolldetail->getbenefitdetails()) != "[]" || $payrolldetail->getbenefitdetails() != "W10="){
+                                $results_credits_array = objectToArray(json_decode(decode($payrolldetail->getbenefitdetails())));
+                            }
+                            $results_debits_array = array();
+                            if(decode($payrolldetail->getdeductiondetails()) != "[]" || $payrolldetail->getdeductiondetails() != "W10="){
+                                $results_debits_array = objectToArray(json_decode(decode($payrolldetail->getdeductiondetails())));
+                            }
+                        ?>
+                            <div class="divider20"></div>
+                            <div id="payslip_<?php echo $id; ?>" class="payslipdata alert_<?php echo $id; ?>">
+                                <label class="blocked bolded" style="font-size:13px !important; color:#4a6694; margin-left:10px;">Payslip Details</label>
+                                <table class="table table-bordered border-cells" style="font-size:12px !important; width:auto; margin:5px;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:267px;">Transaction Details</th>
+                                            <th style="width:100px; text-align:center;">CR</th>
+                                            <th style="width:100px; text-align:center;">DR</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="bolded">
+                                            <td>Basic Salary</td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($gross); ?></td>
+                                            <td class="rightalign"></td>
+                                        </tr>
+                                        <?php foreach($results_credits_array as $line){ ?>
+                                            <tr>
+                                                <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                <td class="rightalign"><?php echo formatMoneyOnly($line['totalcr']); ?></td>
+                                                <td class="rightalign"></td>
+                                            </tr>
+                                        <?php } ?>
+                                        <tr>
+                                            <td>Total Benefits</td>
+                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($allbenefits); ?></td>
+                                            <td class="rightalign"></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                        </tr>
+                                        <tr class="bolded">
+                                            <td>Gross</td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($gross+$allbenefits); ?></td>
+                                            <td class="rightalign"></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                        </tr>
+                                        <tr class="bolded">
+                                            <td>Deductions</td>
+                                            <td class="rightalign"></td>
+                                            <td class="rightalign"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>PAYE</td>
+                                            <td class="rightalign"></td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($paye); ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td>NSSF</td>
+                                            <td class="rightalign"></td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($nssf); ?></td>
+                                        </tr>
+                                        <?php foreach($results_debits_array as $line){ ?>
+                                            <tr>
+                                                <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                <td class="rightalign"></td>
+                                                <td class="rightalign"><?php echo formatMoneyOnly($line['totalbr']); ?></td>
+                                            </tr>
+                                        <?php } ?>
+                                        <tr class="bolded">
+                                            <td>Total Deductions</td>
+                                            <td class="rightalign"></td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($paye + $nssf + $otherdeductions); ?></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                        </tr>
+                                        <tr class="bolded">
+                                            <td>Net</td>
+                                            <td class="rightalign"><?php echo formatMoneyOnly($netpay); ?></td>
+                                            <td class="rightalign"></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td style="height:3px !important; padding:0;"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php } ?>
+                          	
                     </div>
                 </div>
             </div>

@@ -1,0 +1,23 @@
+<div class="row">
+    <div class="col-sm-12">
+        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
+            <div class="alert alert-success alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar(SUCCESS_MESSAGE); ?>
+            </div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar(ERROR_MESSAGE)) && false) { ?>
+            <div class="alert alert-danger alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar("infomessage"))) { ?>
+            <div class="alert alert-info alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar("infomessage"); ?></div>
+     	<?php } ?>
+        <?php if (!isEmptyString($session->getVar("warningmessage"))) { ?>
+            <div class="alert alert-info alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar("warningmessage"); ?></div>
+     	<?php } ?>
+        <?php if (!isEmptyString($session->getVar('invitesuccess'))) { ?>
+            <div class="alert alert-success alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar('invitesuccess'); ?></div>
+        <?php } ?>
+        <?php if (!isEmptyString($session->getVar('custommessage1'))) { ?>
+            <div class="alert alert-success alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar('custommessage1'); ?></div>
+        <?php } ?>
+    </div>
+</div> 

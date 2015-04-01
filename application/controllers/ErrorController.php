@@ -16,8 +16,8 @@ class ErrorController extends Zend_Controller_Action
          
         $exception = $errors->exception; // debugMessage($exception);
         $vars = get_object_vars($exception );
-        $error_list = createHTMLCommaListFromArray($vars); // debugMessage($error_list);
-        // debugMessage(get_class($errors->exception));  debugMessage($errors->type);
+        $error_list = createHTMLCommaListFromArray($vars); // debugMessage('errors are '.$error_list);
+       	//  debugMessage(get_class($errors->exception));  debugMessage($errors->type);
        
         // exit();
         switch ($errors->type) {
@@ -34,14 +34,14 @@ class ErrorController extends Zend_Controller_Action
                	$this->getResponse()->setHttpResponseCode(500);
                 // $this->view->message = 'Application error'.$errors->exception;
             	$this->view->message = $error_list;
-            	/* $string = '<div class="divider30"></div>
+            	$string = '<div class="divider30"></div>
 			<div class="row-fluid">
-				<div class="col-md-12">
+				<div class="col-sm-12">
 					<div class="alert alert-danger">Application Runtime Error</div>
 					<p class="bg-warning padding10">'.$error_list.'></p>
 			    </div>
 			</div> ';
-            	debugMessage($string); */
+            	debugMessage($string); /* */
                 break;
         }
         

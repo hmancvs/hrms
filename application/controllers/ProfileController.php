@@ -299,44 +299,17 @@ class ProfileController extends SecureController  {
     	$formvalues = $this->_getAllParams(); debugMessage($this->_getAllParams());
     	
     	$user = new UserAccount();
-    	$user->populate($formvalues['memberid']);
-    	$user->processPost($formvalues);
+    	$user->populate($formvalues['id']);
+    	// debugMessage($user->toArray());
     	
-    	/* debugMessage($user->toArray());
-    	debugMessage('errors are '.$user->getErrorStackAsString()); exit; */
-    	if($user->hasError()){
-    		$session->setVar(ERROR_MESSAGE, $user->getErrorStackAsString());
-    		$session->setVar(FORM_VALUES, $formvalues);
-    		$this->_helper->redirector->gotoUrl(decode($this->_getParam('failureurl')));
-    	} 
     	try {
-    		$user->save();
-    		
-    		# add log to audit trail
-    		$url = $this->view->serverUrl($this->view->baseUrl('profile/view/id/'.encode($user->getID())));
-    			
-    		$browser = new Browser();
-    		$audit_values = $session->getVar('browseraudit');
-    		$audit_values['module'] = '1';
-    		$audit_values['usecase'] = '1.3';
-    		$audit_values['transactiontype'] = USER_CREATE;
-    		$audit_values['status'] = "Y";
-    		$audit_values['userid'] = $session->getVar('userid');
-    		$audit_values['transactiondetails'] = "User Profile <a href='".$url."' class='blockanchor'>".$user->getName()."</a> created";
-    		$audit_values['url'] = $url;
-    		// debugMessage($audit_values);
-    		$this->notify(new sfEvent($this, USER_CREATE, $audit_values));
-    		
-    		$user->afterUpdate(false);
-    		$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate("global_profile_update_success"));
-    		$this->_helper->redirector->gotoUrl($this->view->baseUrl('profile/view/id/'.encode($user->getID())));
-    			
-   		} catch (Exception $e) {
-   			$session->setVar(ERROR_MESSAGE, $e->getMessage()."<br />".$user->getErrorStackAsString());
-   			$session->setVar(FORM_VALUES, $formvalues);
-   			$this->_helper->redirector->gotoUrl(decode($this->_getParam('failureurl')));
-   		}
+    		$user->inviteOne();
+    		$session->setVar('invitesuccess', "Email Invitation sent to ".$user->getEmail());
+    	} catch (Exception $e) {
+    		$session->setVar(ERROR_MESSAGE, $e->getMessage());
+    	}
     	
+    	$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
     	// exit();
     }
     
@@ -372,7 +345,7 @@ class ProfileController extends SecureController  {
     	// determine if user has destination avatar folder. Else user is editing there picture
     	if(!is_dir($destination_path.$user->getID())){
     		// no folder exits. Create the folder
-    		mkdir($destination_path.$user->getID(), 0775);
+    		mkdir($destination_path.$user->getID(), 0777);
     	}
     
     	// set the destination path for the image
@@ -380,12 +353,12 @@ class ProfileController extends SecureController  {
     	$destination_path = $destination_path.$profilefolder.DIRECTORY_SEPARATOR."avatar";
     
     	if(!is_dir($destination_path)){
-    		mkdir($destination_path, 0775);
+    		mkdir($destination_path, 0777);
     	}
     	// create archive folder for each user
     	$archivefolder = $destination_path.DIRECTORY_SEPARATOR."archive";
     	if(!is_dir($archivefolder)){
-    		mkdir($archivefolder, 0775);
+    		mkdir($archivefolder, 0777);
     	}
     
     	$oldfilename = $user->getProfilePhoto();
@@ -396,7 +369,7 @@ class ProfileController extends SecureController  {
     	// the profile image info before upload
     	$file = $upload->getFileInfo('profileimage');
     	$uploadedext = findExtension($file['profileimage']['name']);
-    	$currenttime = mktime();
+    	$currenttime = time();
     	$currenttime_file = $currenttime.'.'.$uploadedext;
     
     	$thefilename = $destination_path.DIRECTORY_SEPARATOR.'base_'.$currenttime_file;
@@ -508,7 +481,7 @@ class ProfileController extends SecureController  {
     	// debugMessage($user->toArray());
     	$src = $base.$oldfile;
     
-    	$currenttime = mktime();
+    	$currenttime = time();
     	$currenttime_file = $currenttime.'.jpg';
     	$newlargefilename = $base."large_".$currenttime_file;
     	$newmediumfilename = $base."medium_".$currenttime_file;

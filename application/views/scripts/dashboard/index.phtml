@@ -1,281 +1,878 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$user = new UserAccount();	
-	$user->populate($userid);
 	$currentuserid = '';
-	if(isTimesheetEmployee()){
-		$currentuserid = $user->getID();
+	$mytext = "";
+	$istimesheetuser = $istimesheetuser = isTimesheetEmployee() ? true : false;
+	if($istimesheetuser){
+		$mytext = "My ";
+		$currentuserid = $loggedinuser->getID();
 	}
-	$role = getUserType($user->getType());
-	$title = $role." ".$this->translate("dashboard_pagetitle");
+	$ischeckin = isCheckedIn($session->getVar('userid'), date('Y-m-d')) ? true : false; // debugMessage($ischeckin);
+	
+	if($istimesheetuser){ 
+		$salary_label = "Basic Salary";
+		$benefits_label = "Total Benefits"; 
+		$nssf_label = "NSSF Contribution";
+		$paye_label = "PAYE Contribution";;
+		$netpay_label = "Net Payment";
+		$grosspay_label = "Gross Payment";
+		
+	} else {
+		$nssf_label = "Total NSSF Contribution";
+		$paye_label = "Total PAYE Contribution";
+		$benefits_label = "Total Benefits"; 
+		$netpay_label = "Total Net Payout";
+		$grosspay_label = "Total Gross Salaries";
+	}
+	
+	$conn = Doctrine_Manager::connection(); 
+	if(!$istimesheetuser){
+		// no of employees
+		$empquery = "select count(u.id) from useraccount u where u.companyid = '".$companyid."' ";
+		$empcount_result = $conn->fetchOne($empquery);
+		
+		// no of departments
+		$deppquery = "select count(d.id) from department d where d.companyid = '".$companyid."' ";
+		$depcount_result = $conn->fetchOne($deppquery);
+		
+		// no of positions
+		$posquery = "select count(l.lookuptypeid) from lookuptypevalue l where l.lookuptypeid = 7 and l.companyid = '".$companyid."' ";
+		$poscount_result = $conn->fetchOne($posquery);
+	} else {
+		// no of hours accrues
+		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/8);
+		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+	}
+	
+	$custom_query = "";
+	if($istimesheetuser){
+		$custom_query .= " AND t.userid = '".$userid."' ";
+	}
+	// timesheets summary
+	$hrs_query = "select 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND t.status = 3, t.hours, 0)) as thisweek_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND t.status = 3, t.hours, 0)) as lastweek_approved_hrs, 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND t.status = 3, t.hours, 0)) as thismonth_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND t.status = 3, t.hours, 0)) as lastmonth_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as thisweek_pending_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as lastweek_pending_hrs, 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as thismonth_pending_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as lastmonth_pending_hrs 
+	from timesheet t inner join useraccount u on t.userid = u.id where u.companyid = '".$companyid."' ".$custom_query." "; //debugMessage($hrs_query);
+	$hrs_result = $conn->fetchRow($hrs_query); // debugMessage($hrs_result);
+	
+	// benefits summary
+	$benefits_query = "select 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND t.status = 1, t.amount, 0)) as thisweek_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND t.status = 1, t.amount, 0)) as lastweek_approved_benefits, 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND t.status = 1, t.amount, 0)) as thismonth_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND t.status = 1, t.amount, 0)) as lastmonth_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND (t.status = 0), t.amount, 0)) as thisweek_pending_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND (t.status = 0), t.amount, 0)) as lastweek_pending_benefits, 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND (t.status = 0), t.amount, 0)) as thismonth_pending_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND (t.status = 0), t.amount, 0)) as lastmonth_pending_benefits 
+	from ledger t inner join useraccount u on t.userid = u.id where u.companyid = '".$companyid."' AND t.ledgertype = 1 AND t.trxntype = 1 ".$custom_query." "; //debugMessage($benefits_query);
+	$benefits_result = $conn->fetchRow($benefits_query);
+	
+	// finance trends data
+	$custom_query = "";
+	if($istimesheetuser){
+		$custom_query .= " AND pd.userid = '".$userid."' ";
+	}
+	$fields = " SUM(IF(pd.isignored = 0, pd.endgross, 0)) as endgross, SUM(IF(pd.isignored = 0, pd.totalbenefits, 0)) as totalbenefits, SUM(IF(pd.isignored = 0, pd.netearning, 0)) as netearning, SUM(IF(pd.isignored = 0, pd.nssf, 0)) as nssf, SUM(IF(pd.isignored = 0, pd.paye, 0)) as paye, SUM(IF(pd.isignored = 0, pd.otherdebit, 0)) as otherdebit, SUM(IF(pd.isignored = 0, pd.netpay, 0)) as netpay, SUM(IF(pd.isignored = 0, pd.netearning, 0)) as netearning ";
+	$finance_1month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND p.status = 2  AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') ".$custom_query." ";
+	$finance_1month_result = $conn->fetchRow($finance_1month_query); //debugMessage($finance_1month_query); debugMessage($finance_1month_result);
+	$totaldeductions_1month = $finance_1month_result['nssf'] + $finance_1month_result['paye'] + $finance_1month_result['otherdebit'];
+	
+	$finance_2month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND  p.status = 2 AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayof2monthago_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayof2monthago_iso."') ".$custom_query." ";
+	$finance_2month_result = $conn->fetchRow($finance_2month_query); //debugMessage($finance_2month_query); debugMessage($finance_2month_result);
+	$totaldeductions_2month = $finance_2month_result['nssf'] + $finance_2month_result['paye'] + $finance_2month_result['otherdebit'];
+	
+	$finance_3month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND  p.status = 2 AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayof3monthago_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayof3monthago_iso."') ".$custom_query." ";
+	$finance_3month_result = $conn->fetchRow($finance_3month_query); //debugMessage($finance_3month_query); debugMessage($finance_3month_result);
+	$totaldeductions_3month = $finance_3month_result['nssf'] + $finance_3month_result['paye'] + $finance_3month_result['otherdebit'];
+	
+	$title = "Dashboard";
 	$description = 'Welcome to '.getAppName();
+	$pageid = "dashboard_index";
 	
 	$this->headTitle($title.$browserappend);
-	
 ?>
-<link href='<?php echo $this->baseUrl('stylesheets/5.fullcalendar.css'); ?>' rel='stylesheet' type='text/css'>
-<script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/highcharts.js'); ?>"></script>
-<script type="text/javascript" src="<?php echo $this->baseUrl('javascript/plugins/exporting.js'); ?>"></script>
-<!--<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/moment.min.js')); ?>"></script>
-<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar.min.js')); ?>"></script>-->
-<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/5.jquery.fullcalendar.min.js')); ?>"></script>
-
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/fullcalendar/fullcalendar.css')); ?>">
+<link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/fullcalendar/fullcalendar.print.css')); ?>" media="print">
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar/moment.min.js')); ?>"></script>
+<script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar/fullcalendar.min.js')); ?>"></script>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo 'System / '.$this->translate("dashboard_pagetitle"); ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
 	$('.titlelabel').html('<?php echo 'Dashboard'; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
-	$('.pageicon').html('<span class="glyphicon glyphicon-home"></span>');
+	$('.pageicon').html('<span class="fa fa-home"></span>');
 	
-	$('#calendar').fullCalendar({
-		header: {
-			left: 'prev,next today',
-			center: 'title',
-			right: 'month,basicWeek,basicDay'
+	// Calendar
+	if ($(".calendar").length > 0 && !$(".calendar").parent().hasClass("daterangepicker")) {
+		var date = new Date();
+		var d = date.getDate();
+		var m = date.getMonth();
+		var y = date.getFullYear();
+
+		$('.calendar').fullCalendar(
+			'addEventSource', "<?php echo $this->baseUrl('calendar/events/id/'.$currentuserid); ?>"
+		);
+	}
+	
+	$('#container').highcharts({
+        chart: {
+            type: 'column'
+        },
+        title: {
+            text: '<?php echo $mytext; ?> Payroll Insight (Last 3 Months)',
+			style: {
+                color: '#4a6694',
+                fontSize: '12px'
+            }
+        },
+		exporting: {
+			enabled: true
 		},
-		defaultView: 'month',
-		eventLimit: true, // allow "more" link when too many events
-		events: "<?php echo $this->baseUrl('timeoff/events/id/'.$currentuserid); ?>"
-			/*[{
-				title: 'All Day Event',
-				start: '2015-02-01'
-			},
+		credits: {
+			enabled: false
+		},
+        xAxis: {
+            categories: [
+                '<?php echo date('M Y', strtotime($this->firstdayof3monthago_iso)); ?>',
+                '<?php echo date('M Y', strtotime($this->firstdayof2monthago_iso)); ?>',
+                '<?php echo date('M Y', strtotime($this->firstdayoflastmonth_iso)); ?>'
+            ],
+            crosshair: true
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'Amount (UGX)'
+            }
+        },
+		legend: {
+			enabled: false
+		},
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0
+            }
+        },
+        series: [
+		<?php if($istimesheetuser){ ?>
 			{
-				title: 'Conference',
-				start: '2015-02-11',
-				end: '2015-02-13'
-			},
-			{
-				title: 'Meeting',
-				start: '2015-02-12T10:30:00',
-				end: '2015-02-12T12:30:00'
-			},
-			{
-				title: 'Birthday Party',
-				start: '2015-02-13T07:00:00'
-			},
-			{
-				title: 'Click for Google',
-				url: 'http://google.com/',
-				start: '2015-02-28'
-			}]*/
-		
-	});
+				name: '<?php echo $salary_label; ?>',
+				data: ['<?php echo isEmptyString($finance_3month_result['endgross']) ? 0 : $finance_3month_result['endgross']; ?>', '<?php echo isEmptyString($finance_2month_result['endgross']) ? 0 : $finance_2month_result['endgross']; ?>', '<?php echo isEmptyString($finance_1month_result['endgross']) ? 0 : $finance_1month_result['endgross']; ?>'],
+				type: 'column'
+	
+			}, 
+		<?php } ?>
+		{
+            name: '<?php echo $nssf_label; ?>',
+            data: ['<?php echo isEmptyString($finance_3month_result['nssf']) ? 0 : $finance_3month_result['nssf']; ?>', '<?php echo isEmptyString($finance_2month_result['nssf']) ? 0 : $finance_2month_result['nssf']; ?>', '<?php echo isEmptyString($finance_1month_result['nssf']) ? 0 : $finance_1month_result['nssf']; ?>'],
+			type: 'column'
+
+        }, {
+            name: '<?php echo $paye_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['paye']) ? 0 : $finance_3month_result['paye']; ?>, <?php echo isEmptyString($finance_2month_result['nssf']) ? 0 : $finance_2month_result['paye']; ?>, <?php echo isEmptyString($finance_1month_result['paye']) ? 0 : $finance_1month_result['paye']; ?>],
+			type: 'column'
+        }, {
+            name: '<?php echo $benefits_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['totalbenefits']) ? 0 : $finance_3month_result['totalbenefits'] ?>, <?php echo isEmptyString($finance_2month_result['totalbenefits']) ? 0 : $finance_2month_result['totalbenefits']; ?>, <?php echo isEmptyString($finance_1month_result['totalbenefits']) ? 0 : $finance_1month_result['totalbenefits']; ?>],
+			type: 'column'
+        },{
+            type: 'column',
+            name: '<?php echo $netpay_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['netpay']) ? 0 : $finance_3month_result['netpay']; ?>, <?php echo isEmptyString($finance_3month_result['netpay']) ? 0 : $finance_2month_result['netpay']; ?>, <?php echo isEmptyString($finance_1month_result['netpay']) ? 0 : $finance_1month_result['netpay']; ?>]
+        },{
+            type: 'column',
+            name: '<?php echo $grosspay_label ; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['netearning']) ? 0 : $finance_3month_result['netearning']; ?>, <?php echo isEmptyString($finance_3month_result['netearning']) ? 0 : $finance_2month_result['netearning']; ?>, <?php echo isEmptyString($finance_1month_result['netearning']) ? 0 : $finance_1month_result['netearning']; ?>]
+        }]
+    });
 });
 </script>
-<style>
-.fc-event-skin {
-    /*background-color: #92C4E6;
-    border-color: #63abdb;*/
-	background-color: #6A93AD;
-    border-color: #457899;
-}
-</style>
-<?php if ($sessionhaserror) { ?>
-    <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-<?php } ?>
-<?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-    <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-<?php } ?>
-<div class="row row-bg" style="margin-bottom:10px;">
-	<?php if(isTimesheetEmployee()){ ?>
-        <div class="col-sm-6 col-md-6">
-            <div class="widget box hidden-xs">
-                <div class="widget-header">
-                    <h4><i class="glyphicon glyphicon-align-justify"></i> Quick Action</h4>
-                    <div class="toolbar no-padding">
-                        <div class="btn-group">
-                            <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>" class="dashboard">
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="box box-color box-bordered box-small">
+                <div class="box-title">
+                    
+                </div>
+                <div class="box-content">
+					<?php if(!$ischeckin){ ?>
+                        <ul class="stats maxwidth">
+                            <li class="col-sm-6 col-xs-12">
+                                <a class="<?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?> btn btn-block btn-darkblue theme_alterable" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right">
+                                    <i class="fa fa-sign-out"></i>
+                                    <div class="details">
+                                        <span class="big">CHECK IN</span>
+                                        <span><?php echo getShortDaysOfWeek(date('N')).' '.date('F d, Y'); ?></span>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="col-sm-6 col-xs-12">
+                                <a class="alert-dialog btn btn-info btn-block" message="Not yet In!">
+                                    <i class="fa fa-sign-in"></i>
+                                    <div class="details">
+                                        <span class="big">CHECK OUT</span>
+                                        <span>Currently out</span>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul>
+                    <?php } else { ?>
+                       <ul class="stats maxwidth">
+                            <li class="col-sm-6 col-xs-12">
+                                <a class="alert-dialog btn btn-block btn-info" message="Already In!">
+                                    <i class="glyphicon-power"></i>
+                                    <div class="details">
+                                        <span class="big">Currently In</span>
+                                        <span><?php echo getShortDaysOfWeek(date('N')).' '.date('F d, Y'); ?></span>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="col-sm-6 col-xs-12">
+                            <?php 
+								$isoverdue = false;
+								$checkindetails = getCheckInEntry($loggedinuser->getID(), date('Y-m-d'));
+								if(!isEmptyString($checkindetails['datein']) && isEmptyString($checkindetails['dateout']) && (strtotime(date('Y-m-d')) > strtotime($checkindetails['datein']))) {
+									/* TODO: add function to check againist login and out time */
+									$isoverdue = true;
+								}
+								// debugMessage($checkindetails);
+							?>
+                                <a class="btn btn-block btn-darkblue theme_alterable <?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($checkindetails['id']).'/type/2/userid/'.encode($checkindetails['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout  overdue and has been disabled. Contact Admin or a Supervisor.">
+                                    <i class="glyphicon-pause"></i>
+                                    <div class="details">
+                                        <span class="big">CHECK OUT</span>
+                                        <span><?php echo getShortDaysOfWeek(date('N')).' '.date('F d, Y'); ?></span>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul> 
+                    <?php } ?>
+                    <?php if($istimesheetuser){ ?>
+                    	<div class="row">
+                            <div class="col-sm-12">
+                                <ul class="tiles">
+                                	<?php if ($acl->checkPermission('Attendance', ACTION_LIST)) { ?>
+                                    	<li class="orange"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>"><span><i class="fa fa-calendar"></i></span><span class='name'>My Attendance</span></a></li>
+                                    <?php } ?>
+									<?php if($istimesheetuser) { ?>
+                                        <li class="brown">
+                                            <a href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>" class="blockanchor"><span><i class="fa fa-gift"></i></span><span class="name">My Benefits</span></a>
+                                        </li>
+                                    <?php } ?>
+                                    <?php if ($acl->checkPermission('Time off', ACTION_CREATE) && !$acl->checkPermission('Time off', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
+                                        <li class="teal">
+                                            <a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/index'); ?>"><span><i class="fa fa-calendar"></i></span><span class="name">Request Timeoff</span> </a>
+                                        </li>
+                                    <?php } ?>
+                                    <?php if($istimesheetuser) { ?>
+                                        <li class="blue">
+                                            <a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request"><span><i class="fa fa-gift"></i></span><span class="name">Request Benefits</span></a>
+                                        </li>
+                                    <?php } ?>
+                               	</ul>
+                         	</div>
+                       	</div>
+                    <?php } ?>
+                    <?php if(!$istimesheetuser){ ?>
+                    	<div class="row">
+                            <div class="col-sm-12">
+                                <ul class="tiles">
+                                	<?php if ($acl->checkPermission('User Account', ACTION_LIST)) { ?>
+                                    	<li class="orange"><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>"><span><i class="fa fa-user"></i></span><span class='name'>Employees</span></a>
+                                    </li>
+                                    <?php } ?>
+                                    <?php if ($acl->checkPermission('User Account', ACTION_CREATE)) { ?>
+                                    	<li class="brown"><a href="<?php echo $this->baseUrl('profile'); ?>" class="blockanchor"><span class='count'><i class="glyphicon glyphicon-user_add"></i></span><span class='name'>Add Employee</span></a></li>
+                                    <?php } ?>
+                                    <?php if($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
+                                        <li class="teal">
+                                            <a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list'); ?>"><span class='count'><i class="fa fa-gift"></i></span><span class='name'>Manage Benefits</span></a>
+                                        </li>
+                                    <?php } ?>   
+                                    <?php if($acl->checkPermission('Benefits', ACTION_CREATE)) { ?>
+                                        <li class="blue">
+                                            <a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"><span class='count'><i class="fa fa-gift"></i></span><span class='name'>Add Benefits</span></a>
+                                        </li>
+                                    <?php } ?> 
+                               	</ul>
+                           	</div>
+                        </div>
+                   	<?php } ?>
+                </div>
+            </div>
+            <div class="row">
+				<div class="col-sm-12">
+                	<div class="box box-color">
+                        <div class="box-title">
+                            <h3><i class="fa fa-bars"></i>Statistics</h3>
+                        </div>
+                        <div class="box-content nopadding">
+                            <table class="table-hover table-bordered table-nomargin table-condensed table-striped maxwidth">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>This Week</th>
+                                        <th class="hidden-xs">Last Week</th>
+                                        <th>This Month</th>
+                                        <th class="hidden-xs">Last Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="label label-info noround boxitemlabel">Timesheet Hours Approved</span></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thisweek_approved_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastweek_approved_hrs']); ?></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thismonth_approved_hrs'], 2); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastmonth_approved_hrs']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-warning noround boxitemlabel">Timesheet Hours Pending</span></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thisweek_pending_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastweek_pending_hrs']); ?></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thismonth_pending_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastmonth_pending_hrs']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-success noround boxitemlabel">Total Benefits Assigned</span></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thisweek_approved_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastweek_approved_benefits']); ?></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thismonth_approved_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastmonth_approved_benefits']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-warning noround boxitemlabel">Total Benefits Pending</span></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thisweek_pending_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastweek_pending_benefits']); ?></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thismonth_pending_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastmonth_pending_benefits']); ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <?php if(!$istimesheetuser){ ?>
+                                <div class="divider10"></div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="reportdashboard well clearfix"> 
+                                            <ul class="stats">
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $empcount_result; ?></strong>
+                                                    <small>No of Employees</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $depcount_result; ?></strong>
+                                                    <small>No of Departments</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $poscount_result ?></strong>
+                                                    <small>No of Job Positions</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                            <?php if($istimesheetuser){ ?>
+                                <div class="divider10"></div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="reportdashboard well clearfix"> 
+                                            <ul class="stats">
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($totalhrs / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($totalhrs).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Annual Leave Time Accrued</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($takenhrs / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($takenhrs).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Annual Leave Time Taken</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($hoursavailable / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($hoursavailable).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Leave Time Available</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>
+                   	</div>
+                </div>
+           	</div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color lightgrey">
+                        <div class="box-title">
+                            <h3><i class="fa fa-bars"></i>Finance Insight</h3>
+                        </div>
+                        <div class="box-content nopadding" style="height:360px;">
+                        	<div id="container" style="height:350px; width:100%;"></div>
                         </div>
                     </div>
                 </div>
-                <div class="widget-content no-padding whitebg" style="height:215px;">
-                    
-                </div>
             </div>
-        </div>
-        <div class="col-sm-6 col-md-6">
-            <div class="widget box makerelative">
-                <div class="widget-header">
-                    <h4><i class="glyphicon glyphicon-align-justify"></i> Statistics</h4>
-                </div>
-                 <table class="table table-striped margin0">
-                    <thead class="monitor">
-                        <tr>
-                            <th style="width:35px;" class="monitorhead"></th>
-                            <td style="width:180px;" class="variabletd"></td>
-                            <td></td>
-                        </tr>
-                    </thead>
-                    <tbody class="monitorbody">
-                        <tr>
-                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
-                            <td class="variabletd">Approved Hours this Week</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
-                            <td class="variabletd">Approved Hours Last Week</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
-                            <td class="variabletd">Approved Hours this Month</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-default blocked">&nbsp;</span></td>
-                            <td class="variabletd">Approved Hours Last Month</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
-                            <td class="variabletd">Timeoff Accrued Todate</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
-                            <td class="variabletd">Timeoff Utilised Todate</td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td class="icontd"><span class="label label-primary blocked">&nbsp;</span></td>
-                            <td class="variabletd">Timeoff Available Todate</td>
-                            <td></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    <?php } ?>
-    <?php if(isAdmin()){ ?>
-    <div class="col-sm-12 col-md-12">
-        <div class="widget box makerelative">
-            <div class="widget-header">
-                <h4><i class="glyphicon glyphicon-align-justify"></i> System Summary</h4>
-            </div>
-            <div class="widget-content no-padding">
-                <table class="table table-striped margin0">
-                    <thead class="monitor">
-                        <tr>
-                            <th style="width:15px;" class="monitorhead"></th>
-                            <th style="width:130px; text-align:left; padding-left:0;" class="monitorhead"></th>
-                            <th style="width:15px; text-align:center; padding:0;">&nbsp;</th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead"></th>
-                            <th class="monitorhead" style="width:50px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="monitorbody">
-                        <tr id="members_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="members_today"></label></td>
-                            <td><label id="members_yesterday"></label></td>
-                            <td><label id="members_thisweek"></label></td>
-                            <td><label id="members_lastweek"></label></td>
-                            <td><label id="members_thismonth"></label></td>
-                            <td><label id="members_lastmonth"></label></td>
-                            <td><label id="members_thisyear"></label></td>
-                            <td class="last"><label id="members_allentries"></label></td>
-                        </tr>
-                        <tr id="users_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="users_today"></label></td>
-                            <td><label id="users_yesterday"></label></td>
-                            <td><label id="users_thisweek"></label></td>
-                            <td><label id="users_lastweek"></label></td>
-                            <td><label id="users_thismonth"></label></td>
-                            <td><label id="users_lastmonth"></label></td>
-                            <td><label id="users_thisyear"></label></td>
-                            <td class="last"><label id="users_allentries"></label></td>
-                        </tr>
-                        <tr id="churches_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="churches_today"></label></td>
-                            <td><label id="churches_yesterday"></label></td>
-                            <td><label id="churches_thisweek"></label></td>
-                            <td><label id="churches_lastweek"></label></td>
-                            <td><label id="churches_thismonth"></label></td>
-                            <td><label id="churches_lastmonth"></label></td>
-                            <td><label id="churches_thisyear"></label></td>
-                            <td class="last"><label id="churches_allentries"></label></td>
-                        </tr>
-                        <tr id="appoints_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="appoints_today"></label></td>
-                            <td><label id="appoints_yesterday"></label></td>
-                            <td><label id="appoints_thisweek"></label></td>
-                            <td><label id="appoints_lastweek"></label></td>
-                            <td><label id="appoints_thismonth"></label></td>
-                            <td><label id="appoints_lastmonth"></label></td>
-                            <td><label id="appoints_thisyear"></label></td>
-                            <td class="last"><label id="appoints_allentries"></label></td>
-                        </tr>
-                        <tr id="churches_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="churches_today"></label></td>
-                            <td><label id="churches_yesterday"></label></td>
-                            <td><label id="churches_thisweek"></label></td>
-                            <td><label id="churches_lastweek"></label></td>
-                            <td><label id="churches_thismonth"></label></td>
-                            <td><label id="churches_lastmonth"></label></td>
-                            <td><label id="churches_thisyear"></label></td>
-                            <td class="last"><label id="churches_allentries"></label></td>
-                        </tr>
-                        <tr id="appoints_row">
-                            <td class="icontd"></td>
-                            <td class="variabletd"></td>
-                            <td>&nbsp;</td>
-                            <td><label id="appoints_today"></label></td>
-                            <td><label id="appoints_yesterday"></label></td>
-                            <td><label id="appoints_thisweek"></label></td>
-                            <td><label id="appoints_lastweek"></label></td>
-                            <td><label id="appoints_thismonth"></label></td>
-                            <td><label id="appoints_lastmonth"></label></td>
-                            <td><label id="appoints_thisyear"></label></td>
-                            <td class="last"><label id="appoints_allentries"></label></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <?php }  ?>
-</div>
-<div class="row row-bg" style="margin-bottom:10px;">
-    <div class="col-sm-12 col-md-12">
-        <div class="widget box hidden-xs">
-            <div class="widget-header">
-                <h4><i class="glyphicon glyphicon-align-justify"></i> Leave Calendar</h4>
-                <div class="toolbar no-padding">
-                    <div class="btn-group">
-                        <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
+            <div class="row">
+				<div class="col-sm-12">
+                	<div class="box box-color">
+                    	<div class="box-title">
+                            <h3><i class="glyphicon-charts"></i> <?php echo $mytext; ?>Attendance Summary</h3>
+                        </div>
+                    </div>
+                    <div class="box-content clearfix">
+                    	<?php
+							$startdate = $request->startdate;
+							$enddate = $request->enddate;
+							if(isEmptyString($startdate)){
+								$startdate = $this->firstdayof3monthago_iso; // $startdate = '2015-01-01';
+								$request->setParam('startdate', date('M d, Y', strtotime($startdate)));
+							} else {
+								$startdate = date('Y-m-d', strtotime($startdate));
+							}
+							if(isEmptyString($enddate)){
+								$enddate = $this->lastdayofthismonth_iso; //$enddate = '2015-01-31';
+								$request->setParam('enddate', date('M d, Y', strtotime($enddate)));
+							} else {
+								$enddate = date('Y-m-d', strtotime($enddate));
+							}
+							$where_query = " WHERE u.companyid = '".$companyid."' AND t.status = 3 AND TO_DAYS(t.timesheetdate) >= TO_DAYS('".$startdate."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$enddate."') "; 
+							if($istimesheetuser){
+								$request->setParam('userid', $userid);
+							}
+							if(!isEmptyString($request->userid)){
+								$where_query .= " AND t.userid = '".$request->userid."' ";
+							}
+							$trends_query = "SELECT u.id as id, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, t.timesheetdate, DAY(t.timesheetdate) as theday, MONTH(t.timesheetdate) as themonth, YEAR(t.timesheetdate) as theyear, YEARWEEK(t.timesheetdate, 3) as theyearweek, WEEK(t.timesheetdate,3) as theweek, SUM(t.hours) as hours FROM useraccount AS u LEFT Join timesheet AS t ON (t.userid = u.id) ".$where_query." GROUP BY u.id, YEAR(t.timesheetdate), MONTH(t.timesheetdate) order by t.timesheetdate asc, name asc ";
+							// debugMessage($trends_query);
+							$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
+							
+							$processeddata = array(); $userids = array();
+							foreach($trends_result as $key => $line){
+								$userids[$line['id']]['id'] = $line['id'];
+								$userids[$line['id']]['name'] = $line['name'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['name'] = $line['name'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['theyear'] = $line['theyear'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['themonth'] = $line['themonth'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
+								$processeddata[$line['theyear'].$line['themonth']][$line['id']]['hours'] = $line['hours'];
+							}
+						?>
+						<script>
+							$(document).ready(function() {
+								$('#attendance_summary').highcharts({
+									data: {
+										table: 'datatable'
+									},
+									chart: {
+										type: 'column'
+									},
+									exporting: {
+										enabled: true
+									},
+									credits: {
+										enabled: false
+									},
+									title: {
+										text: 'Approved Hours from <?php echo $request->startdate; ?> to <?php echo $request->enddate; ?>',
+										style: {
+											color: '#4a6694',
+											fontSize: '11px'
+										}
+									},
+									yAxis: {
+										title: {
+											text: 'Hours'
+										},
+										 gridLineWidth: 2
+									},
+									xAxis: {
+										labels: {
+											autoRotation: [-90]
+										}
+									},
+									plotOptions: {
+										line: {
+											dataLabels: {
+												enabled: true
+											}
+										}
+									},
+									tooltip: {
+										formatter: function () {
+											return '<b>' + this.series.name + '</b><br/>' +
+												 this.point.name+ ' - ' + this.point.y + 'Hrs';
+										}
+									}
+								});
+							});
+						</script>
+						<div id="attendance_summary" style="width: 100%; height: 400px; margin: 0 auto"></div>
+                        <table id="datatable" class="table table-bordered table-striped hidden" style="font-size:12px !important; width:auto; margin:10px auto !important;">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <?php foreach($userids as $id => $user){ ?>
+                                        <th><?php echo $user['name']; ?></th>
+                                    <?php } ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(count($processeddata) == '0'){ ?>
+                                    <tr>
+                                        <td><?php echo date('M Y', strtotime($startdate)); ?></td>
+                                        <td class="rightalign"></td>
+                                    </tr>
+                                <?php } else { ?>
+                                    <?php foreach($processeddata as $key => $line){ ?>
+                                        <tr>
+                                            <td><?php 
+                                                $dateinmonth = getFirstDayOfNextMonth(substr($key, -1), substr($key, 0, 4));
+                                                echo date('M Y', strtotime($dateinmonth)); ?>
+                                            </td>
+                                            <?php foreach($userids as $id => $user){ ?>
+                                                <td class="rightalign"><?php echo isArrayKeyAnEmptyString($id, $line) ? '' : formatNumber($line[$id]['hours']); ?></td>
+                                            <?php } ?>
+                                        </tr>
+                                    <?php } ?>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+            	</div>
+          	</div>
+            <?php if($acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+            <div class="row">
+            	<div class="col-sm-12">
+                	<div class="box box-color lightgrey box-bordered">
+                        <div class="box-title">
+                            <h3><i class="fa fa-bars"></i>Who is Off</h3>
+                        </div>
+                        <div class="box-content">
+                            <?php
+								$conn = Doctrine_Manager::connection(); 
+								// off today
+								$offtoday_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) order by t.startdate desc limit 3 ";
+								$offtoday_count_query = "SELECT count(t.id) FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) "; $offtoday_count = $conn->fetchOne($offtoday_count_query); 
+								
+								$offtoday_result = $conn->fetchAll($offtoday_query); // debugMessage($offtoday_query); debugMessage($offtoday_result);
+								
+								$conn = Doctrine_Manager::connection(); 
+								// off this
+								$offthismonth_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') order by t.startdate desc limit 3 ";
+								$offthismonth_count_query = "SELECT count(t.id) FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') "; $offthismonth_count = $conn->fetchOne($offthismonth_count_query); 
+								
+								$offthismonth_result = $conn->fetchAll($offthismonth_query); // debugMessage($offthismonth_query); debugMessage($offthismonth_result);
+							?>
+							<div class="widget">
+								<span class="label label-success noround dashforapproval">Today (<?php echo $offtoday_count; ?>)</span>
+								<div class="widget-content" style="padding-left:0;">
+									<table class="table margin0 forapprovalitems">
+										<tr>
+											<td style="padding:0;">
+												<div style="min-height:50px;">
+													<?php if(count($offtoday_result) == 0){ ?>
+														<span class="pagedescription">None at this time</span>
+													<?php } else { ?>
+														<?php foreach($offtoday_result as $line){ ?>
+															<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="blockanchor item" style="">
+																<img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+																<span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
+															</a>
+														<?php } ?>
+														<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="btn btn-default btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon glyphicon-arrow-right"></i></a>
+													<?php } ?>
+												</div>
+											</td>
+										</tr>
+									</table>
+								</div>
+								<span class="label label-warning noround dashforapproval">This month (<?php echo $offthismonth_count; ?>)</span>
+								<div class="widget-content" style="padding-left:0;">
+									<table class="table margin0 forapprovalitems">
+										<tr>
+											<td style="padding:0;">
+												<div style="min-height:50px;">
+												<?php if(count($offthismonth_result) == 0){ ?>
+													<span class="pagedescription">None at this time</span>
+												<?php } else { ?>
+													<?php foreach($offthismonth_result as $line){ ?>
+														<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="blockanchor item" style="">
+															<img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+															<span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
+														</a>
+													<?php } ?>
+													<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon-right_arrow"></i></a>
+												<?php } ?>
+												</div>
+											</td>
+										</tr>
+									</table>
+								</div>
+							</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="widget-content no-padding whitebg minheight400">
-            	<div id='calendar' class="padding0 margin0 row clearfix" style="margin-top:10px; margin-bottom:10px; width:100%;"></div>
-          	</div>
-      	</div>
-   	</div>
-</div>
-<div class="divider10"></div>                            
+         	</div>
+           	<?php } ?>
+        </div>
+        <div class="col-sm-6">
+        	<?php if($acl->checkPermission("Attendance", ACTION_APPROVE) || $acl->checkPermission("Benefits", ACTION_APPROVE) || $acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box box-color red box-bordered">
+                            <div class="box-title">
+                                <h3><i class="fa fa-flag"></i> Action Required</h3>
+                            </div>
+                            <div class="box-content">
+                            	<div class="widget-content clearfix" style="height:auto;">
+                            		<?php if($acl->checkPermission("Attendance", ACTION_APPROVE)){ ?>
+										<?php
+                                            $conn = Doctrine_Manager::connection(); 
+                                            // timesheets for approval
+                                            $timesheetsforapproval_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timesheetdate, t.status, u.profilephoto, u.gender FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 2 AND u.companyid = '".$companyid."' AND (t.isrequest = 1 OR (t.isrequest <> 1 AND t.timeout is not null)) order by t.timesheetdate desc limit 3 ";
+                                            $timesheetsforapproval_result = $conn->fetchAll($timesheetsforapproval_query); // debugMessage($timesheetsforapproval_result); debugMessage($timesheetsforapproval_query);
+                                            $timesheetsforapproval_count_query = "SELECT count(t.id) FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 2 AND u.companyid = '".$companyid."' AND (t.isrequest = 1 OR (t.isrequest <> 1 AND t.timeout is not null)) "; $timesheetsforapproval_count = $conn->fetchOne($timesheetsforapproval_count_query); 
+                                        ?>
+                                        <div class="widget">
+                                            <span class="label label-default noround dashforapproval">Timesheets for Approval (<?php echo $timesheetsforapproval_count; ?>)</span>
+                                            <div class="widget-content" style="padding-left:0;">
+                                                <table class="table margin0 forapprovalitems">
+                                                    <tr>
+                                                        <td style="padding:0;">
+                                                            <div style="min-height:50px;">
+                                                            <?php if(count($timesheetsforapproval_result) == 0){ ?>
+                                                                <span class="pagedescription">None available at this time</span>
+                                                            <?php } else { ?>
+                                                                <?php foreach($timesheetsforapproval_result as $line){ ?>
+                                                                    <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="blockanchor item" style="">
+                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?> - <?php echo $line['hours']; ?>Hrs</span>
+                                                                    </a>
+                                                                <?php } ?>
+                                                                <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
+                                                            <?php } ?>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+                                    <?php if($acl->checkPermission("Benefits", ACTION_APPROVE)){ ?>
+                                    	<?php
+                                            $conn = Doctrine_Manager::connection(); 
+                                            // benefits for approval
+                                            $benefitsforapproval_query = "SELECT l.id, l.userid, l.amount, l.trxndate, l.status, u.profilephoto, u.gender FROM ledger l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' AND l.ledgertype = 1 AND l.trxntype = 1 order by l.trxndate desc limit 3 ";
+                                            $benefitsforapproval_result = $conn->fetchAll($benefitsforapproval_query); // debugMessage($timesheetsforapproval_result); // debugMessage($timesheetsforapproval_query);
+                                            $benefitsforapproval_count_query = "SELECT count(l.id) FROM ledger l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' AND l.ledgertype = 1 AND l.trxntype = 1 "; $benefitsforapproval_count = $conn->fetchOne($benefitsforapproval_count_query); 
+                                        ?>
+                                        <div class="widget">
+                                            <span class="label label-default noround dashforapproval">Benefits for Approval (<?php echo $benefitsforapproval_count; ?>)</span>
+                                            <div class="widget-content" style="padding-left:0;">
+                                                <table class="table margin0 forapprovalitems">
+                                                    <tr>
+                                                        <td style="padding:0;">
+                                                            <div style="min-height:50px;">
+                                                            <?php if(count($benefitsforapproval_result) == 0){ ?>
+                                                                <span class="pagedescription">None available at this time</span>
+                                                            <?php } else { ?>
+                                                                <?php foreach($benefitsforapproval_result as $line){ ?>
+                                                                    <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="blockanchor item" style="">
+                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?> - UGX<?php echo formatMoneyOnly($line['amount']); ?></span>
+                                                                    </a>
+                                                                <?php } ?>
+                                                                <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
+                                                            <?php } ?>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+                                    <?php if($acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+                                    	<?php
+                                            $conn = Doctrine_Manager::connection(); 
+                                            // timeoff requests for approval
+                                            $timeoffforapproval_query = "SELECT l.id, l.userid, l.duration, l.startdate, l.enddate, l.status, u.profilephoto, u.gender FROM timeoff l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' order by l.startdate desc limit 3 ";
+                                            $timeoffforapproval_result = $conn->fetchAll($timeoffforapproval_query); // debugMessage($timesheetsforapproval_result); // debugMessage($timesheetsforapproval_query);
+                                            $timeoffforapproval_count_query = "SELECT count(l.id) FROM timeoff l INNER JOIN useraccount u ON (l.userid = u.id)  where l.status = 0 AND u.companyid = '".$companyid."' "; $timeoffforapproval_count = $conn->fetchOne($timeoffforapproval_count_query); 
+                                        ?>
+                                        <div class="widget">
+                                            <span class="label label-default noround dashforapproval">Timeoff Requests for Approval (<?php echo $timeoffforapproval_count; ?>)</span>
+                                            <div class="widget-content" style="padding-left:0;">
+                                                <table class="table margin0 forapprovalitems">
+                                                    <tr>
+                                                        <td style="padding:0;">
+                                                            <div style="min-height:50px;">
+                                                            <?php if(count($timeoffforapproval_result) == 0){ ?>
+                                                                <span class="pagedescription">None available at this time</span>
+                                                            <?php } else { ?>
+                                                                <?php foreach($timeoffforapproval_result as $line){ ?>
+                                                                    <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="blockanchor item" style="">
+                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
+                                                                    </a>
+                                                                <?php } ?>
+                                                                <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
+                                                            <?php } ?>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color box-bordered">
+                    	<?php 
+							// query for user's lattest 3 messages
+							$q = new Doctrine_RawSql();
+							$q->select('{m.*}, {mr.*}');
+							$q->from('message m INNER JOIN messagerecipient mr ON (m.id = mr.messageid)');
+							$q->where("(mr.recipientid = '".$userid."') ORDER BY m.datecreated DESC LIMIT 2");
+							$q->addComponent('m', 'Message m');
+							$q->addComponent('mr', 'm.recipients mr');
+							$latestmsg = $q->execute();
+							// debugMessage($latestmsg->toArray());
+							
+							$c = new Doctrine_RawSql();
+							$c->select('{m.*}, {mr.*}');
+							$c->from('message m INNER JOIN messagerecipient mr ON (m.id = mr.messageid)');
+							$c->where("(mr.recipientid = '".$userid."' AND mr.isread = 0) ORDER BY m.datecreated");
+							$c->addComponent('m', 'Message m');
+							$c->addComponent('mr', 'm.recipients mr');
+								
+							$unread_messages = $c->execute()->count();
+							$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:12px;">('.$unread_messages.' Unread)</span>';
+						?>
+                    	<div class="box-title">
+                            <h3><i class="fa fa-envelope"></i> Latest Notifications &nbsp;<?php echo $unread_label; ?></h3>
+                        </div>
+                        <div class="box-content xnopadding" style="padding-top:0;">
+                        	<?php if($latestmsg->count() == 0){ ?>
+                            	<div class="divider10"></div>
+                                <div class="alert alert-info">None available</div>
+                            <?php } else { ?>
+                                <ul id="datalist" class="nav nav-stacked">
+                                    <?php
+                                        foreach($latestmsg as $message){ 
+                                            // debugMessage($reply_path);
+                                            $readclass = "read";
+                                            $read_label = ' &nbsp;<span class="pagedescription" style="font-size:14px;">(Read)</span>';
+                                            if(!$message->getMessageDetails()->hasReadMessage()){
+                                                $readclass = "unread";
+                                                $read_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:12px;">(Unread)</span>';
+                                            }
+                                            
+                                            $message_title = "View message details";
+                                            $reply_path = $this->baseUrl("notifications/view/id/".encode($message->getID()));
+                                            
+                                    ?>
+                                        <li style="position:relative; padding:10px;" class="clearfix <?php echo $readclass; ?>" id="row_<?php echo $message['id']; ?>">
+                                            <div class="latest_message clearfix"> 
+                                                <div style="float:left; width:15%; text-align:center;"><img src="<?php echo getImagePath($message->getSenderID(), $message->getSender()->getProfilephoto(), $message->getSender()->getGender()); ?>" style="border-radius: 47px; margin: 0; padding: 0; width: 90%; float:left;" />
+                                                </div>
+                                                <div style="float:right; width:85%;">
+                                                    <a href="<?php echo $reply_path; ?>" title="View detail" class="blocked maxwidth nodecoration" style="font-size:12px; text-decoration:none;"><?php echo snippet($message->getSubject(), 45, '...'); ?></a>
+                                                    <div class="divider20"></div>
+                                                    <span class="blocked bolded"> <?php echo $message->getSender()->getName(); ?></span>
+                                                    <label class="message_date pagedescription" style="font-size:10px;"><?php echo formatDateAndTime($message->getDateCreated()); ?></label>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    <?php } ?>
+                                </ul>
+                            <?php } ?>  
+                            <a href="<?php echo $this->baseUrl('notifications/list'); ?>" class="btn btn-primary centeralign margin10 btn-xs pull-right viewall blockanchor"><?php echo $latestmsg->count() == 0 ? 'Go to Inbox' : 'See All Notifications'; ?> &nbsp;<i class="glyphicon-arrow_right"></i></a>
+                        </div>
+                    </div>
+              	</div>
+         	</div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color box-bordered lightgrey">
+                    	<?php
+							$conn = Doctrine_Manager::connection(); 
+							// users onduty
+							$onduty_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timein, t.timeout, t.timesheetdate, t.status, u.profilephoto, u.gender, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.`status` = '0' AND u.companyid = '".$companyid."' AND TO_DAYS(t.datein) = TO_DAYS('".$this->today_iso."') order by t.datein desc, t.timein desc limit 6 ";
+							$onduty_result = $conn->fetchAll($onduty_query); // debugMessage($onduty_query); // debugMessage($onduty_result);
+						?>
+                    	<div class="box-title">
+                            <h3><i class="fa fa-bars"></i> Who is at Work Today?</h3>
+                        </div>
+                        <div class="box-content">
+                        	<table class="table-hover table-bordered table-nomargin table-condensed table-striped maxwidth">
+                                <thead>
+                                    <tr>
+                                        <th class="col-sm-7">Name</th>
+                                        <th class="col-sm-5 centeralign">Time In</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if(count($onduty_result) == 0){ ?>
+                                        <tr><td colspan="2"><span class="pagedescription">None at this time</span></td></tr>
+                                    <?php } else { ?>
+                                        <?php foreach($onduty_result as $line){ ?>
+                                            <tr>
+                                                <td class="bolded"><?php echo $line['name']; ?></td>
+                                                <td class="centeralign"><?php echo isEmptyString($line['timein']) ? '' : formatTimeCustom($line['timein']); ?></td>
+                                            </tr>
+                                        <?php } ?>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                            <a href="<?php echo $this->baseUrl('timesheets/attendance/status/0/style/1/startdate/'.$this->today_iso.'/enddate/'.$this->today_iso.'/'); ?>" class="btn btn-primary centeralign margin10 btn-xs pull-right viewall blockanchor" style="display:inline-block;">See detailed report &nbsp;<i class="glyphicon-arrow_right"></i></a>
+                        </div>
+                    </div>
+              	</div>
+         	</div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color">
+                        <div class="box-title">
+                            <h3><i class="fa fa-calendar"></i>Calendar</h3>
+                            <div class="actions">
+                                <a class="btn btn-sm" href="<?php echo $this->baseUrl('calendar/index'); ?>">View Full Calendar<i class="fa fa-arrow_right"></i> </a>
+                            </div>
+                        </div>
+                        <div class="box-content nopadding">
+                            <div class="calendar"></div>
+                        </div>
+                    </div>
+                </div>
+         	</div>
+        </div>
+    </div>
+</div>    
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

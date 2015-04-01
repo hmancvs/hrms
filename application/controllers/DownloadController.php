@@ -41,7 +41,7 @@ class DownloadController extends IndexController {
 			$cvsdata = $title."\r\n".$cvsdata;
 		}
 		// debugMessage($cvsdata); exit();
-		$currenttime = mktime();
+		$currenttime = time();
 		$filename = $currenttime.'.csv';
 	
 		/*$full_path = BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$filename;

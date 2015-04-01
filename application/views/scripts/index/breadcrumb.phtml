@@ -1,10 +1,54 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 ?>
-<div class="pageheader">
-    <div class="pageicon"></div>
-    <div class="pagetitle">
+<div class="page-header pageheader">
+    <div class="pull-left">
         <h1 class="titlelabel"></h1>
-        <h5 class="desclabel"></h5>
+    </div>
+    <div class="pull-right">
+        <ul class="stats">
+        	<?php if(isAdmin()){ ?>
+                <li>
+                    <?php
+                        // debugMessage('current '.$companyid);
+                        $companies = getCompanies();
+                        $dropdown = new Zend_Form_Element_Select('companyid',
+                                            array(
+                                                'multiOptions' => $companies,
+                                                'view' => new Zend_View(), 
+                                                'decorators' => array('ViewHelper'),
+                                                'class' => array('form-control','input-sm','width200'),
+                                                'id' => 'changecompany',
+                                                'action' => $this->baseUrl('index/changecompany/successurl/'.encode($this->viewurl))
+                                            )
+                                        );
+                        $dropdown->setValue($session->getVar('companyid')); 
+                        echo $dropdown->render(); 
+                    ?>
+                </li>
+            <?php } ?>
+            <li class='<?php echo $session->getVar('unread') > 0 ? 'lightred' : 'lightgrey'; ?>'>
+                <a href="<?php echo $this->baseUrl('notifications/list'); ?>">
+                    <i class="fa fa-flag"></i>
+                    <div class="details">
+                        <span class="big">Notifications</span>
+                        <span>(<?php echo $session->getVar('unread'); ?> Unread)</span>
+                    </div>
+                </a>
+            </li>
+            <li class='blue'>
+                <i class="fa fa-calendar"></i>
+                <div class="details">
+                    <span class="big"><?php echo date('F j, Y', time()); ?></span>
+                    <span><?php echo date('l, h:i A', time()); ?></span>
+                </div>
+            </li>
+        </ul>
     </div>
 </div>
+<div class="breadcrumbs">
+    <ul>
+        <li><span class="titlebreadcrumb"></span></li>
+    </ul>
+</div>
+<div class="divider10"></div>

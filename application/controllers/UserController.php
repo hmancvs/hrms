@@ -13,13 +13,13 @@ class UserController extends IndexController  {
 			$session->setVar(ERROR_MESSAGE, $this->_translate->translate("profile_email_error")); 
 			$session->setVar(FORM_VALUES, $this->_getAllParams());
 			// return to the home page
-    		$this->_helper->redirector->gotoSimpleAndExit('login', "user");
+    		$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 		if (isEmptyString(trim($this->_getParam("password")))) {
 			$session->setVar(ERROR_MESSAGE, $this->_translate->translate("profile_password_error")); 
 			$session->setVar(FORM_VALUES, $this->_getAllParams());
 			// return to the home page
-    		$this->_helper->redirector->gotoSimpleAndExit('login', "user");
+    		$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 		
 		# check which field user is using to login. default is username
@@ -123,6 +123,7 @@ class UserController extends IndexController  {
 		$session->setVar("userid", $useraccount->getID());
 		$session->setVar("username", $useraccount->getUserName());
 		$session->setVar("type", $useraccount->getType());
+		$session->setVar("companyid", $useraccount->getCompanyID());
 		$session->setVar("istimesheetuser", $useraccount->getIsTimesheetUser());
 		$session->setVar("browseraudit", $browser_session);
 		
@@ -275,7 +276,7 @@ class UserController extends IndexController  {
     	$user->setStatus(1);
       	$user->setAgreedToTerms(1);
       	if(isEmptyString($user->getActivationDate())){
-      		$startdate = date("Y-m-d H:i:s", mktime());
+      		$startdate = date("Y-m-d H:i:s", time());
 			$user->setActivationDate($startdate);
       	}
     	// exit();

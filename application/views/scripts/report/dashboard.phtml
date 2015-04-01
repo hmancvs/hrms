@@ -3,6 +3,98 @@
 
 	$title = "Reports Dashboard"; 
 	$description = "";
+	
+	$mytext = "";
+	$istimesheetuser = isTimesheetEmployee() ? true : false;
+	if($istimesheetuser){
+		$mytext = "My ";
+	}
+	
+	if($istimesheetuser){ 
+		$salary_label = "Basic Salary";
+		$benefits_label = "Total Benefits"; 
+		$nssf_label = "NSSF Contribution";
+		$paye_label = "PAYE Contribution";;
+		$netpay_label = "Net Payment";
+		$grosspay_label = "Gross Payment";
+		
+	} else {
+		$nssf_label = "Total NSSF Contribution";
+		$paye_label = "Total PAYE Contribution";
+		$benefits_label = "Total Benefits"; 
+		$netpay_label = "Total Net Payout";
+		$grosspay_label = "Total Gross Salaries";
+	}
+	
+	$conn = Doctrine_Manager::connection(); 
+	if(!$istimesheetuser){
+		// no of employees
+		$empquery = "select count(u.id) from useraccount u where u.companyid = '".$companyid."' ";
+		$empcount_result = $conn->fetchOne($empquery);
+		
+		// no of departments
+		$deppquery = "select count(d.id) from department d where d.companyid = '".$companyid."' ";
+		$depcount_result = $conn->fetchOne($deppquery);
+		
+		// no of positions
+		$posquery = "select count(l.lookuptypeid) from lookuptypevalue l where l.lookuptypeid = 7 AND l.companyid = '".$companyid."' ";
+		$poscount_result = $conn->fetchOne($posquery);
+	} else {
+		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/$config->system->hoursinday);
+		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+	}
+	
+	$custom_query = "";
+	if($istimesheetuser){
+		$custom_query .= " AND t.userid = '".$userid."' ";
+	}
+	// timesheets summary
+	$hrs_query = "select 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND t.status = 3, t.hours, 0)) as thisweek_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND t.status = 3, t.hours, 0)) as lastweek_approved_hrs, 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND t.status = 3, t.hours, 0)) as thismonth_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND t.status = 3, t.hours, 0)) as lastmonth_approved_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as thisweek_pending_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as lastweek_pending_hrs, 
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as thismonth_pending_hrs,
+	SUM(IF(TO_DAYS(t.timesheetdate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.timesheetdate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND (t.status = 2 || t.status = 4), t.hours, 0)) as lastmonth_pending_hrs 
+	from timesheet t inner join useraccount u on t.userid = u.id where u.companyid = '".$companyid."' ".$custom_query." "; //debugMessage($hrs_query);
+	$hrs_result = $conn->fetchRow($hrs_query);
+	
+	// benefits summary
+	$benefits_query = "select 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND t.status = 1, t.amount, 0)) as thisweek_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND t.status = 1, t.amount, 0)) as lastweek_approved_benefits, 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND t.status = 1, t.amount, 0)) as thismonth_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND t.status = 1, t.amount, 0)) as lastmonth_approved_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND (t.status = 0), t.amount, 0)) as thisweek_pending_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND (t.status = 0), t.amount, 0)) as lastweek_pending_benefits, 
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND (t.status = 0), t.amount, 0)) as thismonth_pending_benefits,
+	SUM(IF(TO_DAYS(t.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(t.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND (t.status = 0), t.amount, 0)) as lastmonth_pending_benefits 
+	from ledger t inner join useraccount u on t.userid = u.id where u.companyid = '".$companyid."' AND t.ledgertype = 1 AND t.trxntype = 1 ".$custom_query." "; //debugMessage($benefits_query);
+	$benefits_result = $conn->fetchRow($benefits_query);
+	
+	// finance trends data
+	$custom_query = "";
+	if($istimesheetuser){
+		$custom_query .= " AND pd.userid = '".$userid."' ";
+	}
+	$fields = " SUM(IF(pd.isignored = 0, pd.endgross, 0)) as endgross, SUM(IF(pd.isignored = 0, pd.totalbenefits, 0)) as totalbenefits, SUM(IF(pd.isignored = 0, pd.netearning, 0)) as netearning, SUM(IF(pd.isignored = 0, pd.nssf, 0)) as nssf, SUM(IF(pd.isignored = 0, pd.paye, 0)) as paye, SUM(IF(pd.isignored = 0, pd.otherdebit, 0)) as otherdebit, SUM(IF(pd.isignored = 0, pd.netpay, 0)) as netpay, SUM(IF(pd.isignored = 0, pd.netearning, 0)) as netearning ";
+	$finance_1month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND p.status = 2  AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') ".$custom_query." ";
+	$finance_1month_result = $conn->fetchRow($finance_1month_query); //debugMessage($finance_1month_query); debugMessage($finance_1month_result);
+	$totaldeductions_1month = $finance_1month_result['nssf'] + $finance_1month_result['paye'] + $finance_1month_result['otherdebit'];
+	
+	$finance_2month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND  p.status = 2 AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayof2monthago_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayof2monthago_iso."') ".$custom_query." ";
+	$finance_2month_result = $conn->fetchRow($finance_2month_query); //debugMessage($finance_2month_query); debugMessage($finance_2month_result);
+	$totaldeductions_2month = $finance_2month_result['nssf'] + $finance_2month_result['paye'] + $finance_2month_result['otherdebit'];
+	
+	$finance_3month_query = "SELECT ".$fields." from payrolldetail pd inner join payroll p on pd.payrollid = p.id where p.companyid = '".$companyid."' AND  p.status = 2 AND TO_DAYS(p.payrolldate) >= TO_DAYS('".$this->firstdayof3monthago_iso."') AND TO_DAYS(p.payrolldate) <= TO_DAYS('".$this->lastdayof3monthago_iso."') ".$custom_query." ";
+	$finance_3month_result = $conn->fetchRow($finance_3month_query); //debugMessage($finance_3month_query); debugMessage($finance_3month_result);
+	$totaldeductions_3month = $finance_3month_result['nssf'] + $finance_3month_result['paye'] + $finance_3month_result['otherdebit'];
+	
+	$pageid = "report_dashboard";
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
@@ -13,152 +105,389 @@ $(document).ready(function() {
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="glyphicon glyphglyphicon glyphicon-signal"></span>');
 	
+	$('#container').highcharts({
+        chart: {
+            type: 'column'
+        },
+        title: {
+            text: '<?php echo $mytext; ?> Payroll Insight (Last 3 Months)',
+			style: {
+                color: '#4a6694',
+                fontSize: '12px'
+            }
+        },
+		exporting: {
+			enabled: true
+		},
+		credits: {
+			enabled: false
+		},
+        xAxis: {
+            categories: [
+                '<?php echo date('M Y', strtotime($this->firstdayof3monthago_iso)); ?>',
+                '<?php echo date('M Y', strtotime($this->firstdayof2monthago_iso)); ?>',
+                '<?php echo date('M Y', strtotime($this->firstdayoflastmonth_iso)); ?>'
+            ],
+            crosshair: true
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'Amount (UGX)'
+            }
+        },
+		legend: {
+			enabled: false
+		},
+        plotOptions: {
+            column: {
+                pointPadding: 0.2,
+                borderWidth: 0
+            }
+        },
+        series: [
+		<?php if($istimesheetuser){ ?>
+			{
+				name: '<?php echo $salary_label; ?>',
+				data: ['<?php echo isEmptyString($finance_3month_result['endgross']) ? 0 : $finance_3month_result['endgross']; ?>', '<?php echo isEmptyString($finance_2month_result['endgross']) ? 0 : $finance_2month_result['endgross']; ?>', '<?php echo isEmptyString($finance_1month_result['endgross']) ? 0 : $finance_1month_result['endgross']; ?>'],
+				type: 'column'
+	
+			}, 
+		<?php } ?>
+		{
+            name: '<?php echo $nssf_label; ?>',
+            data: ['<?php echo isEmptyString($finance_3month_result['nssf']) ? 0 : $finance_3month_result['nssf']; ?>', '<?php echo isEmptyString($finance_2month_result['nssf']) ? 0 : $finance_2month_result['nssf']; ?>', '<?php echo isEmptyString($finance_1month_result['nssf']) ? 0 : $finance_1month_result['nssf']; ?>'],
+			type: 'column'
+
+        }, {
+            name: '<?php echo $paye_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['paye']) ? 0 : $finance_3month_result['paye']; ?>, <?php echo isEmptyString($finance_2month_result['nssf']) ? 0 : $finance_2month_result['paye']; ?>, <?php echo isEmptyString($finance_1month_result['paye']) ? 0 : $finance_1month_result['paye']; ?>],
+			type: 'column'
+        }, {
+            name: '<?php echo $benefits_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['totalbenefits']) ? 0 : $finance_3month_result['totalbenefits'] ?>, <?php echo isEmptyString($finance_2month_result['totalbenefits']) ? 0 : $finance_2month_result['totalbenefits']; ?>, <?php echo isEmptyString($finance_1month_result['totalbenefits']) ? 0 : $finance_1month_result['totalbenefits']; ?>],
+			type: 'column'
+        },{
+            type: 'column',
+            name: '<?php echo $netpay_label; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['netpay']) ? 0 : $finance_3month_result['netpay']; ?>, <?php echo isEmptyString($finance_3month_result['netpay']) ? 0 : $finance_2month_result['netpay']; ?>, <?php echo isEmptyString($finance_1month_result['netpay']) ? 0 : $finance_1month_result['netpay']; ?>]
+        },{
+            type: 'column',
+            name: '<?php echo $grosspay_label ; ?>',
+            data: [<?php echo isEmptyString($finance_3month_result['netearning']) ? 0 : $finance_3month_result['netearning']; ?>, <?php echo isEmptyString($finance_3month_result['netearning']) ? 0 : $finance_2month_result['netearning']; ?>, <?php echo isEmptyString($finance_1month_result['netearning']) ? 0 : $finance_1month_result['netearning']; ?>]
+        }]
+    });
 }); 
 </script>
-<div class="row-fluid margin0 view">
-    <div class="col-md-12 padding0">
-    	<div class="headerbox">
-            <table class="table border0 nohover margin0">                       
-                <tr>		                    
-                    <td class="padding2">
-                    	
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-    <?php if($sessionhaserror) { ?>
-        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-    <?php } ?>
-    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-    <?php } ?>
-    <div class="row row-bg" style="margin-bottom:10px;">
-            <div class="col-md-12">
-                <div class="widget box hidden-xs">
-                    <div class="widget-header">
-                        <h4><i class="glyphicon glyphicon-align-justify"></i> Statistics</h4>
-                        <div class="toolbar no-padding">
-                            <div class="btn-group">
-                                <span class="btn btn-xs widget-collapse" style="padding:11px; margin:0;"><i class="icon-angle-down"></i></span>
-                            </div>
+<style>
+<?php if(!$istimesheetuser){ ?>
+.reportdashboard .widget.box.box-shadow {
+	margin-bottom: 10px;
+    margin-top: 8px;
+}
+<?php } ?>
+</style>
+<div id="<?php echo $pageid; ?>" class="dashboard">
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="row">
+				<div class="col-sm-12">
+                	<div class="box box-color">
+                        <div class="box-title">
+                            <h3><i class="fa fa-bars"></i>Statistics</h3>
                         </div>
-                    </div>
-                    <div class="widget-content no-padding whitebg" style="height:215px;">
-                        
+                        <div class="box-content nopadding">
+                            <table class="table-hover table-bordered table-nomargin table-condensed table-striped maxwidth">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>This Week</th>
+                                        <th class="hidden-xs">Last Week</th>
+                                        <th>This Month</th>
+                                        <th class="hidden-xs">Last Month</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="label label-info noround boxitemlabel">Timesheet Hours Approved</span></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thisweek_approved_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastweek_approved_hrs']); ?></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thismonth_approved_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastmonth_approved_hrs']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-warning noround boxitemlabel">Timesheet Hours Pending</span></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thisweek_pending_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastweek_pending_hrs']); ?></td>
+                                        <td class="rightalign"><?php echo formatNumber($hrs_result['thismonth_pending_hrs']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatNumber($hrs_result['lastmonth_pending_hrs']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-success noround boxitemlabel">Total Benefits Assigned</span></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thisweek_approved_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastweek_approved_benefits']); ?></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thismonth_approved_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastmonth_approved_benefits']); ?></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="label label-warning noround boxitemlabel">Total Benefits Pending</span></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thisweek_pending_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastweek_pending_benefits']); ?></td>
+                                        <td class="rightalign"><?php echo formatMoneyOnly($benefits_result['thismonth_pending_benefits']); ?></td>
+                                        <td class="rightalign hidden-350"><?php echo formatMoneyOnly($benefits_result['lastmonth_pending_benefits']); ?></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <?php if(!$istimesheetuser){ ?>
+                                <div class="divider10"></div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="reportdashboard well clearfix"> 
+                                            <ul class="stats">
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $empcount_result; ?></strong>
+                                                    <small>No of Employees</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $depcount_result; ?></strong>
+                                                    <small>No of Departments</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong><?php echo $poscount_result ?></strong>
+                                                    <small>No of Job Positions</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                            <?php if($istimesheetuser){ ?>
+                                <div class="divider10"></div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="reportdashboard well clearfix"> 
+                                            <ul class="stats">
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($totalhrs/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($totalhrs).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Leave Time Accrued</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($takenhrs/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($takenhrs).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Total Time Taken</small>
+                                                </li>
+                                                <li class="col-sm-4 col-xs-12">
+                                                    <strong>
+                                                        <span class="blocked"><?php echo formatNumber($hoursavailable/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($hoursavailable).' Hours'; ?>)</span>
+                                                    </strong>
+                                                    <small>Total Time Available</small>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>
+                   	</div>
+                </div>
+           	</div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color lightgrey">
+                        <div class="box-title">
+                            <h3><i class="fa fa-bars"></i>Finance Insight</h3>
+                        </div>
+                        <div class="box-content nopadding" style="height:360px;">
+                        	<div id="container" style="height:350px; width:100%;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    <div class="contentcontainer clearfix">
-    	
-        <div class="row-fluid">
-            <div id="dashboard-left" class="col-md-12 padding0 dashboard">
-                <div class="row row-bg margin0 padding0">
-                    <div class="divider10"></div>
-                    <?php if($acl->checkPermission('Report 2', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php //echo $this->baseUrl('report/memberlocation'); ?>" class="nodecoration clearfix gonowhere xblockanchor">
-                                        <div class="visual blue"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Employee Profiles</div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php //echo $this->baseUrl('report/memberlocation'); ?>" class="more gonowhere xblockanchor">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
+            <?php if(!$istimesheetuser){ ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box box-color">
+                        	<div class="box-title">
+                            	<h3><i class="fa fa-bars"></i>TBD</h3>
+                           	</div>
+                            <div class="box-content nopadding" style="height:400px;">
+                            
                             </div>
-                        </div>
-                    <?php } ?>
-					<?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>	
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php echo $this->baseUrl('payroll/list'); ?>" class="nodecoration clearfix blockanchor">
-                                        <div class="visual cyan"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Payroll Processing</span></div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php echo $this->baseUrl('payroll/list'); ?>" class="more">View Reports <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                    <?php if($acl->checkPermission('Report 1', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php //echo $this->baseUrl('report/membertrend'); ?>" class="nodecoration clearfix gonowhere xblockanchor">
-                                        <div class="visual red"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Approved Hours Report</span></div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php //echo $this->baseUrl('report/membertrend'); ?>" class="more gonowhere xblockanchor">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                    <?php if($acl->checkPermission('Report 1', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php //echo $this->baseUrl('report/membertrend'); ?>" class="nodecoration clearfix gonowhere xblockanchor">
-                                        <div class="visual red"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Employee Attendance</span></div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php //echo $this->baseUrl('report/membertrend'); ?>" class="more gonowhere xblockanchor">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                    <?php if($acl->checkPermission('Report 3', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php //echo $this->baseUrl('report/churchstats'); ?>" class="nodecoration clearfix gonowhere xblockanchor">
-                                        <div class="visual cyan"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Employee Benefits</div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php //echo $this->baseUrl('report/churchstats'); ?>" class="more gonowhere xblockanchor">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?> 
-					<?php if($acl->checkPermission('Report 2', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php //echo $this->baseUrl('report/memberlocation'); ?>" class="nodecoration clearfix gonowhere xblockanchor">
-                                        <div class="visual blue"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Time Off Accruals</div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php //echo $this->baseUrl('report/memberlocation'); ?>" class="more gonowhere xblockanchor">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
-                    <?php if($acl->checkPermission('Audit Trail Report', ACTION_VIEW)) { ?>
-                        <div class="col-sm-4 col-md-4">
-                            <div class="statbox widget box box-shadow">
-                                <div class="widget-content">
-                                    <a href="<?php echo $this->baseUrl('report/audittrail'); ?>" class="nodecoration clearfix blockanchor">
-                                        <div class="visual red"><i class="icon-large icon-signal white" style="font-size:24px;"></i></div>
-                                        <div class="title">Transaction AuditTrail</div>
-                                        <div class="value"></div>
-                                    </a>
-                                    <a href="<?php echo $this->baseUrl('report/audittrail'); ?>" class="more">View Report <i class="pull-right glyphicon glyphicon-angle-right"></i></a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php } ?>
+                      	</div>
+                    </div>
                 </div>
-            </div>
+            <?php } ?> 
+       	</div>
+        <div class="col-sm-6">
+        	<?php if($acl->checkPermission('Employee Data Report', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">
+                        	<a href="<?php echo $this->baseUrl('report/employeedetails'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Employee Profiles</h3>
+                                </div>
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+            <?php if($acl->checkPermission('Attendance Detailed Report', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">
+                        	<a href="<?php echo $this->baseUrl('report/attendancestats'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i><?php echo $istimesheetuser == true ? 'My' : ''; ?> Attendance Report</h3>
+                                </div>
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+        	<?php } ?>
+			<?php if($acl->checkPermission('Benefits Detailed Report', ACTION_VIEW)) { ?>
+            	<div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">
+                        	<a href="<?php echo $this->baseUrl('report/benefitstats'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i><?php echo $istimesheetuser == true ? 'My' : ''; ?> Benefits Report</h3>
+                                </div>
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+			<?php } ?>
+			<?php if($acl->checkPermission('Payroll', ACTION_VIEW)) { ?>
+            	<div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('payroll/history'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Payroll Processing</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>
+            <?php } ?>            
+            <?php if($acl->checkPermission('Payslips', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/payslips'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i><?php echo $istimesheetuser == true ? 'My' : ''; ?> Payslips</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>
+            <?php } ?>           
+            <?php if($acl->checkPermission('Bank Credit Instructions', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/bankadvice'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Bank Credit Instructions</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>           
+            <?php } ?>              
+			<?php if($acl->checkPermission('Tax Remittance', ACTION_VIEW)) { ?>
+            	<div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/paye'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Tax Remittance</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>  
+            <?php } ?> 
+            <?php if($acl->checkPermission('Insurance Remittance', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/nssf'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Insurance Remittance</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>
+            <?php } ?> 
+            <?php if($acl->checkPermission('Timeoff Accruals Report', ACTION_VIEW)) { ?>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/timeoffstats'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Timeoff Accruals</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>           
+            <?php } ?> 
+            <?php if($acl->checkPermission('Audit Trail Report', ACTION_VIEW)) { ?>           
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="box">	
+                    		<a href="<?php echo $this->baseUrl('report/audittrail'); ?>" class="nodecoration clearfix blockanchor">
+                                <div class="box-title">
+                                    <h3><i class="fa fa-bar-chart-o"></i>Transaction AuditTrail</h3>
+                                </div>	
+                                <div class="box-content">
+                                    <span class="label label-primary padding10 pull-right">View Report</span>  
+                                </div>
+                         	</a>    
+                  		</div>
+                   	</div>
+               	</div>                        
+			<?php } ?>
         </div>
-   	</div>
-</div>          
+  	</div>
+</div>             
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

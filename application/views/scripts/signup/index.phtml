@@ -203,7 +203,7 @@ $(document).ready(function() {
 	display:none;
 }
 </style>
-<div id="publiccontainer" class="index">
+<div id="publiccontainer" class="col-sm-6 col-sm-offset-3 index">
 	<!--<h3 class="centeralign">Account Activation</h3>-->
 	<?php if($sessionhaserror) { ?>
     	<div class="alert alert-error clear"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
@@ -215,7 +215,7 @@ $(document).ready(function() {
         <fieldset class="fieldsetcontainer">
             <legend><h4>Account Activation</h4></legend>
             <div class="panel-body well-sm">
-                <div class="col-md-12">
+                <div class="col-sm-12">
                     <div class="form-group">
                         <label class="col-sm-4 control-label"><?php echo $this->translate("profile_firstname_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                         <div class="col-sm-8">
@@ -275,12 +275,13 @@ $(document).ready(function() {
                     </div>
                 </div>
             </div>
-            <div class="col-md-12">
-                <button type="submit" class="btn btn-primary floatright" style="margin-top:10px;"><i class="glyphicon glyphicon-ok icon-white"></i> Activate</button>
+            <div class="col-sm-12">
+                <button type="submit" class="btn btn-primary floatright">Activate</button>
                 <input type="hidden" name="usecustomsave" id="usecustomsave" value="true" />
                 <input type="hidden" name="id" id="id" value="<?php echo encode($user->getID()); ?>" />
                 <input type="hidden" name="createdby" id="createdby" value="<?php echo $user->getCreatedBy(); ?>" />
                 <input type="hidden" name="type" id="type" value="<?php echo $user->getType(); ?>" />
+                <input type="hidden" name="companyid" id="companyid" value="<?php echo $user->getCompanyID(); ?>" />
         	</div>
             <div class="divider15"></div>
         </fieldset> 

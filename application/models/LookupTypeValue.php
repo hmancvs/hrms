@@ -13,6 +13,7 @@ class LookupTypeValue extends BaseEntity {
 		$this->hasColumn('alias', 'string', 500);
 		$this->hasColumn('code', 'string', 500);
 		$this->hasColumn('info', 'string', 65535);
+		$this->hasColumn('companyid', null, array('default' => NULL));
 	}
 	
 	function setUp() {

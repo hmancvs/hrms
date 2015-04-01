@@ -18,7 +18,7 @@ class Timesheet extends BaseEntity  {
 		$this->hasColumn('inremarks', 'string', 1000);
 		$this->hasColumn('outremarks', 'string', 1000);
 		$this->hasColumn('timesheetdate','date', null, array('default' => NULL));
-		$this->hasColumn('datesubmitted', 'string', 255, array('default' => NULL));
+		//$this->hasColumn('datesubmitted', 'string', 255, array('default' => NULL));
 		$this->hasColumn('dateapproved','date', null, array('default' => NULL));
 		
 		$this->hasColumn('hours', 'decimal', 10, array('scale' => '2','default' => '0.00'));
@@ -26,6 +26,8 @@ class Timesheet extends BaseEntity  {
 		$this->hasColumn('approvedbyid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('notes', 'string', 1000);
 		$this->hasColumn('comments', 'string', 255);
+		$this->hasColumn('payrollid', 'integer', null, array('default' => NULL));
+		$this->hasColumn('isrequest', 'integer', null, array('default' => NULL));
 	}
 	
 	/**
@@ -93,9 +95,13 @@ class Timesheet extends BaseEntity  {
 		}
 		if(isArrayKeyAnEmptyString('datein', $formvalues)){
 			unset($formvalues['datein']);
+		} else {
+			$formvalues['datein'] = date('Y-m-d', strtotime($formvalues['datein']));
 		}
 		if(isArrayKeyAnEmptyString('dateout', $formvalues)){
 			unset($formvalues['dateout']);
+		} else {
+			$formvalues['dateout'] = date('Y-m-d', strtotime($formvalues['dateout']));
 		}
 		if(isArrayKeyAnEmptyString('timein', $formvalues)){
 			unset($formvalues['timein']);
@@ -106,6 +112,12 @@ class Timesheet extends BaseEntity  {
 			unset($formvalues['timeout']);
 		} else {
 			$formvalues['timeout'] = date("H:i:s", strtotime($formvalues['timeout']));
+		}
+		if(isArrayKeyAnEmptyString('payrollid', $formvalues)){
+			unset($formvalues['payrollid']);
+		}
+		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
+			unset($formvalues['isrequest']);
 		}
 		// debugMessage($formvalues); exit();
 		parent::processPost($formvalues);
@@ -118,7 +130,7 @@ class Timesheet extends BaseEntity  {
 			$fulldatein = strtotime($this->getDateIn().' '.$this->getTimeIn()); 
 			$fulldateout = strtotime($this->getDateOut().' '.$this->getTimeOut());
 			$hours = $fulldateout - $fulldatein; 
-			$hours = number_format($hours/3600, 2); // debugMessage($hours);
+			$hours = formatNumber($hours/3600); // debugMessage($hours);
 		}
 		return $hours;
 	}

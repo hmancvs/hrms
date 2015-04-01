@@ -1,0 +1,592 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	// $session->setVar('toggled', "1");
+	$title = "";
+	$subtitle = '';  $reporttitle = "";
+	$description = ''; $periodlabel = '';
+	$result = array(); $has_no_data = false;
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	
+	$istimesheetuser = isTimesheetEmployee() ? true : false;
+	if($istimesheetuser){
+		$mytext = "My ";
+	}
+	
+	$reporttype = "";
+	$type = $request->type;
+	switch($action){
+		case 'payrolldata':
+		case 'payslips':
+			$type = 1;
+			$reporttitle = "Employee Payslips";
+			$subtitle = "Payslip Details";
+			if($istimesheetuser){
+				$reporttitle = "My Payslips";
+			}
+			break;
+		case 'bankadvice':
+			$type = 2;
+			$reporttitle = "Bank Credit Advice";
+			$subtitle = "Bank Instruction Details";
+			break;
+		case 'paye':
+			$type = 3;
+			$reporttitle = "PAYE Remittance Report";
+			$subtitle = "PAYE Details";
+			break;
+		case 'nssf':
+			$type = 4;
+			$reporttitle = "NSSF Remittance Report";
+			$subtitle = "NSSF Details";
+			break;
+	}
+	
+	$payroll = new Payroll();
+	$payrollid = is_numeric($request->id) ? $request->id : decode($request->id);
+	if(!isEmptyString($payrollid)){
+		$payroll->populate($payrollid);
+		$startdate = $payroll->getStartDate(); $enddate = $payroll->getEndDate();
+		$monthendlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($enddate)).' '.date('M', strtotime($startdate));
+		// $subtitle .= " - ".$monthendlabel;
+	}
+	$ignorelist = $payroll->getignorelist();
+	$ignore_array = explode(',', $ignorelist); //debugMessage($ignore_array);
+	
+	$isgenerated = false;
+	if(!isEmptyString($payrollid)){
+		$isgenerated = true;
+		$subtitle = $subtitle.' - '.date('F', strtotime($startdate)).' '.date('Y', strtotime($startdate));
+		
+		$where_query = " WHERE p.payrollid = '".$payrollid."' ";
+		$departmentid = $request->departmentid;
+		if(!isEmptyString($departmentid)){
+			$where_query .= " AND u.departmentid = '".$departmentid."' ";
+		}
+		
+		$empstatus = $request->empstatus;
+		if(!isEmptyString($empstatus)){
+			$where_query .= " AND u.empstatus = '".$empstatus."' ";
+		}
+		
+		$empid = $request->userid;
+		if($istimesheetuser){
+			$empid = $userid;
+		}
+		if(!isEmptyString($empid)){
+			$where_query .= " AND u.id = '".$empid."' ";
+		}
+		
+		$all_results_query = "SELECT p.*, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position, u.nssfid, u.uratin, u.contributiontype, u.bankname, u.accno, u.accname, u.branchname FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." GROUP BY p.userid ORDER BY name ASC ";
+		// debugMessage($all_results_query); // exit;
+		
+		$conn = Doctrine_Manager::connection(); 
+		$result = $conn->fetchAll($all_results_query); // debugMessage($result);
+	}
+	 
+	$benefits = getBenefits();
+	$employeesstatuses = getDatavariables('EMPLOYEE_STATUS');
+	$departments = getDepartments();
+	$positions = getDatavariables('EMPLOYEE_POSITIONS');
+	$users = getUsers();
+	$payrolltypes = getPayrollTypes();
+	$ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
+	$resource = "";
+	
+	$title = $reporttitle;
+	$this->headTitle($title.$browserappend);
+?>
+<?php if(!isEmptyString($request->pgc)){ ?>
+	<?php require APPLICATION_PATH."/views/scripts/index/pgc_top.phtml"; ?>
+<?php } ?>
+<?php if(isEmptyString($request->pgc)){ ?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	$("#reportform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			id: "required"
+		}, 
+		// the messages for each of the fields being validated
+		messages: {				
+			id: "Please select Payroll Report"
+		},
+		// custom error positions
+		errorPlacement: function(error, element) {
+			switch(element.attr("name")){					
+				default:
+					error.appendTo("#"+element.attr("name")+"_error")
+					break;
+			}			
+		}
+	});
+	
+});
+</script>
+<?php } ?>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+    	<form class="form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" originalaction="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
+            </div>
+            <div class="box-content nopadding">
+                <div class="row hideonprint">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                        	<li style="width:400px;">
+								<?php
+                                    $payrolls = getPayrollReports();
+                                    $dropdown = new Zend_Form_Element_Select('id',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'Select a Payroll Period'), $payrolls),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("form-control", 'input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($payrollid); 
+                                    echo $dropdown->render();
+                                ?>
+                            </li>
+                            <li><button type="submit" class="btn btn-primary" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button>
+                            </li>
+                        </ul>
+                        <?php if(!isEmptyString($payrollid) && !$istimesheetuser){ ?>
+                        <div class="divider2"></div>
+                        <ul class="resetlist listactions">
+                            <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('departmentid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Departments'), $departments),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("form-control", 'width150','input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('departmentid')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                            <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('empstatus',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $employeesstatuses),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("form-control", 'width150','input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('empstatus')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                            <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('userid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Employees'), $users),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("form-control", 'width150','input-sm','chosen-select')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('userid')); 
+                                    echo $dropdown->render();
+                                ?>
+                            </li>
+                        </ul>
+                       	<?php } ?>
+                 	</div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+						<div class="box box-color box-bordered">
+							<div class="box-title condensed xhideonprint">
+								<h3><i class="fa fa-calendar"></i> <?php echo $subtitle; ?></h3>
+                                <div class="actions">
+                                	<?php if ($isgenerated && !$has_no_data && !$isprint) { ?>
+                                        <a class="btn lightgrey btn-xs noround" href="<?php echo stripUrl($this->viewurl).'/print/1'; ?>" target="_blank" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</a>
+                                    <?php } ?>
+                                    <?php if($isprint) { ?>
+                                        <button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</button>
+                                    <?php } ?>
+                                    <input type="hidden" name="csv_text" id="csv_text" value="" />
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+                            	<?php if($isgenerated){ ?>
+									<?php if($has_no_data) { ?>
+                                        <div class="divider10"></div>
+                                        <div class="alert alert-warning">There are no records for this report</div>
+                                    <?php } else { ?>
+                                        <table class="table list table-bordered table-striped data-table border-cells" id="datatable" style="width:auto;">
+                                            <thead>
+                                                <tr style="font-size:12px; font-weight:normal;">
+                                                    <td style="width:15px;"><label class="control-label">#</label></td>
+                                                    <td style="width:180px;"><label class="control-label">Employee</label></td>
+                                                     <?php if($type == 1){ ?>
+                                                    	<td style="width:125px;"><label class="control-label bolded">Basic Salary</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">Total Benefits</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">Gross Amount</label></td>
+                                                        <td style="width:150px;"><label class="control-label bolded">Total Deductions</label></td>
+                                                    <?php } ?>
+                                                    <?php if($type == 2){ ?>
+                                                        <td style="width:200px;"><label class="control-label bolded">Name of Bank</label></td>
+                                                        <td style="width:150px;"><label class="control-label bolded">Branch</label></td>
+                                                        <td style="width:150px;"><label class="control-label">Acc Name</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">Acc Number</label></td>
+                                                    <?php } ?>
+                                                    <?php if(in_array($type, array(1,2))){ ?>
+                                                    	<td style="width:100px;"><label class="control-label bolded">Net Amount</label></td>
+                                                    <?php } ?>
+                                                    <?php if($type == 3){ ?>
+                                                    	<td style="width:80px;"><label class="control-label">TIN Number</label></td>
+                                                        <td style="width:75px;"><label class="control-label">Start Date</label></td>
+                                                        <td style="width:75px;"><label class="control-label">End Date</label></td>
+                                                    	<td style="width:125px;"><label class="control-label bolded">Basic Salary</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">Taxable Benefits</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">Chargeable Income</label></td>
+                                                        <td style="width:125px;"><label class="control-label bolded">PAYE Tax Amount</label></td>
+                                                    <?php } ?>
+                                                    <?php if($type == 4){ ?>
+                                                    	<td style="width:75px;"><label class="control-label">NSSF Number</label></td>
+                                                        <td style="width:75px;"><label class="control-label">Contribution Type</label></td>
+                                                        <td style="width:50px;"><label class="control-label">Year</label></td>
+                                                        <td style="width:50px;"><label class="control-label">Month</label></td>
+                                                        <td style="width:80px;"><label class="control-label bolded">Basic Salary</label></td>
+                                                        <td style="width:80px;"><label class="control-label bolded">Employee Contribution</label></td>
+                                                        <td style="width:80px;"><label class="control-label bolded">Employer Contribution</label></td>
+                                                        <td style="width:80px;"><label class="control-label bolded">Total Contribution</label></td>
+                                                        <td style="width:60px;"><label class="control-label bolded">Status</label></td>
+                                                    <?php } ?>
+                                                    <?php if($type == 1 && isEmptyString($request->print)){ ?>
+                                                        <td style="width:50px;"><label class="control-label bolded">Payslip</label></td>
+                                                    <?php } ?>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                               <?php 
+                                                    // debugMessage(json_encode($result));
+                                                    $i = 1; $userids = array();
+                                                    $total_hourspending = $total_halfhoursworked = $total_fullhoursworked = $total_midmonthpay = $total_gross = $total_grossandbenefits = $total_nssf = $total_paye = $total_otherdeductions = $total_alldeductions = $total_netminusdeductions = $total_transport = $total_totalbenefits = $total_taxablebenefits = $total_payeincome = $total_netpayout = $total_employeer = $total_contrib = 0; $companycontrb = 0;
+                                                    foreach($result as $employee){
+                                                        $userids [] = $employee['id'];
+                                                        $employeeid = $employee['id'];
+                                                        $rate_type = isArrayKeyAnEmptyString($employee['ratetype'], $ratetypes) ? '' : $ratetypes[$employee['ratetype']];
+                                                        if(!isEmptyString($rate_type)){
+                                                            preg_match_all('/\b\w/', $rate_type, $match);
+                                                            $rate_array = $match;
+                                                            $rate_type = strtolower($match[0][0].'/'.$match[0][1]);
+                                                        }
+                                                        
+                                                        // else is viewing payroll draft
+                                                        $paysnssf = false;
+                                                        if(!isEmptyString($employee['nssf'])){
+                                                            $paysnssf = true;
+                                                        }
+                                                        $result = $employee;
+                                                        $result['totaltransport'] = $employee['transport'];
+                                                        $result['otheradditions'] = $employee['othercredit'];
+                                                        $result['otheradditions'] = $employee['otherdebit'];
+                                                        
+                                                        $results_credits_array = array();
+                                                        if(decode($result['benefitdetails']) != "[]" || $result['benefitdetails'] != "W10="){
+                                                            $results_credits_array = objectToArray(json_decode(decode($result['benefitdetails'])));
+                                                        }
+                                                        $results_debits_array = array();
+                                                        if(decode($result['deductiondetails']) != "[]" || $result['deductiondetails'] != "W10="){
+                                                            $results_debits_array = objectToArray(json_decode(decode($result['deductiondetails'])));
+                                                        }
+                                                        
+                                                        // end of month gross earnings
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$gross = $employee['endgross'];
+                                                        	$total_gross += $gross;
+														}
+                                                        
+                                                        // transport 
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$transport = $employee['transport'];
+                                                        	$total_transport += $transport;
+														}
+                                                        
+                                                        // total benefits minus transport
+                                                        $totalbenefits = $employee['othercredit'];
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$allbenefits = $transport + $totalbenefits;
+															$total_grossandbenefits += ($gross+$allbenefits);
+                                                       		$total_totalbenefits += $allbenefits;
+                                                        	$total_taxablebenefits += $employee['totaltaxable'];
+															$total_payeincome += ($gross +$employee['totaltaxable']);
+														}
+														
+                                                        // compute nssf
+                                                        $nssf = $employee['nssf'];
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$total_nssf += $nssf;
+															if($employee['nssf'] > 0){
+																$companycontrb = $gross*($config->system->nssfcompanyrate/100);
+																$total_employeer += $companycontrb;
+																$total_contrib += ($nssf + $companycontrb);
+															}
+														}
+                                                        // paye contribution
+                                                        $paye = $employee['paye'];
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$payeeincome = $gross + $employee['totaltaxable']; 
+                                                        	$total_paye += $paye; 
+														}
+                                                        
+                                                        // other deductions
+                                                        $otherdeductions = $employee['otherdebit'];
+														if(!in_array($employee['id'], $ignore_array)){
+	                                                        $total_otherdeductions += $otherdeductions;
+														}
+														
+														// all deductions 
+														if(!in_array($employee['id'], $ignore_array)){
+															$alldeductions = $nssf + $paye + $otherdeductions;
+															$total_alldeductions += $alldeductions;
+														}
+														
+                                                        // net pay less deductions
+														$netminusdeductions = $employee['netearning'];
+														if(!in_array($employee['id'], $ignore_array)){
+															$total_netminusdeductions += $netminusdeductions;
+														}
+                                                        
+                                                        // net pay
+                                                        $netpayout = $employee['netpay'];
+														if(!in_array($employee['id'], $ignore_array)){
+                                                        	$total_netpayout += $netpayout;
+														}
+                                                        
+														$name = '';
+														if(isEmptyString($request->print)){
+															$name .= '<a href="'.$this->baseUrl('profile/view/id/'.encode($employeeid)).'" title="View Profile" target="_blank" class="blocked">'.$employee['name'].'</a>';
+														} else {
+															$name .= $employee['name'];
+														}
+														
+														$strike = '';
+														if(in_array($employee['id'], $ignore_array)){
+															$strike = ' style="text-decoration:line-through; color:red; opacity:0.5; " ';
+														}
+                                               ?>
+                                                    <?php if($type == 1 && isEmptyString($request->print)){ ?>
+														<script>
+                                                            $(document).ready(function() {
+                                                                $(".payslip_<?php echo $employeeid; ?>").click(function(e){
+                                                                    e.preventDefault();
+                                                                    var message = 'testing';
+                                                                    var payslip = $("#payslip_<?php echo $employeeid; ?>").html(); // alert(payslip);
+                                                                    bootbox.alert(payslip); 
+                                                                    return false;
+                                                                });
+                                                            });
+                                                        </script>
+                                                    <?php } ?>
+                                                    <tr style="font-size:12px; font-weight:normal;">
+                                                        <td><?php echo $i; ?></td>
+                                                        <td class="bolded"><?php echo $name; ?>
+															<?php if($type == 1 && isEmptyString($request->print)){ ?>
+                                                                <div id="payslip_<?php echo $employeeid; ?>" class="hidden hideonprint payslipdata alert_<?php echo $employeeid; ?>">
+                                                                    <label class="blocked bolded">Payslip: <?php echo $employee['name']; ?> <?php echo $monthendlabel; ?></label>
+                                                                    <table class="table table-bordered" style="font-size:11px !important;">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>Item</th>
+                                                                                <th style="width:25%; text-align:center;">CR</th>
+                                                                                <th style="width:25%; text-align:center;">DR</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <tr class="bolded">
+                                                                                <td>Basic Salary</td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($gross); ?></td>
+                                                                                <td class="rightalign"></td>
+                                                                            </tr>
+                                                                            <?php foreach($results_credits_array as $line){ ?>
+                                                                                <tr>
+                                                                                    <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                                                    <td class="rightalign"><?php echo formatMoneyOnly($line['totalcr']); ?></td>
+                                                                                    <td class="rightalign"></td>
+                                                                                </tr>
+                                                                            <?php } ?>
+                                                                            <tr class="bolded">
+                                                                                <td>Total Benefits</td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($allbenefits); ?></td>
+                                                                                <td class="rightalign"></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                            </tr>
+                                                                            <tr class="bolded">
+                                                                                <td>Gross</td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($gross+$allbenefits); ?></td>
+                                                                                <td class="rightalign"></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                            </tr>
+                                                                            <tr class="bolded">
+                                                                                <td>Deductions</td>
+                                                                                <td class="rightalign"></td>
+                                                                                <td class="rightalign"></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>PAYE</td>
+                                                                                <td class="rightalign"></td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($paye); ?></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td>NSSF</td>
+                                                                                <td class="rightalign"></td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($nssf); ?></td>
+                                                                            </tr>
+                                                                            <?php foreach($results_debits_array as $line){ ?>
+                                                                                <tr>
+                                                                                    <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                                                    <td class="rightalign"></td>
+                                                                                    <td class="rightalign"><?php echo formatMoneyOnly($line['totalbr']); ?></td>
+                                                                                </tr>
+                                                                            <?php } ?>
+                                                                            <tr class="bolded">
+                                                                                <td>Total Deductions</td>
+                                                                                <td class="rightalign"></td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($paye + $nssf + $otherdeductions); ?></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                            </tr>
+                                                                            <tr class="bolded">
+                                                                                <td>Net</td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly($netpayout); ?></td>
+                                                                                <td class="rightalign"></td>
+                                                                            </tr>
+                                                                            <tr>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                                <td style="height:3px !important; padding:0;"></td>
+                                                                            </tr>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            <?php } ?>
+                                                        </td>
+                                                        <?php if($type == 1){ ?>
+                                                            <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($gross); ?></td>
+                                                            <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($allbenefits); ?></td>
+                                                            <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($gross+$allbenefits); ?></td>
+                                                            <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($alldeductions); ?></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 2){ ?>
+                                                            <td <?php echo $strike; ?>><?php echo $employee['bankname']; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo $employee['branchname']; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo $employee['accname']; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo $employee['accno']; ?></td>
+                                                        <?php } ?>
+                                                        <?php if(in_array($type, array(1,2))){ ?>
+                                                        	<td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatMoneyOnly($netpayout); ?></td>
+                                                        <?php } ?> 
+                                                        <?php if($type == 3){ ?>
+                                                        	<td <?php echo $strike; ?>><?php echo $employee['uratin']; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo date('jS', strtotime($startdate)).' '.date('M', strtotime($startdate)); ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo date('jS', strtotime($enddate)).' '.date('M', strtotime($enddate)); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($gross); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($employee['totaltaxable']); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($gross + $employee['totaltaxable']); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($paye); ?></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 4){ ?>
+                                                        	<td <?php echo $strike; ?>><?php echo $employee['nssfid']; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo !isEmptyString($employee['contributiontype']) ? '' : 'Normal'; ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo date('Y', strtotime($startdate)); ?></td>
+                                                            <td <?php echo $strike; ?>><?php echo date('F', strtotime($enddate)); ?></td>
+                                                        
+                                                            <td <?php echo $strike; ?>><?php echo formatMoneyOnly($gross); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($nssf); ?></td>
+                                                            <td <?php echo $strike; ?>class="rightalign"><?php echo formatMoneyOnly($companycontrb); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"><?php echo formatMoneyOnly($nssf+$companycontrb); ?></td>
+                                                            <td <?php echo $strike; ?> class="rightalign"></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 1 && isEmptyString($request->print)){ ?>
+                                                            <td><a class="xalert-dialog gonowhere payslip_<?php echo $employeeid; ?>" id="alert_<?php echo $employeeid; ?>" title=" Payslip Details">Preview</a>
+                                                            </td>
+                                                        <?php } ?>
+                                                    </tr>
+                                               <?php $i++; } ?>
+                                               <?php if(!$istimesheetuser){ ?>
+                                                   <tr style="font-size:12px; font-weight:bold;">
+                                                        <td></td>
+                                                        <td>Totals</td>
+                                                        <?php if($type == 1){ ?>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_gross); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_totalbenefits); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_grossandbenefits); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_alldeductions); ?></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 2){ ?>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                            <td></td>
+                                                        <?php } ?>
+                                                        <?php if(in_array($type, array(1,2))){ ?>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_netpayout); ?></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 3){ ?>
+                                                            <td class="rightalign bolded" colspan="3"></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_gross); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_taxablebenefits); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_payeincome); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_paye); ?></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 4){ ?>
+                                                            <td colspan="4"></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_gross); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_nssf); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_employeer); ?></td>
+                                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($total_contrib); ?></td>
+                                                            <td class="rightalign bolded"></td>
+                                                        <?php } ?>
+                                                        <?php if($type == 1 && isEmptyString($request->print)){ ?>
+                                                            <td></td>
+                                                        <?php } ?>
+                                                   </tr>
+                                               	<?php } ?>
+                                            </tbody>
+                                         </table>
+                                    <?php } ?>
+                                <?php } else { ?>
+                                    <label class="labeldescription noresults" style="font-size:16px !important; margin-bottom:200px;">Select reporting parameters to Generate</label>
+                                <?php } ?>
+                        	</div>
+                     	</div>
+                   	</div>
+                </div>
+           	</div>
+       	</div>
+    	</form>
+	</div>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

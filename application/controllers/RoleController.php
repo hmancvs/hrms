@@ -24,6 +24,8 @@ class RoleController extends SecureController   {
 		$session = SessionWrapper::getInstance(); 
      	$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
+		
+		$this->_translate = Zend_Registry::get("translate");
 		$post_array = $this->_getAllParams(); // debugMessage($this->_getAllParams()); exit; 
 		$id = $post_array['id']; 
 		$post_array['id'] = decode($id);
@@ -171,12 +173,15 @@ class RoleController extends SecureController   {
 			// debugMessage($audit_values);
 			$this->notify(new sfEvent($this, $type, $audit_values));
 			
+			if (!isEmptyString($this->_getParam(SUCCESS_MESSAGE))) {
+				$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($this->_getParam(SUCCESS_MESSAGE)));
+			}
 			$this->_helper->redirector->gotoUrl($this->view->baseUrl("role/view/id/".encode($role->getID())));
 		} catch (Exception $e) {
 			// debugMessage($perm_collection->toArray()); 
 			// debugMessage('error in save. '.$e->getMessage());
 			$session->setVar(ERROR_MESSAGE, $e->getMessage());
-			$this->_helper->redirector->gotoUrl($this->view->baseUrl("role/index/id/".encode($role->getID())));
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 	}
 }

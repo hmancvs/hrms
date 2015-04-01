@@ -151,6 +151,22 @@
 		}
 		return $days;
 	}
+	# determine days of week
+	function getShortDaysOfWeek($current ='') {
+		$days = array(
+				"1" => "Mon",
+				"2" => "Tue",
+				"3" => "Wed",
+				"4" => "Thur",
+				"5" => "Fri",
+				"6" => "Sat",
+				"7" => "Sun",
+		);
+		if(!isEmptyString($current)){
+			return $days[$current];
+		}
+		return $days;
+	}
 	
 	# function to generate years
 	function getAllYears($yearsback="", $yearsahead="") {				
@@ -757,6 +773,7 @@
 		return $all_users;
 	}
 	function getUsers($type = '', $limit = '', $ignoretype = '', $ignorelist = '', $wherequery = '', $hasemail = false, $hasphone = false){
+		$companyid = getCompanyID();
 		$custom_query = '';
 		if(!isEmptyString($type)){
 			$custom_query .= " AND u.type = '".$type."' ";
@@ -776,6 +793,12 @@
 		if($hasphone){
 			$custom_query .= " AND u.phone <> '' ";
 		}
+		if($companyid == DEFAULT_COMPANYID){
+			$custom_query .= " AND (u.companyid = '".$companyid."' OR u.companyid is null) ";
+		} else {
+			$custom_query .= " AND u.companyid = '".$companyid."' ";
+		}
+		
 		$limit_query = '';
 		if(!isEmptyString($limit)){
 			$limit_query= ' LIMIT '.$limit;
@@ -839,7 +862,7 @@
 	}
 	
 	function getTimesheetUsers(){
-		$query = "SELECT u.id AS optionvalue, concat(u.firstname, ' ', u.lastname, ' ', u.othername) AS optiontext FROM useraccount as u WHERE u.id <> '' AND u.istimesheetuser = 1 ORDER BY optiontext";
+		$query = "SELECT u.id AS optionvalue, concat(u.firstname, ' ', u.lastname, ' ', u.othername) AS optiontext FROM useraccount as u WHERE u.id <> '' AND u.type = 2 ORDER BY optiontext";
 		return getOptionValuesFromDatabaseQuery($query);
 	}
 	function getUserIDFromUsername($username){
@@ -857,8 +880,18 @@
 	}
 	# determine the dropdown value for a lookuptype
 	function getDatavariables($lookuptypetext = '', $value = '', $checkempty = false){
-		$query = "SELECT l.lookuptypevalue as optionvalue, trim(l.lookupvaluedescription) as optiontext FROM lookuptypevalue AS l INNER JOIN lookuptype AS v ON l.lookuptypeid = v.id WHERE v.name = '".$lookuptypetext."' ";
-		// debugMessage($query); exit();
+		$companyid = getCompanyID();
+		$company_query = "";
+		if($lookuptypetext == 'EMPLOYEE_POSITIONS'){
+			if($companyid == DEFAULT_COMPANYID){
+				$company_query = " AND (l.companyid = '".$companyid."' OR l.companyid is null) ";
+			} else {
+				$company_query = " AND l.companyid = '".$companyid."' ";
+			}
+		}
+		
+		$query = "SELECT l.lookuptypevalue as optionvalue, trim(l.lookupvaluedescription) as optiontext FROM lookuptypevalue AS l INNER JOIN lookuptype AS v ON l.lookuptypeid = v.id WHERE v.name = '".$lookuptypetext."' ".$company_query." ";
+		// debugMessage($query); // exit();
 		$array = getOptionValuesFromDatabaseQuery($query);
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
@@ -874,7 +907,14 @@
 	}
 	# determine the departments
 	function getDepartments($value ='', $checkempty = false){
-		$query = "SELECT d.id as optionvalue, d.name as optiontext FROM department d where d.id <> '' order by optiontext ";
+		$companyid = getCompanyID();
+		if($companyid == DEFAULT_COMPANYID){
+			$company_query = " AND (d.companyid = '".$companyid."' OR d.companyid is null) ";
+		} else {
+			$company_query = " AND (d.companyid = '".$companyid."') ";
+		}
+		
+		$query = "SELECT d.id as optionvalue, d.name as optiontext FROM department d where d.id <> '' ".$company_query." order by optiontext ";
 		$array = getOptionValuesFromDatabaseQuery($query);
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
@@ -914,6 +954,13 @@
 		}
 		return false;
 	}
+	# determine if user has checked in today
+	function getCheckInEntry($userid, $date){
+		$conn = Doctrine_Manager::connection();
+		$query = "SELECT * FROM timesheet AS t where t.`userid` = '".$userid."' AND TO_DAYS(t.datein) = TO_DAYS('".$date."') AND t.timein <> '' AND t.timeout is null "; // debugMessage($query);
+		$result = $conn->fetchRow($query); // debugMessage($result);
+		return $result;
+	}
 	function getWeekTimesheetsForUser($userid, $startdate, $enddate){
 		$conn = Doctrine_Manager::connection();
 		$query = "SELECT t.userid, t.timesheetdate, t.`status`, t.hours, t.datein, t.dateout, t.timein, t.timeout, WEEKDAY(t.timesheetdate)+1 as weekno from timesheet t where t.userid = '".$userid."' and TO_DAYS(t.timesheetdate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') ";   //debugMessage($query);
@@ -939,6 +986,13 @@
 	}
 	function getWeekDays(){
 		return array(1=>'Monday', 2=>'Tuesday', 3=>'Wednesday', 4=>'Thursday', 5=>'Friday', 6=>'Saturday', 7=>'Sunday');
+	}
+	function getBenefitStatuses($status = '') {
+		$values = array('0'=>'Requested', '1'=>'Approved', '4'=>'Rejected');
+		if(!isEmptyString($status)){
+			return $values[$status];
+		}
+		return $values;
 	}
 	/**
 	 * Determine the first day of a week
@@ -988,9 +1042,12 @@
 		return $result;
 	}
 	# determine the monetary benefits as a dropdown
-	function getBenefits($value ='', $checkempty = false){
+	function getBenefits($showall = 1, $value ='', $checkempty = false){
 		$query = "SELECT b.id as optionvalue, b.name as optiontext FROM benefittype b where b.id <> '' order by optiontext ";
 		$array = getOptionValuesFromDatabaseQuery($query);
+		if($showall == 1){
+			unset($array[1]); unset($array[NSSFID]); unset($array[PAYEID]); // unset($array[ADVANCE]);
+ 		}
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
 				return $array[$value];
@@ -1029,7 +1086,7 @@
 	}
 	# determine cash benefit terms
 	function getAllBenefitTerms($value ='', $checkempty = false){
-		$array =  array(1=>'Assign as Credit(Addition) to Salary', 2=>'Assign as Debit(Deduction) to Salary');
+		$array =  array(1=>'Credit Salary', 2=>'Debit Salary');
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
 				return $array[$value];
@@ -1041,6 +1098,22 @@
 			return '';
 		}
 		
+		return $array;
+	}
+	# determine payroll type for the employee
+	function getPayrollTypes($value ='', $checkempty = false){
+		$array =  array(1=>'Payable Daily', 2=>'Payable Weekly', 3=>'Payable Fortnightly', 4=>'Payable Monthly');
+		if(!isEmptyString($value)){
+			if(!isArrayKeyAnEmptyString($value, $array)){
+				return $array[$value];
+			} else {
+				return '';
+			}
+		}
+		if($checkempty && isEmptyString($value)){
+			return '';
+		}
+	
 		return $array;
 	}
 	# determine the time off types
@@ -1057,6 +1130,15 @@
 		if($checkempty && isEmptyString($value)){
 			return '';
 		}
+		return $array;
+	}
+	function getCompanies($status ='1'){
+		$custom_query = "";
+		if(!isEmptyString($status)){
+			$custom_query .= " AND c.status = '".$status."' ";
+		}
+		$query = "SELECT c.id as optionvalue, c.name as optiontext FROM company c where c.id <> '' ".$custom_query." order by optiontext ";
+		$array = getOptionValuesFromDatabaseQuery($query);
 		return $array;
 	}
 	# fetch all benefits data. option for addition where cond
@@ -1101,7 +1183,7 @@
 	}
 	# determine ther benefit modes
 	function getBenefitTypes($value ='', $checkempty = false){
-		$array =  array('1'=>'Cash Benefit', '2'=>'Time-off Benefit');
+		$array =  array('1'=>'Cash Benefit', '2'=>'Timeoff Benefit');
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
 				return $array[$value];
@@ -1150,23 +1232,27 @@
 	# determine number of hours accrued in the current financial period
 	function getHoursAccrued($userid, $type=1, $start ='2015-01-01', $end='2015-12-31'){
 		$conn = Doctrine_Manager::connection();
-		$query = "SELECT sum(timeofflength) FROM ledger where userid = '".$userid."' AND timeoffid = '".$type."' AND TO_DAYS(trxndate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND ledgertype = '2' AND trxntype = '1' "; //debugMessage($query);
+		$query = "SELECT sum(IF(lengthtype = 2, timeofflength * lengthtype, timeofflength)) FROM ledger where userid = '".$userid."' AND timeoffid = '".$type."' AND TO_DAYS(trxndate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND ledgertype = '2' AND trxntype = '1' AND status = 1 "; //debugMessage($query);
 		$result = $conn->fetchOne($query); //debugMessage($result);
-		return $result;
+		
+		$rquery = "SELECT IF(u.accrualtype = 2, u.accrualvalue * 8, u.accrualvalue) FROM userbenefit u where u.userid = '".$userid."' AND u.type = 2 AND u.timeofftypeid = '".$type."' AND u.accrualfrequency = '1' "; // debugMessage($rquery);
+		$rresult = $conn->fetchOne($rquery);
+		
+		return formatNumber($result+$rresult);
 	}
 	# determine the number of hours taken in the current financial period
 	function getHoursTaken($userid, $type=1, $start ='2015-01-01', $end='2015-12-31'){
 		$conn = Doctrine_Manager::connection();
-		$query = "SELECT sum(duration) FROM timeoff where userid = '".$userid."' AND typeid = '".$type."' AND TO_DAYS(startdate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND status = '1' "; //debugMessage($query);
+		$query = "SELECT sum(duration) FROM timeoff where userid = '".$userid."' AND typeid = '".$type."' AND TO_DAYS(startdate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND TO_DAYS(enddate) < TO_DAYS('".$end."') AND status = '4' "; //debugMessage($query);
 		$result = $conn->fetchOne($query); //debugMessage($result);
-		return $result;
+		return formatNumber($result);
 	}
 	# determine number of hours available in the current financial period
 	function getHoursAvailable($userid, $type=1, $start ='2015-01-01', $end='2015-12-31'){
 		$accrued = getHoursAccrued($userid, $type, $start, $end); //debugMessage($accrued);
 		$taken = getHoursTaken($userid, $type, $start, $end); //debugMessage($taken);
 		$available = $accrued - $taken; // debugMessage($available);
-		return $available < 0 ? 0 : number_format($available, 2);
+		return $available < 0 ? 0 : formatNumber($available);
 	}
 	# fetch all timeoff requests for a user 
 	function getTimeoffRequests($userid ='', $start ='2015-01-01', $end='2015-12-31'){
@@ -1180,9 +1266,34 @@
 		from timeoff t 
 		inner join timeofftype p on t.typeid = p.id
 		inner join useraccount u on t.userid = u.id
-		where t.id <> '' ".$customquery." AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND t.status = 1 order by t.startdate desc, t.id ";  //debugMessage($query);
+		where t.id <> '' ".$customquery." AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$start."') AND TO_DAYS('".$end."') AND t.status = 1 order by t.startdate desc, t.id ";  //debugMessage($query);
 		$result = $conn->fetchAll($query); //debugMessage($result);
 	
 		return $result;
+	}
+	# determine payroll reports 
+	function getPayrollReports($value ='', $checkempty = false){
+		$query = "SELECT p.id as optionvalue, concat('Payroll (', DATE_FORMAT(p.startdate, '%b %D'), ' - ', DATE_FORMAT(p.enddate, '%b %D'),')') as optiontext FROM payroll p where p.status = 2 order by optiontext ";
+		$array = getOptionValuesFromDatabaseQuery($query);
+		return $array;
+	}
+	function getAttendanceTypes($value ='', $checkempty = false){
+		$array =  array(
+					'0'=>'Employee does not submit timesheets',
+					'1' => 'Employee submits timesheets and is paid hourly',
+					'2' => 'Employee submits timesheets but is paid monthly'
+				);
+		if(!isEmptyString($value)){
+			if(!isArrayKeyAnEmptyString($value, $array)){
+				return $array[$value];
+			} else {
+				return '';
+			}
+		}
+		if($checkempty && isEmptyString($value)){
+			return '';
+		}
+	
+		return $array;
 	}
 ?>

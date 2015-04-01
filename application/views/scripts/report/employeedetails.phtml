@@ -1,0 +1,840 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$session->setVar('toggled', "1");
+	$title = "";
+	$subtitle = '';  $reporttitle = "";
+	$description = ''; $periodlabel = '';
+	$result = array(); $has_no_data = false;
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	
+	$reporttype = "";
+	$type = $request->type;
+	$reporttitle = "Employee Profiles";
+	$subtitle = "Employees";
+	$resource = "Employee Data Report";
+	$maxfilters = 5;
+	
+	$conditions = array(
+		1 => 'is equal to',
+		2 => 'is not equal to',
+		3 => 'is less than',
+		4 => 'is less than or equal to',
+		5 => 'is greater than',
+		6 => 'is greater than or equal to',
+		7 => 'contains',
+		8 => 'does not contain',
+		9 => 'begins with',
+		10 => 'ends with',
+		11 => 'is empty',
+		12 => 'is not empty',
+		13 => 'is between',
+		14 => 'is not between',
+		15 => 'is in list',
+		16 => 'is not in list'
+	);
+	$sql_condition_parts = array(
+		1 => " = ",
+		2 => " <> ",
+		3 => " < ",
+		4 => " <= ",
+		5 => " > ",
+		6 => " >= ",
+		7 => " LIKE '%x%' ",
+		8 => " NOT LIKE '%x%' ",
+		9 => " LIKE 'x%' ",
+		10 => " LIKE '%x' ",
+		11 => " = '' ",
+		12 => " <> '' ",
+		13 => " BETWEEN ",
+		14 => " NOT BETWEEN ",
+		15 => " IN x ",
+		16 => " NOT IN x "
+	);
+	
+	$selectable = array(
+		"salutation" => "salutation",
+		"gender" => "gender",
+		"maritalstatus" => "maritalstatus",
+		"contactrshp" => "contactrshp",
+		"departmentid" => "departmentid",
+		"position" => "position",
+		"managerid" => "managerid",
+		"empstatus" => "empstatus",
+		"workingdays" => "workingdays",
+		"shift" => "shift",
+		"istimesheetuser" => "istimesheetuser",
+		"ratetype" => "ratetype",
+		"payrolltype" => "payrolltype",
+		"type" => "type",
+		"status" => "status",
+		"createdby" => "createdby"
+	);
+	
+	$datetable = array(
+		"dateofbirth" => "dateofbirth",
+		"startdate" => "startdate",
+		"enddate" => "enddate",
+		"probationend" => "probationend",
+		"datecreated" => "datecreated",
+		"activationdate" => "activationdate"
+	);
+	
+	$attributes = array(
+		"id" => "ID",
+		"firstname" => "Fist Name",
+		"lastname" => "Last Name",
+		"othername" => "Other Names",
+		"displayname" => "Full Display Names",
+		"salutation" => "Salutation",
+		"gender" => "Gender",
+		"maritalstatus" => "Marital Status",
+		"dateofbirth" => "Date of Birth",
+		
+		"email" => "Email",
+		"email2" => "Alt Email",
+		"phone" => "Phone",
+		"phone2" => "Alt Phone",
+		"country" => "Nationality",
+		"town" => "Town / City",
+		"postalcode" => "Postal Code",
+		"address1" => "Address",
+		"linkedin" => "LinkedIn Url",
+		"skype" => "Skype Username",
+		"contactname" => "Next of Kin",
+		"contactrshp" => "Kin Relationship",
+		"contactphone" => "Emergency Phone",
+		"contactemail" => "Emergency Email",
+		
+		"departmentid" => "Department",
+		"position" => "Position",
+		"managerid" => "Manager / Supervisor",
+		"empstatus" => "Contract Status",
+		"startdate" => "Join / Start Date",
+		"enddate" => "Contract End Date",
+		"probationend" => "Probation End Date",
+		"bio" => "Biography",
+		"jobdescription" => "Job Description",
+		"qualifications" => "Qualifications",
+		"education" => "Education",
+		"skills" => "Skills",
+		"experience" => "Work Experience",
+		"workingdays" => "Working Days",
+		"shift" => "Current Work Shift",
+		"maxhoursperday" => "Maximum Hours Per Day",
+		"maxhoursperweek" => "Maximum Hours Per Week",
+		"istimesheetuser" => "Submits Timesheets",
+		"rate" => "Employee Rate",
+		"ratetype" => "Rate Type",
+		"payrolltype" => "Payroll Terms",
+		
+		"bankname" => "Name of Bank",
+		"branchname" => "Branch",
+		"accname" => "Account Name",
+		"accno" => "Account Number",
+		"nssfid" => "NSSF ID No#",
+		"contributiontype" => "NSSF Contribn Type",
+		"uratin" => "URA TIN No#",
+		"idno" => "ID/Employee No#",
+		
+		"type" => "User Type",
+		"status" => "User Status",
+		"username" => "Username",
+		"datecreated" => "Input Date",
+		"createdby" => "Input By",
+		"activationdate" => "Activation Date"
+	);
+	
+	$isgenerated = false; $isgenerated = true;
+	
+	$where_query = " WHERE (u.id <> '') AND u.companyid = '".$companyid."' ";
+	$filters_query = ""; $xwhere_query = " ";
+	$sqlpart = ""; $has_subq = false; $rowcount = 1;
+	
+	for($i = 1; $i <=$maxfilters; $i++){
+		$filter_query = ""; 
+		$attr = $request->{'attr_'.$i};
+		$condition = $request->{'condition_'.$i};
+		$value = $request->{'value_'.$i}; 
+		$start = $request->{'startdate_'.$i}; $startdate = date('Y-m-d', strtotime($start));
+		$end = $request->{'enddate_'.$i}; $enddate = date('Y-m-d', strtotime($end)); 
+		if(!isEmptyString($attr) && !isEmptyString($condition)){
+			$sqlpart = $sql_condition_parts[$condition];
+			if(in_array($condition, array(1,2,3,4,5,6))){
+				if(!in_array($attr, $selectable) && !in_array($attr, $datetable)){
+					$filter_query = " u.".$attr." ". $sqlpart." '".$value."' "; $has_subq = true;
+				} else {
+					if(in_array($attr, $selectable)){
+						$col = $attr.'_'.$i; 
+						$filter_query = " u.".$attr." ".$sqlpart." '".$request->{$col}."' "; $has_subq = true;
+						if($attr == 'workingdays' && $condition == 1){
+							$filter_query = " FIND_IN_SET('".$request->{$col}."', u.".$attr.") > 0 ";
+						}
+					}
+					if(in_array($attr, $datetable)){
+						$filter_query = " (TO_DAYS(u.".$attr.") ".$sqlpart." TO_DAYS('".$startdate."')) "; $has_subq = true;
+					}
+				}
+			}
+			if(in_array($condition, array(7,8,9,10))){
+				if(!in_array($attr, $selectable) && !in_array($attr, $datetable) && !isEmptyString($value)){
+					$filter_query = " u.".$attr." ".str_replace('x', $value, $sqlpart)." "; $has_subq = true;
+				}
+			}
+			if(in_array($condition, array(11,12))){
+				$filter_query = " u.".$attr." ".$sqlpart." "; $has_subq = true;
+			}
+			if(in_array($condition, array(13,14))){
+				if(in_array($attr, $datetable)){
+					$filter_query = " (TO_DAYS(u.".$attr.") ".$sqlpart." TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."'))"; $has_subq = true;
+				} else {
+					$range_array = explode(',',str_replace(' ', '', trim($value))); 
+					if(count($range_array) == 2){
+						$filter_query = " u.".$attr." ".$sqlpart." '".$range_array[0]."' AND '".$range_array[1]."' "; $has_subq = true;
+					}
+				}
+			}
+			if(in_array($condition, array(15,16))){
+				$range_array = explode(',',str_replace(' ', '', trim($value))); 
+				$in_string = "('".implode("','", $range_array)."')";
+				$filter_query = " u.".$attr." ".str_replace('x', $in_string, $sqlpart)." "; $has_subq = true;
+			}
+			if($has_subq){
+				$filters_query .= " AND ".$filter_query.""; $rowcount ++;
+			}
+		}
+	}
+	if(!isEmptyString($filters_query)){
+		$where_query .= $filters_query;
+	}
+	// debugMessage($filters_query); // exit;
+	
+	$order = trim($request->order);
+	$order_query = " ORDER BY name DESC, u.id desc ";
+	
+	$sortcolumn = $request->sortby;
+	$sortorder = $request->sortorder;
+	if(!isEmptyString($sortcolumn) && !isEmptyString($sortorder)){
+		$order_query = " ORDER BY " . $sortcolumn. " " .$sortorder. " ";
+	}
+
+	$all_results_query = "SELECT u.*, u.id as uid, 
+	IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, 
+	IF(mc.displayname <> '', mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername)) as addedby, 
+	u.datecreated as mdatecreated, 
+	g.groupid as groupid, acg.name as `Group`
+	 FROM useraccount u
+	 left join useraccount mc on (u.createdby = mc.id)
+	 left join aclusergroup as g ON (u.id = g.userid) 
+	 inner join aclgroup as acg ON (u.type = acg.id)
+	".$where_query." GROUP BY u.id ".$order_query;
+	// debugMessage($all_results_query); // exit;
+	
+	$conn = Doctrine_Manager::connection(); 
+	$result = $conn->fetchAll($all_results_query); // debugMessage($result);
+	$has_no_data = count($result) == 0 ? true : false;
+	
+	$benefits = getBenefits();
+	$employeesstatuses = getDatavariables('EMPLOYEE_STATUS');
+	$departments = getDepartments();
+	$positions = getDatavariables('EMPLOYEE_POSITIONS');
+	$users = getUsers();
+	$payrolltypes = getPayrollTypes();
+	$ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
+	$shifts = getWorkShifts();
+	$salutations =  getDatavariables('SALUTATION');
+	$genders = array(1=>'Male',2=>'Female');
+	$maritalstatus = getDatavariables('MARITAL_STATUS_VALUES');
+	$contactrships = getDatavariables('CONTACT_RELATIONSHIPS');
+	$allusers = getUsers();
+	$weekdays = getShortDaysOfWeek();
+	$allstatuses = getUserStatus();
+	$allroles = getUserType();
+	$isdatatable = true;
+	
+	$title = $reporttitle;
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	$("#all").attr('checked', true);
+	$(".iscolumn").attr('checked', true);
+	$("#all").click(function(){				
+		if (this.checked == true) {			
+			$(".iscolumn").attr('checked', true);
+			$("#datatable tr td, #datatable thead.paginationheader th").removeClass("hidden").addClass("visible");
+		} else {			
+			$(".iscolumn").attr('checked', false);
+			$("#datatable tr td, #datatable thead.paginationheader th").removeClass("visible").addClass("hidden");
+		} 
+	});
+	
+	$(".iscolumn").click(function(){
+		var id = $(this).attr('id');
+		if (this.checked == true) {
+			$("#datatable tr td."+id+", #datatable thead.paginationheader th."+id).removeClass("hidden").addClass("visible");
+		} else {
+			$("#datatable tr td."+id+", #datatable thead.paginationheader th."+id).removeClass("visible").addClass("hidden");
+		}
+	});
+	
+	$("#columnsection").removeClass("visible").addClass("hidden");
+	$("#reportcontents").css({'margin-left':'0'});
+	$("#checkboxtoggle").click(function(){
+		if (this.checked == true) {
+			$("#all").attr('checked', true);
+			$("#columnsection").removeClass("hidden").addClass("visible");
+			$("#reportcontents").css({'margin-left':'150px'});
+		} else {
+			$("#columnsection").removeClass("visible").addClass("hidden");
+			$("#reportcontents").css({'margin-left':'0'});
+		}
+	});
+	
+	var dateable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($datetable); ?>'));
+	var selectable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($selectable); ?>'));
+	var attributes = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($attributes); ?>'));
+	
+	// alert(selectable); alert(dateable);
+	$(".selects, .dates, .ui-datepicker-trigger").addClass("hidden").hide();
+	$(".values").removeClass("hidden").show(); 
+	<?php for($i = 1; $i <=$maxfilters; $i++){ ?>
+		// alert(dateable);
+		$("#attr_<?php echo $i; ?>, #condition_<?php echo $i; ?>").change(function(){
+			var attribute = $("#attr_<?php echo $i; ?>").val(); // alert(attribute);
+			var cond = $("#condition_<?php echo $i; ?>").val(); 
+			$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+			if(!isEmptyString(attribute)){
+				// alert(selectable.indexOf(attribute)); alert(dateable.indexOf(attribute));
+				if(selectable.indexOf(attribute) == -1 && dateable.indexOf(attribute) == -1){
+					$("#value_<?php echo $i; ?>").removeClass("hidden").show();
+					$(".selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+					$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+					$("#condition_<?php echo $i; ?>").attr('readonly', false);
+					if(cond == '13' || cond == '14' || cond == '15' || cond == '16'){
+						if(cond == '13' || cond == '14'){
+							$("#value_<?php echo $i; ?>").attr('placeholder','Comma separated e.g 5,10');
+						}
+						if(cond == '15' || cond == '16'){
+							$("#value_<?php echo $i; ?>").attr('placeholder','Comma separated e.g 5,10,15,20');
+						}
+					} else {
+						$("#value_<?php echo $i; ?>").attr('placeholder','enter search value');
+					}
+				} else {
+					if(selectable.indexOf(attribute) >= 0 ){
+						$("#value_<?php echo $i; ?>, .selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+						$("#"+attribute+"_<?php echo $i; ?>").removeClass("hidden").show();
+						$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+						// $("#condition").val('1').attr('readonly', true);
+						disabledoptions = '3,4,5,6,7,8,9,10,13,14,15,16';
+						var fieldsarray = disabledoptions.replace(/ /g,'').split(',');
+						// alert(fieldsarray);
+						$.each(fieldsarray, function(index, value) {
+							$("#condition_<?php echo $i; ?> option:eq("+value+")").attr('disabled', true).addClass("disabledoption"); 
+						});
+					}
+					if(dateable.indexOf(attribute) >= 0){
+						$("#value_<?php echo $i; ?>, .selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+						$(".dates_<?php echo $i; ?>").removeClass("hidden").show();
+						$("#condition_<?php echo $i; ?>").attr('readonly', false);
+						
+						disabledoptions = '7,8,9,10,15,16';
+						var fieldsarray = disabledoptions.replace(/ /g,'').split(',');
+						// alert(fieldsarray);
+						$.each(fieldsarray, function(index, value) {
+							$("#condition_<?php echo $i; ?> option:eq("+value+")").attr('disabled', true).addClass("disabledoption"); 
+						});
+					} 
+				}
+			}
+		});
+		$("#attr_<?php echo $i; ?>, #condition_<?php echo $i; ?>").trigger("change");
+	<?php } ?>
+	
+	function getArrayFromJsonObject(obj){
+		var arr = [];
+		for(var x in obj){
+		  arr.push(obj[x]);
+		}
+		return arr;
+	}
+
+});
+</script>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+        <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" originalaction="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
+        <ul class="nav nav-tabs hideonprint">
+            <li class="<?php echo $action == 'employeestats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'employeestats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'employeestats' ? '' : $this->baseUrl('report/employeestats'); ?>">Summary Report</a></li>
+            <li class="<?php echo $action == 'employeedetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'employeedetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/employeedetails'); ?>">Detailed Report</a></li>
+        </ul>
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
+            </div>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                           	<li style="width:170px; font-size:12px !important;"><label class="bolded">Filter By</label></li>
+                            <li style="width:200px; font-size:12px !important;"><label class="bolded">Condition</label></li>
+                            <li style="width:250px; font-size:12px !important;"><label class="bolded">Values / Range</label></li>
+                        </ul>
+                        <div class="divider2"></div>
+                        <?php for($i = 1; $i <=$maxfilters; $i++){ ?>
+                        	<ul class="resetlist listactions <?php echo $i <= ($rowcount) ? 'visible_row_ref' : 'hidden_row_ref'; ?>" style="margin-bottom:0;">
+                        		<li style="width:170px;">
+									<?php
+                                        $dropdown = new Zend_Form_Element_Select('attr_'.$i,
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $attributes),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control","input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->{'attr_'.$i}); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li style="width:200px;">
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('condition_'.$i,
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $conditions),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control","input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->{'condition_'.$i}); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li style="width:250px;">
+                                    <input type="text" name="value_<?php echo $i; ?>" id="value_<?php echo $i; ?>" value="<?php echo $request->{'value_'.$i}; ?>" class="form-control values values_<?php echo $i; ?> input-sm" />
+                                    <span id="selects_<?php echo $i; ?>">
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('salutation_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $salutations),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'salutation_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('gender_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $genders),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'gender_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('maritalstatus_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $maritalstatus),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'maritalstatus_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('contactrshp_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $contactrships),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'contactrshp_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('position_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $positions),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'position_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('departmentid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $departments),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'departmentid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('empstatus_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $employeesstatuses),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'empstatus_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('managerid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $allusers),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'managerid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('workingdays_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $weekdays),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'workingdays_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('shift_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $shifts),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'shift_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('istimesheetuser_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), array(1=>'Yes',0 => 'No')),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'istimesheetuser_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('ratetype_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $ratetypes),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'ratetype_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('payrolltype_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $payrolltypes),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'payrolltype_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('payrolltype_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $payrolltypes),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'payrolltype_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('type_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $allroles),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'type_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('status_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $allstatuses),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'status_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('createdby_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $allusers),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'createdby_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                    </span>
+                                    <span id="dates_<?php echo $i; ?>">
+                                        <input type="text" name="startdate_<?php echo $i; ?>" id="startdate_<?php echo $i; ?>" class="form-control input-sm datefield dates dates_<?php echo $i; ?> ordinary readonly width100" value="<?php echo $request->{'startdate_'.$i}; ?>" placeholder="Start" />
+                                        <input name="enddate_<?php echo $i; ?>" id="enddate_<?php echo $i; ?>" type="text" class="form-control input-sm datefield dates dates_<?php echo $i; ?> ordinary readonly width100" placeholder="End" value="<?php echo $request->{'enddate_'.$i}; ?>" />
+                                    </span>
+                                </li>
+                               <li style="width:150px;">And</li>
+                        	</ul>
+                            <div class="divider1"></div>
+                        <?php } ?>
+                        <div class="divider5"></div>
+                        <a id="ref" class="addline gonowhere btn btn-primary btn-xs">Add</a>&nbsp
+                        <a id="clearfilters" class="blockanchor btn btn-default btn-xs" href="<?php echo $this->baseUrl("report/employees"); ?>">Clear</a>
+                        <div id="listpagerrors" class="lineblocked nowrapping"></div>
+                  	</div>
+                    <div class="col-sm-3">
+                    	<div class="divider20"></div>
+                        <button type="submit" class="btn btn-primary btn-sm" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button>
+                    	<input type="hidden" name="csv_text" id="csv_text" value="" />
+                    </div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+                    	<div class="box box-color box-bordered">
+							<div class="box-title condensed">
+								<h3><i class="fa fa-user"></i> <?php echo $subtitle; ?></h3>
+                                <div class="actions">
+                                	<a href="<?php echo $this->baseUrl($controller.'/'.$action); ?>" title="Reset and Clear all Filters" rel="tooltip"><i class="fa fa-refresh"></i></a> &nbsp;
+                                	<?php if ($acl->checkPermission($resource, ACTION_EXPORT)) { ?>
+                                        <button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</button>
+                                        <input type="hidden" name="csv_text" id="csv_text" value="" />
+                                    <?php } ?>
+                                	
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+                            	<?php if($isgenerated){ ?>
+									<?php if($has_no_data) { ?>
+                                        <div class="divider10"></div>
+                                        <div class="alert alert-warning">There are no records for this report</div>
+                                    <?php } else { ?>
+                                        <table class="table table-hover table-nomargin table-bordered dataTable dataTable-fixedcolumn dataTable-scroll-x dataTable-scroll-y dataTable-colvis" id="datatable">
+                                            <thead>
+                                                <tr>
+                                                    <th class="nowrapping firstname" style="width:100px;">Fist Name</th>
+                                                    <th class="nowrapping lastname" style="width:100px;">Last Name</th>
+                                                    <th class="nowrapping othername" style="width:100px;">Other Names</th>
+                                                    <th class="nowrapping displayname" style="width:150px;">Full Display Names</th>
+                                                    <th class="nowrapping salutation" style="width:80px;">Salutation</th>
+                                                    <th class="nowrapping id">ID No#</th>
+                                                    <th class="nowrapping gender" style="width:80px;">Gender</th>
+                                                    <th class="nowrapping maritalstatus" style="width:80px;">Marital Status</th>
+                                                    <th class="nowrapping dateofbirth" style="width:100px;">Date of Birth</th>
+                                                    
+                                                    <th class="nowrapping email" style="width:150px;">Email</th>
+                                                    <th class="nowrapping email2" style="width:150px;">Alt Email</th>
+                                                    <th class="nowrapping phone" style="width:100px;">Phone</th>
+                                                    <th class="nowrapping phone2" style="width:100px;">Alt Phone</th>
+                                                    <th class="nowrapping country" style="width:100px;">Nationality</th>
+                                                    <th class="nowrapping town" style="width:100px;">Town / City</th>
+                                                    <th class="nowrapping postalcode" style="width:100px;">Postal Code</th>
+                                                    <th class="nowrapping address1" style="width:200px;">Address</th>
+                                                    <th class="nowrapping linkedin" style="width:150px;">LinkedIn Url</th>
+                                                    <th class="nowrapping skype" style="width:100px;">Skype Username</th>
+                                                    <th class="nowrapping contactname" style="width:150px;">Next of Kin</th>
+                                                    <th class="nowrapping contactrshp" style="width:100px;">Relationship</th>
+                                                    <th class="nowrapping contactphone" style="width:100px;">Emergency Phone</th>
+                                                    <th class="nowrapping contactemail" style="width:150px;">Emergency Email</th>
+                                                    
+                                                    <th class="nowrapping departmentid" style="width:100px;">Department</th>
+                                                    <th class="nowrapping position" style="width:150px;">Position</th>
+                                                    <th class="nowrapping managerid" style="width:150px;">Manager / Supervisor</th>
+                                                    <th class="nowrapping empstatus" style="width:100px;">Contract Status</th>
+                                                    <th class="nowrapping startdate" style="width:100px;">Join / Start Date</th>
+                                                    <th class="nowrapping enddate" style="width:100px;">Contract End Date</th>
+                                                    <th class="nowrapping probationend" style="width:100px;">Probation End Date</th>
+                                                    <th class="nowrapping bio" style="width:80px;">Biography</th>
+                                                    <th class="nowrapping jobdescription" style="width:80px;">Job Description</th>
+                                                    <th class="nowrapping qualifications" style="width:80px;">Qualifications</th>
+                                                    <th class="nowrapping education" style="width:80px;">Education</th>
+                                                    <th class="nowrapping skills" style="width:80px;">Skills</th>
+                                                    <th class="nowrapping experience" style="width:80px;">Work Experience</th>
+                                                    <th class="nowrapping workingdays" style="width:200px;">Working Days</th>
+                                                    <th class="nowrapping shift" style="width:200px;">Current Work Shift</th>
+                                                    <th class="nowrapping maxhoursperday" style="width:125px;">Maximum Hours Per Day</th>
+                                                    <th class="nowrapping maxhoursperweek" style="width:125px;">Maximum Hours Per Week</th>
+                                                    <th class="nowrapping istimesheetuser" style="width:100px;">Submits Timesheets</th>
+                                                    <th class="nowrapping rate" style="width:125px;">Employee Rate (<?php echo $config->country->currencycode; ?>)</th>
+                                                    <th class="nowrapping ratetype" style="width:80px;">Rate Type</th>
+                                                    <th class="nowrapping payrolltype" style="width:125px;">Payroll Terms</th>
+                                                    
+                                                    <th class="nowrapping bankname" style="width:170px;">Name of Bank</th>
+                                                    <th class="nowrapping branchname" style="width:125px;">Branch</th>
+                                                    <th class="nowrapping accname" style="width:170px;">Account Name</th>
+                                                    <th class="nowrapping accno" style="width:100px;">Account Number</th>
+                                                    <th class="nowrapping nssfid" style="width:100px;">NSSF ID No#</th>
+                                                    <th class="nowrapping contributiontype" style="width:120px;">NSSF Contribn Type</th>
+                                                    <th class="nowrapping uratin" style="width:100px;">URA TIN No#</th>
+                                                    <th class="nowrapping idno" style="width:100px;">ID/Employee No#:</th>
+                                                    
+                                                    <th class="nowrapping type" style="width:125px;">User Type</th>
+                                                    <th class="nowrapping status" style="width:100px;">User Status</th>
+                                                    <th class="nowrapping username" style="width:100px;">Username</th>
+                                                    <th class="nowrapping datecreated" style="width:100px;">Input Date</th>
+                                                    <th class="nowrapping createdby" style="width:150px;">Input By</th>
+                                                    <th class="nowrapping activationdate" style="width:100px;">Activation Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+												<?php
+                                                    
+                                                    foreach($result as $line){
+                                                        $viewurl = $this->baseUrl('profile/view/id/'.encode($line['uid']));
+
+                                                        $daysofweek = ""; 
+                                                        if(!isEmptyString($line['workingdays'])){
+                                                            $listarray = array();
+                                                            $daysOfWeekArray = explode(',',preg_replace('!\s+!', '', trim($line['workingdays'])));
+                                                            foreach ($daysOfWeekArray as $value) {
+                                                                if(!isArrayKeyAnEmptyString($value, $weekdays)){
+                                                                    $listarray[] = $weekdays[$value];
+                                                                }
+                                                            }
+                                                            if(count($listarray) > 0){
+                                                                $daysofweek = createHTMLCommaListFromArray($listarray, ', ');
+                                                            }
+                                                        }
+                                                ?>
+                                                    <tr style="font-size:12px;">
+                                                        <td class="firstname"><?php echo $line['firstname']; ?></td>
+                                                        <td class="lastname"><?php echo $line['lastname']; ?></td>
+                                                        <td class="othername"><?php echo $line['othername']; ?></td>
+                                                        <td class="displayname"><?php echo $line['displayname']; ?></td>
+                                                        <td class="salutation"><?php echo isArrayKeyAnEmptyString($line['salutation'], $salutations) ? '' : $salutations[$line['salutation']]; ?></td>
+                                                        <td class="id"><?php echo 'U'.number_pad($line['uid'], 4); ?></td>
+                                                        <td class="gender"><?php echo getGenderText($line['gender']); ?></td>
+                                                        <td class="maritalstatus"><?php echo isArrayKeyAnEmptyString($line['maritalstatus'], $maritalstatus) ? '' : $maritalstatus[$line['maritalstatus']]; ?></td>
+                                                        <td class="dateofbirth"><?php echo changeMySQLDateToPageFormat($line['dateofbirth']); ?></td>
+                                                        
+                                                        <td class="email"><?php echo $line['email']; ?></td>
+                                                        <td class="email2"><?php echo $line['email2']; ?></td>
+                                                        <td class="phone"><?php echo $line['phone']; ?></td>
+                                                        <td class="phone2"><?php echo $line['phone2']; ?></td>
+                                                        <td class="country"><?php echo $line['country'] == 'UG' ? 'Uganda': ''; ?></td>
+                                                        <td class="town"><?php echo $line['town']; ?></td>
+                                                        <td class="postalcode"><?php echo $line['postalcode']; ?></td>
+                                                        <td class="address1"><?php echo $line['address1']; ?></td>
+                                                        <td class="linkedin"><?php echo $line['linkedin']; ?></td>
+                                                        <td class="skype"><?php echo $line['skype']; ?></td>
+                                                        <td class="contactname"><?php echo $line['contactname']; ?></td>
+                                                        <td class="contactrshp"><?php echo isArrayKeyAnEmptyString($line['contactrshp'], $contactrships) ? '' : $contactrships[$line['contactrshp']]; ?></td>
+                                                        <td class="contactphone"><?php echo $line['contactphone']; ?></td>
+                                                        <td class="contactemail"><?php echo $line['contactemail']; ?></td>
+                                                        
+                                                        <td class="departmentid"><?php echo isArrayKeyAnEmptyString($line['departmentid'], $departments) ? '' : $departments[$line['departmentid']]; ?></td>
+                                                        <td class="position"><?php echo isArrayKeyAnEmptyString($line['position'], $positions) ? '' : $positions[$line['position']]; ?></td>
+                                                        <td class="managerid"><?php echo isArrayKeyAnEmptyString($line['managerid'], $allusers) ? '' : $allusers[$line['managerid']]; ?></td>
+                                                        <td class="empstatus"><?php echo isArrayKeyAnEmptyString($line['empstatus'], $employeesstatuses) ? '' : $employeesstatuses[$line['empstatus']]; ?></td>
+                                                        <td class="startdate"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?></td>
+                                                        <td class="enddate"><?php echo changeMySQLDateToPageFormat($line['enddate']); ?></td>
+                                                        <td class="probationend"><?php echo changeMySQLDateToPageFormat($line['probationend']); ?></td>
+                                                        <td class="bio"><?php isEmptyString($line['bio']) ? '' : '<a class="gonowhere" title="'.$line['bio'].'">View</a>'; ?></td>
+                                                        <td class="jobdescription"><?php isEmptyString($line['jobdescription']) ? '' : '<a class="gonowhere" title="'.$line['jobdescription'].'">View</a>'; ?></td>
+                                                        <td class="qualifications"><?php isEmptyString($line['qualifications']) ? '' : '<a class="gonowhere" title="'.$line['qualifications'].'">View</a>'; ?></td>
+                                                        <td class="education"><?php isEmptyString($line['education']) ? '' : '<a class="gonowhere" title="'.$line['education'].'">View</a>'; ?></td>
+                                                        <td class="skills"><?php isEmptyString($line['skills']) ? '' : '<a class="gonowhere" title="'.$line['skills'].'">View</a>'; ?></td>
+                                                        <td class="experience"><?php isEmptyString($line['experience']) ? '' : '<a class="gonowhere" title="'.$line['experience'].'">View</a>'; ?></td>
+                                                        <td class="workingdays"><?php echo $daysofweek; ?></td>
+                                                        <td class="shift"><?php echo isArrayKeyAnEmptyString($line['shift'], $shifts) ? '' : $shifts[$line['shift']]; ?></td>
+                                                        <td class="maxhoursperday"><?php echo $line['maxhoursperday']; ?></td>
+                                                        <td class="maxhoursperweek"><?php echo $line['maxhoursperweek']; ?></td>
+                                                        <td class="istimesheetuser"><?php echo $line['istimesheetuser'] == 1 ? 'Yes' : 'No'; ?></td>
+                                                        <td class="rate rightalign"><?php echo formatMoneyOnly($line['rate']); ?></td>
+                                                        <td class="ratetype"><?php echo isArrayKeyAnEmptyString($line['ratetype'], $ratetypes) ? '--' : $ratetypes[$line['ratetype']]; ?></td>
+                                                        <td class="payrolltype"><?php echo isArrayKeyAnEmptyString($line['payrolltype'], $payrolltypes) ? '--' : $payrolltypes[$line['payrolltype']]; ?></td>
+                                                        
+                                                        <td class="bankname"><?php echo $line['bankname']; ?></td>
+                                                        <td class="branchname"><?php echo $line['branchname']; ?></td>
+                                                        <td class="accname"><?php echo $line['accname']; ?></td>
+                                                        <td class="accno"><?php echo $line['accno']; ?></td>
+                                                        <td class="nssfid"><?php echo $line['nssfid']; ?></td>
+                                                        <td class="contributiontype"><?php echo $line['contributiontype']; ?></td>
+                                                        <td class="uratin"><?php echo $line['uratin']; ?></td>
+                                                        <td class="idno"><?php echo $line['idno']; ?></td>
+                                                        
+                                                        <td class="type"><?php echo $line['Group']; ?></td>
+                                                        <td class="status"><?php echo isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; ?></td>
+                                                        <td class="username"><?php echo $line['username']; ?></td>
+                                                        <td class="datecreated"><?php echo formatDateAndTime($line['mdatecreated']); ?></td>
+                                                        <td class="createdby"><?php echo $line['addedby']; ?></td>
+                                                        <td class="activationdate"><?php echo formatDateAndTime($line['activationdate']); ?></td>
+                                                    </tr>
+                                                <?php } ?>
+                                            </tbody>
+                                        </table>
+                                    
+                                    <?php } ?>
+                                <?php } else { ?>
+                                    <label class="labeldescription noresults" style="font-size:16px !important;">Select reporting parameters to Generate</label>
+                                <?php } ?>
+                            </div>
+                     	</div>
+                    </div>
+              	</div>
+         	</div>
+      	</div>
+		</form>
+   	</div>
+</div>           
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

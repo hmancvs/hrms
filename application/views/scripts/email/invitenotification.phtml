@@ -2,7 +2,12 @@
 
 Dear <?php echo $this->firstname; ?>,<br /><br />
 
-You have been invited to activate your Account on the <?php echo $this->companyname; ?> <?php echo $this->appname; ?> platform.<br /><br />
+<?php if($this->type == 3){ ?>
+	Your company <b><?php echo $this->company; ?></b> has been successfully setup on <?php echo $this->appname; ?> and you have been invited to activate your Admin account to start automating your HR functions.<br /><br />
+<?php } else { ?>
+	You have been invited by <b><?php echo $this->company; ?></b> as an Employee. <br /><br />
+    
+<?php } ?>
 
 To activate your account, <a href="<?php echo $this->invitelink; ?>">click here</a> <br /><br /> or alternatively copy the activation link below and paste it in the address window of the browser :<br /><br />
 <?php echo $this->invitelink; ?><br /><br />

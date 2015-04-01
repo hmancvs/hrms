@@ -8,12 +8,21 @@
 			$ledger->setUserID($request->userid);
 		}
 		$ledger->setTrxnDate(date('Y-m-d'));
-		$ledger->setLedgerType(1);
-		$ledger->setTrxnType(1);
+		$ledgercat = 1;
+		if(!isEmptyString($request->ledgercat)){
+			$ledgercat = $request->ledgercat;
+		}
+		$ledger->setLedgerType($ledgercat);
+
+		$type = 1;
+		if(!isEmptyString($request->type)){
+			$type = $request->type;
+		}
+		$ledger->setTrxnType($type);
 		$ledger->setAmount('');
 		$ledger->setTimeoffLength('');
-		if($request->type == 2){
-			$ledger->setTrxnType(2);
+		if(!isEmptyString($request->trxndate)){
+			$ledger->setTrxnDate($request->trxndate);
 		}
 	} else { 
 		$ledger->populate(decode($request->id)); 
@@ -26,9 +35,11 @@
 	$timeoffs = getTimeoffTypes();
 	$timeoffoptions = getHoursDaysDropdown();
 ?>
+<?php require APPLICATION_PATH."/views/scripts/index/pgcjs.phtml"; ?>
+<!--<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/custom/jquery.form.min.js')); ?>"></script>-->
 <script>
 $(document).ready(function() {		
-	$("#indexform").validate({		
+	$(".popupdiv #indexform").validate({		
 		// define the validation rules one field at a time
 		rules: {
 			userid: "required",
@@ -67,114 +78,207 @@ $(document).ready(function() {
 		}
 	});
 	
-	$(".readonly").each(function(){
-		$(this).attr('readonly','readonly');
+	$("#trxntype_1").click(function(){
+		enableContainerByID('taxable_row');
 	});
-	$(".disabledfield").each(function(){
-		$(this).attr('readonly', true).attr('disabled', true);
+	$("#trxntype_2").click(function(){
+		disableContainerByID('taxable_row');
 	});
-	
-	var datepickerOpts = {
-		showOn: 'both', 
-		buttonImage: '<?php echo $this->baseUrl('images/calendar.png'); ?>', 
-		buttonImageOnly: true,
-		changeMonth: true,
-		changeYear: true,
-		minDate: '-<?php echo $config->dateandtime->mindate; ?>Y',
-		maxDate: '+<?php echo $config->dateandtime->maxdate; ?>Y',
-		dateFormat: '<?php echo $config->dateandtime->datepickerformat; ?>',
-		hideIfNoPrevNext: true,
-		showButtonPanel: true, 
-		currentText: 'Now'		
-	}; 
-	
-	var dateofbirthOpts = datepickerOpts;
-	var yearback = '<?php echo intval(date('Y'))-1995; ?>';
-	dateofbirthOpts.yearRange = "-"+yearback+":+3"; 
-	dateofbirthOpts.minDate = "-"+yearback+"Y";
-	datepickerOpts.maxDate = new Date("Dec 31, "+<?php echo intval(date('Y'))+3; ?>);
-	$(".ordinary").datepicker(dateofbirthOpts);
-	
+	<?php if($ledger->gettrxntype() == '1'){ ?>
+		enableContainerByID('taxable_row');
+	<?php } ?>
+	<?php if($ledger->gettrxntype() == '2'){ ?>
+		disableContainerByID('taxable_row');
+	<?php } ?>
+		
 	$("#ledgertype_1").click(function(){
 		enableContainerByClass('b_cash');
 		disableContainerByClass('b_time');
+		enableField("istaxable");
 	});
 	$("#ledgertype_2").click(function(){
 		enableContainerByClass('b_time');
 		disableContainerByClass('b_cash');
+		disableField("istaxable");
+		$("#istaxable").attr('checked', false);
 	});
 	<?php if($ledger->getledgertype() == '1'){ ?>
 		enableContainerByClass('b_cash');
 		disableContainerByClass('b_time');
+		enableField("istaxable");
 	<?php } ?>
 	<?php if($ledger->getledgertype() == '2'){ ?>
 		enableContainerByClass('b_time');
 		disableContainerByClass('b_cash');
+		disableField("istaxable");
+		$("#istaxable").attr('checked', false);
 	<?php } ?>
+	
+	$(".trxntype").change(function(){
+		var selectedVal = "";
+		var selected = $("input[type='radio'][name='trxntype']:checked"); 
+		if (selected.length > 0) {
+			selectedVal = selected.val();
+		}
+		// alert('=>'+selectedVal);
+		if(selectedVal == '1'){
+			enableField("istaxable");
+		} else {
+			disableField("istaxable");
+			$("#istaxable").attr('checked', false);
+		}
+	});
+	$(".trxntype, #istaxable").trigger("change");
+	$("#lengthtype_1").click(function(){
+		$("#lengthtype_2").attr('checked', false);
+	});
+	$("#lengthtype_2").click(function(){
+		$("#lengthtype_1").attr('checked', false);
+	});
+	
+	$("#indexform #userid").change(function(){
+		$("#uploadform #userid").val($(this).val());	
+	});
+	
+	var options = { 
+		target:   '#output',   // target element(s) to be updated with server response 
+		beforeSubmit:  beforeSubmit,  // pre-submit callback 
+		success:       afterSuccess,  // post-submit callback 
+		uploadProgress: OnProgress, //upload progress callback 
+		resetForm: true        // reset the form after successful submit 
+	}; 
+		
+	$("#FileInput").change(function(){
+		var filename = $(this).val(); // alert('file is '+filename);								
+		$("#filenamedisplay").html(filename);
+		// upload the file to the server
+		$("#uploadform").ajaxSubmit(options); 
+	});  
+	
+	$('#filenamedisplay').click(function(){
+		$("#FileInput").trigger('click');
+	});		
+	
+	$('#re-upload').click(function(){
+		$("#aftersave").hide().addClass('hidden');
+		$("#beforesave").show().removeClass('hidden');
+		$("#filename, #FileInput, #attachment, #attachment_display").val('');
+		$("#uploadresult, #output").html('');
+	});
+	
+	//function after succesful file upload (when server response)
+	function afterSuccess() {
+		$('#submit-btn').show(); //hide submit button
+		$('#loading-img').hide(); //hide submit button
+		$('#progressbox').delay(400).fadeOut(); //hide progress bar
+		$("#filenamedisplay").html('');
+		// alert($("#output").html()); return false;
+		var data = $.parseJSON($("#output").html());
+		// alert(data.msg);
+		if(data.result == 1){
+			$("#output, #FileInput_error, #filename_error ").hide();	
+			$('#uploadresult').html('<div class="divider5"></div><span class="font-green">Successfully uploaded!</span>').removeClass('hidden');
+			$("#indexform #filename").val(data.newfilename);
+			$("#attachment").val(data.oldfilename);
+			$("#filesize").val(data.filesize);
+			$("#attachment_display, #aftersave").show().removeClass('hidden');
+			$("#attachment_display").html(data.newfilename);
+			$("#beforesave").hide().addClass('hidden');
+		} else {
+			$("#uploadresult").html('Error in uploading file. Invalid format');	
+		}
+	}
+	
+	//function to check file size before uploading.
+	function beforeSubmit(){
+		//check whether browser fully supports all File API
+	   if (window.File && window.FileReader && window.FileList && window.Blob){
+			$('#loading-img').show(); //hide submit button
+			$("#output").html("");
+		} else {
+			//Output error to older unsupported browsers that doesn't support HTML5 File API
+			$("#output").html("Please upgrade your browser. File upload not supported at this time.");
+			return false;
+		}
+	}
+	
+	//progress bar function
+	function OnProgress(event, position, total, percentComplete){
+		//Progress bar
+		$('#progressbox').show();
+		$('#progressbar').width(percentComplete + '%') //update progressbar percent complete
+		$('#statustxt').html(percentComplete + '%'); //update status text
+		if(percentComplete > 50) {
+			$('#statustxt').css('color','#000'); //change status text to white after 50%
+		}
+	}
 });
 </script>
-<style>
-.modal-body {
-	padding-top: 10px;
-}
-</style>
 <div class="popupdiv">
-    <form id="indexform" class="form-horizontal profile" role="form" method="post">
-        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
-            <input name="entityname" id="entityname" type="hidden" value="Ledger" />
-            <input type="hidden" id="id" name="id" value="<?php echo encode($ledger->getID()); ?>" />
-            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" /> 
-            <input type="hidden" id="status" name="status" value="<?php echo $ledger->getStatus(); ?>" /> 
-            <div class="panel-body well-sm" style="min-height:150px;">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-12 paddingleft10">
-                    	<div class="form-group">
-                            <label class="col-md-3 control-label">Employee: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                            	<?php
-									$allvalues = getUsers();
-									$dropdown = new Zend_Form_Element_Select('userid',
-														array(
-															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
-															'view' => new Zend_View(),
-															'decorators' => array('ViewHelper'),
-															'class' => array('form-control','input-sm','width200')
-														)
-									);  
-									$dropdown->setValue($ledger->getUserID()); 
-									echo $dropdown->render();
-								?><div id="userid_error"></div>
+    <fieldset class="fieldsetcontainer" style="margin-bottom:0; margin-top:-8px;">
+        <div class="panel-body well-sm" style="min-height:150px;">
+            <div class="row-fluid marginleft5">
+                <div class="col-sm-12 paddingleft10">
+                    <form id="indexform" class="form-horizontal" method="post">
+                        <input name="entityname" id="entityname" type="hidden" value="Ledger" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($ledger->getID()); ?>" />
+                        <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" /> 
+                        <input type="hidden" id="status" name="status" value="<?php echo $ledger->getStatus(); ?>" /> 
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Employee: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <?php
+                                    $allvalues = getUsers();
+                                    $dropdown = new Zend_Form_Element_Select('userid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','width200','chosen-select')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($ledger->getUserID()); 
+                                    echo $dropdown->render();
+                                ?><div id="userid_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-3 control-label">Transaction Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                            	<input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="trxndate" id="trxndate" value="<?php echo changeMySQLDateToPageFormat($ledger->gettrxndate()); ?>" /><div id="trxndate_error"></div>
+                            <label class="col-sm-4 control-label">Transaction Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="trxndate" id="trxndate" value="<?php echo changeMySQLDateToPageFormat($ledger->gettrxndate()); ?>" /><div id="trxndate_error"></div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Transaction Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                             	<?php foreach($trxtypes as $key => $value){ ?>
-                             		<label class="radio radio-inline"><input type="radio" name="trxntype" id="trxntype_<?php echo $key; ?>" class="<?php echo $ledger->gettrxntype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->gettrxntype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo $value; ?> &nbsp;</label>
-                                <?php } ?>
-                                <div id="trxntype_error"></div>
+                        <?php if(isEmptyString($request->type)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Transaction Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                    <?php foreach($trxtypes as $key => $value){ ?>
+                                        <label class="radio radio-inline"><input type="radio" name="trxntype" id="trxntype_<?php echo $key; ?>" class="trxntype <?php echo $ledger->gettrxntype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->gettrxntype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo $value; ?> &nbsp;</label>
+                                    <?php } ?>
+                                    <div id="trxntype_error"></div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Benefit Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                            	<?php foreach($benefittypes as $key => $value){ ?>
-                             		<label class="radio radio-inline"><input type="radio" name="ledgertype" id="ledgertype_<?php echo $key; ?>" class="<?php echo $ledger->getledgertype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->getledgertype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo str_replace('Benefit', '', $value); ?> &nbsp;</label>
-                                <?php } ?>
-                                <div id="ledgertype_error"></div>
+                        <?php } else { ?>
+                        	<input type="hidden" id="trxntype" name="trxntype" value="<?php echo $ledger->gettrxntype(); ?>" /> 
+                        <?php } ?>
+                        <?php if(isEmptyString($request->ledgercat)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Benefit Type: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                    <?php foreach($benefittypes as $key => $value){ ?>
+                                        <label class="radio radio-inline"><input type="radio" name="ledgertype" id="ledgertype_<?php echo $key; ?>" class="<?php echo $ledger->getledgertype() == $key ? 1 : 0; ?>" value="<?php echo $key; ?>" <?php echo $ledger->getledgertype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo str_replace('Benefit', '', $value); ?> &nbsp;</label>
+                                    <?php } ?>
+                                    <div id="ledgertype_error"></div>
+                                </div>
                             </div>
-                        </div>
+                        <?php } else { ?>
+                        	<input type="hidden" id="ledgertype" name="ledgertype" value="<?php echo $ledger->getledgertype(); ?>" /> 
+                        <?php } ?>
                         <div class="form-group">
-                            <label class="col-md-3 control-label">Category: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                            	<span id="benefit_cash" class="b_cash">
-									<?php
+                            <label class="col-sm-4 control-label">Category: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <span id="benefit_cash" class="b_cash">
+                                    <?php
                                         $dropdown = new Zend_Form_Element_Select('benefitid',
                                                             array(
                                                                 'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $benefits),
@@ -186,9 +290,9 @@ $(document).ready(function() {
                                         $dropdown->setValue($ledger->getBenefitID()); 
                                         echo $dropdown->render();
                                     ?>
-                               	</span>
+                                </span>
                                 <span id="benefit_timeoff" class="b_time">
-                                	<?php
+                                    <?php
                                         $dropdown = new Zend_Form_Element_Select('timeoffid',
                                                             array(
                                                                 'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffs),
@@ -205,33 +309,74 @@ $(document).ready(function() {
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-3 control-label">Value: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                            	<span class="b_cash">
+                            <label class="col-sm-4 control-label">Value: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <span class="b_cash">
                                     <input type="text" name="amount" id="amount" class="form-control input-sm isnumber centeralign width100 inline" value="<?php echo $ledger->getAmount(); ?>" />
                                     &nbsp; (<?php echo $config->country->currencycode; ?> Amount)
                                 </span>
                                 <span class="b_time">
-                                	<input type="text" name="timeofflength" id="timeofflength" class="form-control input-sm centeralign isdecimal b_time width80 inline" value="<?php echo $ledger->getTimeoffLength(); ?>" />&nbsp; 
-                                    <?php foreach($timeoffoptions as $key => $value){ ?>
-                                        <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype_<?php echo $key; ?>" id="lengthtype_<?php echo $key; ?>" class="<?php echo $ledger->getlengthtype() == $key ? 1 : 0; ?>" value="1" <?php echo $ledger->getlengthtype() == $key ? 'checked="checked"' : ''; ?> /> <?php echo $value; ?> &nbsp;</label>
-                                    <?php } ?>
-                               	</span>
+                                    <input type="text" name="timeofflength" id="timeofflength" class="form-control input-sm centeralign isdecimal b_time width80 inline" value="<?php echo $ledger->getTimeoffLength(); ?>" />&nbsp; 
+                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_1" value="1" <?php echo $ledger->getlengthtype() == 1 ? 'checked="checked"' : ''; ?> /> <?php echo $timeoffoptions[1]; ?> &nbsp;</label>
+                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_2" value="2" <?php echo $ledger->getlengthtype() == 2 ? 'checked="checked"' : ''; ?> /> <?php echo $timeoffoptions[2]; ?> &nbsp;</label>
+                                </span>
                                 <div id="amount_error"></div><div id="timeofflength_error"></div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Remarks: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                             	<textarea name="remarks" id="description" class="form-control input-sm expanding"><?php echo $ledger->getRemarks(); ?></textarea>
-                                <div id="remarks_error"></div>        
+                        <div class="form-group" id="taxable_row">
+                            <label class="col-sm-4 control-label"></label>
+                            <div class="col-sm-8">
+                                <label class="checkbox checkbox-inline"><input type="checkbox" id="istaxable" name="istaxable" <?php echo $ledger->getistaxable() == 1 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Click to enable or disable taxable Credit benefits" /> &nbsp; Is Taxable</label>
                             </div>
                         </div>
-                    </div>
-               	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Remarks: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <textarea name="remarks" id="description" class="form-control input-sm expanding"><?php echo $ledger->getRemarks(); ?></textarea>
+                                <div id="remarks_error"></div>        
+                                <input type="text" name="filename" id="filename" class="hidden" value=">" />
+	                            <input type="hidden" name="attachment" id="attachment" value="" />
+                            </div>
+                        </div>
+                    </form> 
+                    <form id="uploadform" class="form-horizontal profile" role="form" action="<?php echo $this->baseUrl('ledger/upload'); ?>" method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="userid" id="userid" value="<?php echo $ledger->getUserID(); ?>" />
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Attachment:</label>
+                            <div class="col-sm-8">
+                                <div id="profilephoto_error"></div>
+                                <input type="text" name="filename" id="filename" value="" style="border:1px solid #fff; height:1px; padding:0; background:none; border-style:none; box-shadow:none;" />
+                                <div id="uploadarea" style="margin-bottom:10px;">
+                                    <label class="blocked" style="font-size:10px;">Upload an a file (Max size <?php echo formatBytes($config->uploads->docmaximumfilesize); ?>)</label>
+                                    <div id="beforesave">
+                                        <div class="fileinput-holder input-group col-sm-8" style="padding-left:0;">
+                                            <div id="filenamedisplay" style="cursor: text; text-overflow: ellipsis; " class="fileinput-preview uneditable-input form-control">No file selected...</div>
+                                            <div class="input-group-btn">
+                                                <span style="overflow: hidden; position: relative; cursor: pointer; margin:0;" class="fileinput-btn btn btn-default">Browse...
+                                                    <input type="file" name="FileInput" id="FileInput" class="form-control inline" data-style="fileinput" style="position: absolute; top: 0px; right: 0px; margin: 0px; cursor: pointer; font-size: 99px; opacity: 0;" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-2 padding0">
+                                            <img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" id="loading-img" style="display:none;" />
+                                        </div>                                                    	
+                                    </div>
+                                    <div id="aftersave" class="hidden">
+                                        <div class="col-sm-12" style="padding-left:0;"><span id="attachment_display"></span></div>
+                                        <button type="button" id="re-upload" class="btn btn-default btn-xs">Re-upload</button>
+                                    </div>
+                                    <div class="divider5"></div>
+                                    <div id="progressbox"><div id="progressbar"></div><div id="statustxt">0%</div></div>
+                                    <div id="output"></div><div id="uploadresult" class="hidden"></div>
+                                    <div id="filename_error"></div><div id="FileInput_error"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-      	</fieldset>
-    </form>
+        </div>
+    </fieldset>
 </div>
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';

@@ -91,14 +91,14 @@ $(document).ready(function() {
 	});
 	
 	$("#filter").click(function(e){
-		$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
+		// $.blockUI({ message: '<?php //echo $blockcontent; ?>'}); 
 		return true;
 	});	
 	
 });
 </script>
 <div class="row margin0">
-    <div class="col-md-12 padding0">
+    <div class="col-sm-12 padding0">
         <form class="form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/page/smsoutbound"); ?>" method="get" id="reportform">
         	<?php if ($sessionhaserror) { ?>
             <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
@@ -108,7 +108,7 @@ $(document).ready(function() {
             <?php } ?>
             <div class="row-fluid clearfix whitebg">
             	<div class="divider10"></div>
-                <div class="col-md-9">
+                <div class="col-sm-9">
                     <ul class="listfilter">
                     	<li><a href="<?php echo $this->baseUrl('report/dashboard'); ?>" class="btn btn-default btn-sm noimgbutton"><i class="glyphicon glyphicon-arrow-left"></i></a></li>
                         <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
@@ -140,7 +140,7 @@ $(document).ready(function() {
             <div class="divider10"></div>
             <div id="list_error" class="maxwidth"></div>
     		<div class="row row-bg" style="margin-bottom:10px;">
-                <div class="col-sm-12 col-md-12">
+                <div class="col-sm-12 col-sm-12">
                     <div class="widget box makerelative">
                         <div class="widget-header">
                             <h4 class="widgettitle blocked maxwidth"><?php echo $subtitle; ?>

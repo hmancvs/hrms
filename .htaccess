@@ -3,7 +3,7 @@ RewriteEngine On
 # the base for rewriting the files, this is relative to the document root being used 
 # for local environment use the name of the project folder 
 # RewriteBase /
-RewriteBase /hrms
+RewriteBase /hrm
 
 # BEGIN Compress text files
 <IfModule mod_deflate.c>

@@ -11,29 +11,30 @@
 	$description = '';
 	$listurl = $this->baseUrl("timeoff/list");
 	$listitems  = "Timeoff Requests";
+	$pagetitle = "Request Details";
 	$title = 'Timeoff Request';
 	$icon = 'glyphicon glyphicon-time';
 	
 	$allowedit = false;
 	if($acl->checkPermission($resource, ACTION_EDIT)){
-		if($loggedinuser->getID() == $timeoff->getUserID() && $timeoff->isPending()){
+		if($timeoff->isPending() || $acl->checkPermission($resource, ACTION_APPROVE)){
 			$allowedit = true;
 		}
 	}
 	
 	$allowdelete = false;
 	if($acl->checkPermission($resource, ACTION_DELETE)){
-		if($loggedinuser->getID() == $timeoff->getUserID() && $timeoff->isPending()){
+		if($timeoff->isPending()){
 			$allowdelete = true;
 		}
 	}
 	$allowapprove = false;
-	if($acl->checkPermission($resource, ACTION_APPROVE) && ($timeoff->isPending()) && $timeoff->getUserID() != $loggedinuser->getID()){
+	if($acl->checkPermission($resource, ACTION_APPROVE) && ($timeoff->isPending())){
 		$allowapprove = true;
 	}
 	
 	$allowreject = false;
-	if($acl->checkPermission($resource, ACTION_APPROVE) && ($timeoff->isPending() || $timeoff->isApproved()) && $timeoff->getUserID() != $loggedinuser->getID()){
+	if($acl->checkPermission($resource, ACTION_APPROVE) && ($timeoff->isPending() || $timeoff->isApproved())){
 		$allowreject = true;
 	}
 	
@@ -44,154 +45,107 @@
 	if(!isArrayKeyAnEmptyString($timeoff->getdurationtype(), $timeoffoptions)){
 		$unit = ' ('.$timeoffoptions[$timeoff->getdurationtype()].')';
 	}
+	
+	$pageid = "timeoff_index";
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo $homedir.'Timeoff / Request Details'; ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title.' / '.$pagetitle; ?>');
 	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 	
 });
 </script>
-<div class="row-fluid margin0 view">
-    <div class="col-md-12 padding0">
-    	<div class="headerbox">
-            <table class="table border0 nohover margin0">                       
-                <tr>		                    
-                    <td class="padding2">
-                    	<ul class="listfilter floatright" style="margin-bottom:10px;">
-                        	<?php if($allowapprove) { ?>
-                            	<li><a class="btn btn-success confirm-dialog inline" title="Approve Request" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$timeoff->getID().'/status/1/successurl/'.encode($this->viewurl).'/successmessage/leave_approve_success'); ?>" message="Are you sure you want to Approve <?php echo $timeoff->getDuration().$unit; ?> requested by <br><?php echo $timeoff->getUser()->getName(); ?> from <?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?> to <?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?>"><i class="glyphicon glyphicon-ok"></i> Approve</a></li>
-                            <?php } ?>
-							<?php if($allowreject) { ?>
-                            	<li><a class="btn btn-default confirm-prompt inline" title="Reject Request" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$timeoff->getID().'/status/2/successurl/'.encode($this->viewurl).'/successmessage/leave_rejected_success'); ?>" message="Reject <?php echo $timeoff->getDuration().$unit; ?> requested by <?php echo $timeoff->getUser()->getName(); ?>. <br>Please specify Reason/Comment to continue"><i class="glyphicon glyphicon-remove"></i> Reject</a></li>
-                            <?php } ?>
-							<?php if($allowedit) { ?>	
-                                <li><a class="btn btn-primary btn-sm blockanchor" title="Update" href="<?php echo $this->baseUrl('timeoff/index/id/'.encode($timeoff->getID())); ?>" id="update"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a></li>
-                            <?php } ?>
-                            <?php if($acl->checkPermission($resource, ACTION_LIST)) { ?>
-                                <li><a class="btn btn-default noimgbutton blockanchor" title="Leave History" href="<?php echo $listurl; ?>"><i class="glyphicon glyphicon-list"></i></a></li>
-                            <?php } ?>
-                            <?php if($allowdelete) { ?>	
-                                <li><a class="btn btn-danger noimgbutton deleteline gonowhere" action="<?php echo $this->baseUrl('timeoff/delete/id/'.encode($timeoff->getID())."/entityname/Timeoff/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon glyphicon-trash"></i></a></li>
-                            <?php } ?>
-                        </ul>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-    <?php if($sessionhaserror) { ?>
-        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-    <?php } ?>
-    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-    <?php } ?>
-    <div class="contentcontainer clearfix">
-    	<form id="viewform" class="form-horizontal" role="form" method="get">
-        	<div class="row-fluid margin0">
-            	<div class="col-md-12">
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Summary</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label"><?php echo $this->translate('leave_typeid_label'); ?>: </label>
-                                            <div class="col-sm-10"><?php echo $timeoff->getType()->getName(); ?></div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-md-2 control-label"><?php echo $this->translate('leave_description_label'); ?>:</label>
-                                            <div class="col-md-6"><?php echo nl2br($timeoff->getRemarks()); ?></div>
-                                        </div>
-                                    </div>
-                                </div>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+		<div class="col-sm-8">
+        	<div class="box box-color box-bordered">
+                <div class="box-title">
+                    <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
+                    <div class="actions">
+                        <?php if($allowapprove) { ?>
+                            <a class="xbtn confirm-dialog inline" title="Approve Request" rel="tooltip" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$timeoff->getID().'/status/1/successurl/'.encode($this->viewurl).'/successmessage/leave_approve_success'); ?>" message="Are you sure you want to Approve <?php echo $timeoff->getDuration().$unit; ?> requested by <br><?php echo $timeoff->getUser()->getName(); ?> from <?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?> to <?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?>"><i class="fa fa-check"></i> Approve</a> &nbsp;
+                        <?php } ?>
+                        <?php if($allowreject) { ?>
+                            <a class="xbtn confirm-prompt inline" title="Reject Request" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$timeoff->getID().'/status/2/successurl/'.encode($this->viewurl).'/successmessage/leave_rejected_success'); ?>" rel="tooltip" message="Reject <?php echo $timeoff->getDuration().$unit; ?> requested by <?php echo $timeoff->getUser()->getName(); ?>. <br>Please specify Reason/Comment to continue"><i class="fa fa-remove"></i> Reject</a> &nbsp;
+                        <?php } ?>
+                        <?php if($allowedit) { ?>	
+                            <a class="xxbtn" title="Update" rel="tooltip" href="<?php echo $this->baseUrl('timeoff/index/id/'.encode($timeoff->getID())); ?>" id="update"><i class="fa fa-edit"></i>&nbsp; Update</a> &nbsp;
+                        <?php } ?>
+                        <?php if($allowdelete) { ?>	
+                            <a class="xbtn deleteline" action="<?php echo $this->baseUrl('timeoff/delete/id/'.encode($timeoff->getID())."/entityname/Timeoff/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="fa fa-times"></i></a> &nbsp;
+                        <?php } ?>
+                        <?php if($acl->checkPermission($resource, ACTION_LIST)) { ?>
+                            <a class="xbtn" title="Leave History" rel="tooltip" href="<?php echo $listurl; ?>"><i class="fa fa-list"></i></a> &nbsp;
+                        <?php } ?>
+                    </div>
+                </div>
+                <div class="box-content nopadding">
+                    <form class="form-horizontal form-bordered" method="get" id="indexform">
+                        <?php if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
+                      		<div class="form-group">
+                                <label class="col-sm-3 control-label">Employee: </label>
+                                <div class="col-sm-9"><?php echo $timeoff->getUser()->getName(); ?></div>
+                            </div>
+                        <?php } ?>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('leave_typeid_label'); ?>: </label>
+                            <div class="col-sm-9"><?php echo $timeoff->getType()->getName(); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $this->translate('leave_description_label'); ?>:</label>
+                            <div class="col-sm-9"><?php echo nl2br($timeoff->getRemarks()); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Start Date/Time:</label>
+                            <div class="col-sm-9"><?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Time Requested: </label>
+                            <div class="col-sm-9">
+                                <?php echo $timeoff->getDuration().$unit; ?>
                             </div>
                         </div>
-               		</fieldset>
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Duration</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Start Date/Time:</label>
-                                            <div class="col-sm-10"><?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?> &nbsp; <?php echo date("h:i A", strtotime($timeoff->getstarttime())); ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">Time Requested: </label>
-                                            <div class="col-sm-10">
-                                            	<?php echo $timeoff->getDuration().$unit; ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">End Date/Time: </label>
-                                            <div class="col-sm-10">
-                                            	<?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?> &nbsp; <?php echo date("h:i A", strtotime($timeoff->getendtime())); ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label class="col-sm-2 control-label">Return Date/Time: </label>
-                                            <div class="col-sm-10">
-												<?php echo changeMySQLDateToPageFormat($timeoff->getreturndate()); ?> &nbsp; <?php echo date("h:i A", strtotime($timeoff->getreturntime())); ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">End Date/Time: </label>
+                            <div class="col-sm-9"><?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Return Date/Time: </label>
+                            <div class="col-sm-9"><?php echo changeMySQLDateToPageFormat($timeoff->getreturndate()); ?></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Date Submitted: </label>
+                            <div class="col-sm-9">
+                                <?php echo formatDateAndTime($timeoff->getdatecreated()); ?>
                             </div>
                         </div>
-                    </fieldset>
-                    <fieldset class="fieldsetcontainer">
-                        <legend>Status Details</legend>
-                        <div class="panel-body well-sm">
-                            <div class="col-md-12">
-                            	<div class="row-fluid margin">
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Date Submitted: </label>
-                                            <div class="col-sm-10">
-												<?php echo formatDateAndTime($timeoff->getdatecreated()); ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                	<div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Current Status: </label>
-                                            <div class="col-sm-10">
-												<?php echo isArrayKeyAnEmptyString($timeoff->getstatus(), $timeoffstatuses) ? '' : $timeoffstatuses[$timeoff->getstatus()]; ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label">Date <?php echo $timeoff->isRejected() ? 'Rejected' : 'Approved'; ?>:</label>
-                                            <div class="col-sm-10">
-												<?php echo isEmptyString($timeoff->getdateapproved()) ? '--' : formatDateAndTime($timeoff->getdateapproved()); ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12 paddingleft0">
-                                    	<div class="form-group">
-                                            <label class="col-sm-2 control-label"><?php echo $timeoff->isRejected() ? 'Rejected' : 'Approved'; ?> By:</label>
-                                            <div class="col-sm-10">
-												<?php echo isEmptyString($timeoff->getApprovedByID()) ? '--' : $timeoff->getApprover()->getName(); ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                         	</div>
-                       	</div>
-                    </fieldset>
-              	</div>
-        	</div>
-		</form>
-	</div>                   
-</div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Current Status: </label>
+                            <div class="col-sm-9">
+                                <?php echo isArrayKeyAnEmptyString($timeoff->getstatus(), $timeoffstatuses) ? '' : $timeoffstatuses[$timeoff->getstatus()]; ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Date <?php echo $timeoff->isRejected() ? 'Rejected' : 'Approved'; ?>:</label>
+                            <div class="col-sm-9">
+                                <?php echo isEmptyString($timeoff->getdateapproved()) ? '--' : formatDateAndTime($timeoff->getdateapproved()); ?>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"><?php echo $timeoff->isRejected() ? 'Rejected' : 'Approved'; ?> By:</label>
+                            <div class="col-sm-9">
+                                <?php echo isEmptyString($timeoff->getApprovedByID()) ? '--' : $timeoff->getApprover()->getName(); ?>
+                            </div>
+                        </div>
+                    </form>
+               	</div>
+         	</div>
+      	</div>
+ 	</div>
+</div> 
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

@@ -31,7 +31,7 @@
 	# set the search columns to be used on this list
 	$paginate->setSearchColumns(array("u.firstname","u.lastname","u.othername","u.displayname","u.email","u.phone","u.phone2"));
 	$paginate->setFilterColumns(array());
-	$paginate->setItemCountPerPage("50");
+	$paginate->setItemCountPerPage("ALL");
 	
 	# define the letter to be clicked to ease navigation 
 	$where_query = " WHERE u.id <> '' ";
@@ -93,6 +93,17 @@
 		$where_query .= " AND u.createdby = '".$profilerid."' ";
 		$allowclear = true;
 	}
+	$company_query = "";
+	if(!isEmptyString($request->companyid)){
+		$companyid = $request->companyid;
+	}
+	if(!isEmptyString($companyid)){
+		if($companyid == DEFAULT_COMPANYID){
+			$where_query .= " AND (u.companyid = '".$companyid."' OR u.companyid is null) ";
+		} else {
+			$where_query .= " AND u.companyid = '".$companyid."' ";
+		}
+	}
 	
 	$order = trim($request->order);
 	$order_query = " ORDER BY u.datecreated DESC, u.id desc ";
@@ -119,22 +130,13 @@
 		 left join aclusergroup as g ON (u.id = g.userid) 
 		 inner join aclgroup as acg ON (u.type = acg.id)
 	 ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY u.id ".$order_query;
-	// debugMessage($all_results_query); exit;
+	// debugMessage($all_results_query); // exit;
 	
-	// determine total number of records found
-	$conn = Doctrine_Manager::connection(); 
-	$count_query = "SELECT count(u.id) as total FROM useraccount u
-	left join useraccount mc on (u.createdby = mc.id)
-	left join aclusergroup as g ON (u.id = g.userid) 
-	left join aclgroup as acg ON (g.groupid = acg.id)
-	".$where_query." ".$paginate->getSearchAndFilterSQL(); // debugMessage($count_query); exit;
-	$total = $conn->fetchOne($count_query);
-	$paginate->setItemCount($total); //debugMessage('>> '.$total);	
+	$paginate->setItemCountFromSQLQuery($all_results_query);
 	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
-	
 	$conn = Doctrine_Manager::connection(); 
 	$result = $conn->fetchAll($current_results_query);
-	$has_no_data = (count($result) == 0) ? true : false;
+	$has_no_data = (count($result) == 0) ? true : false; 
 	
 	$listurl = $this->baseUrl('profile/list');
 	$addurl = $this->baseUrl($controller);
@@ -143,7 +145,7 @@
 	$moduleitem = "Employee";
 	$description = '';
 	$icon = 'glyphicon glyphicon-user';
-	$resourcename = 'User Account';
+	$resource = 'User Account';
 	$salutations =  getDatavariables('SALUTATION'); 
 	$employeesstatuses = getDatavariables('EMPLOYEE_STATUS');
 	$departments = getDepartments();
@@ -158,384 +160,196 @@
 		$('.desclabel').html('<?php echo $description; ?>');
 		$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 		
-		var dateoptions = datepickerOpts;
-		var startfrom = '<?php echo date('Y'); ?>';
-		dateoptions.yearRange = "-<?php echo date('Y')-2010; ?>:-0"; 
-		dateoptions.minDate = "-<?php echo date('Y'); ?>Y";
-		dateoptions.maxDate = new Date("Dec 31, "+startfrom);	
-		$("#startdate, #enddate").datepicker(dateoptions);
-		
-		// export list to excel
-		$(".submitexcel").click(function(e){
-			<?php if($style == 1){ ?>
-				$("#exporttrigger").val('1');
-				$("#style").val('2');
-				$("#listform").submit();
-			<?php } else { ?>
-				e.preventDefault();
-				var csv_value = $('#datatable').table2CSV({delivery:'value'});
-				var decoded_value = base64_encode(csv_value);
-				$("#csv_text").val(decoded_value);
-				$("#listform").attr('action', '<?php echo $this->baseUrl('download/excel'); ?>').attr('method', 'post').submit();
-				// on submit reset the form parameters to previous definition
-				$("#listform").attr('action', '<?php echo $this->baseUrl($controller."/listsearch"); ?>').attr('method', 'get');
-				$("#csv_text").val('');
-				return true;
-			<?php } ?>
-		});
-		
-		<?php if($request->exporttrigger == '1'){ ?>
-			$(".submitexcel").trigger('click');
-		<?php } ?>
-		
-		$("#filter").click(function(e){
-			$.blockUI({ message: '<?php echo $blockcontent; ?>'}); 
-	        return true;
-		});	
 	});
 </script>
-<style>
-.peoplelist .peoplewrapper {
-	height:130px;
-}
-.listfilter {
-    margin-bottom: 0;
-}
-</style>
-<div class="row margin0">
-    <div class="col-md-12 padding0">
-    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl($controller."/listsearch"); ?>" method="get" id="listform">
-		<?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="row-fluid clearfix">
-        	<div class="col-md-9 paddingleft0">
-            	<ul class="listfilter blocked">
-                    <li>
-                        <?php
-                            $dropdown = new Zend_Form_Element_Select('departmentid',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Departments'), $departments),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('departmentid')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                        <?php
-                            $dropdown = new Zend_Form_Element_Select('position',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Positions'), $positions),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control",'chosen-select'),
-													'style' => 'width:180px;'
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('position')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                        <?php
-                            $dropdown = new Zend_Form_Element_Select('empstatus',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Contract Statuses'), $employeesstatuses),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'chosen-select'),
-													'style' => 'width:170px;'
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('empstatus')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                        <?php
-                            $dropdown = new Zend_Form_Element_Select('type',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All User Types'), $allroles),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('type')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                    	<button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
-                    </li>
-                </ul>
-                <ul class="listfilter blocked">
-                	<?php if ($acl->checkPermission("User Account", ACTION_CREATE)) { ?>
-                        <li><a title="New <?php echo $moduleitem; ?>" class="btn btn-primary btn-sm blockanchor" href="<?php echo $addurl; ?>"><i class="glyphicon glyphicon-plus"></i> New <?php echo $moduleitem; ?></a></li>
-                    <?php } ?>
-                    <li>
-                        <?php
-                            $allstatus = getUserStatus();
-                            $dropdown = new Zend_Form_Element_Select('status',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All User Statuses'), $allstatus),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('status')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                        <?php
-                            $genders = array(1=>'Male',2=>'Female');
-                            $dropdown = new Zend_Form_Element_Select('gender',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Genders'), $genders),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("xautofilter", "form-control", 'width150', 'chosen-select')
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('gender')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <li>
-                    	<button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="glyphicon glyphicon-filter"></i> Filter</button>
-                    </li>
-                </ul>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+    	<form class="form-horizontal" action="<?php echo $this->baseUrl($controller."/listsearch"); ?>" method="get" id="listform">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
             </div>
-            <div class="col-md-3 padding0">
-            	<div class="col-md-12 padding0"><input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><button type="submit" class="btn btn-default blockanchor searchbtn"><i class="glyphicon glyphicon-search"></i></button></div>
-            	<input type="hidden" name="letter" id="letter" value="<?php echo $request->getParam('letter'); ?>" />
-                <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
-                <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
-                <?php if($allowclear){ ?>
-                    <a href="<?php echo $listurl; ?>" title="Clear Search and Filters" class="reset close button btn resetlink blockanchor">&times;</a>
-                <?php } ?>
-            </div>
-        </div>
-        <div class="stylewidget">
-        	<?php if($allowclear){ ?>
-	        	<a class="btn btn-xs blockanchor" href="<?php echo $listurl; ?>" title="Clear Search and Filters"><i class="glyphicon glyphicon-refresh"></i> Reset List</a>
-            <?php } ?>
-            <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 1 ? 'active' : ''; ?>" id="style1" rel='1'><i class="glyphicon glyphicon-th-large"></i> Grid</a>
-            <a class="gonowhere btn btn-default btn-xs noround styletrigger <?php echo $style == 2 ? 'active' : ''; ?>" id="style2" rel='2'><i class="glyphicon glyphicon-list-alt"></i> Table</a>
-            <?php if ($acl->checkPermission("User Account", ACTION_EXPORT)) { ?>
-            	<button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to Excel"><i class='glyphicon glyphicon-download-alt'></i> Export</button>
-                <input type="hidden" name="csv_text" id="csv_text" value="" />
-            <?php } ?>
-        </div>
-        <?php echo $paginate->getAlphabetString(); ?>
-		<?php if ($has_no_data) { ?>
-            <div class="divider30"></div>
-            <div style="clear:both;" class="alert alert-warning margin5"><?php echo $this->translate("global_list_noentries"); ?></div>
-        <?php } else { ?>
-            <div class="divider2"></div>
-        	<div class="row-fluid peoplelist clearfix <?php echo $style == '2' ? 'whitebg' : ''; ?>">
-            	<?php if($style == 1){ ?>		
-                	<div class="divider10"></div>
-					<?php
-						foreach($result as $line){
-							$viewurl = stripUrl($this->baseUrl('profile/view/id/'.encode($line['uid'])));
-							$indexurl = stripUrl($this->baseUrl('profile/index/id/'.encode($line['uid'])));
-							
-							$isme = false;
-							if($line['uid'] == $userid){
-								$isme = true;
-							}
-							$allowedit = false;
-							if($acl->checkPermission("User Account", ACTION_EDIT)){
-								$allowedit = true;
-							}
-					?>
-                    	 <div class="col-xs-12 col-sm-6">
-                            <div class="peoplewrapper makerelative">
-                                <div class="btn-group gridactions">
-                                    <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
-                                    <ul class="dropdown-menu" role="menu" style="left:-102px;">
-										<?php if ($acl->checkPermission("User Account", ACTION_VIEW)) { ?>
-                                       		<li><a class="blockanchor" href="<?php echo $viewurl; ?>"><i class="glyphicon glyphicon-list"></i> View Profile</a></li>
-                                        <?php } ?>
-                                        <?php if ($allowedit) { ?>
-                                        	<li><a class="blockanchor" href="<?php echo $indexurl; ?>"><i class="glyphicon glyphicon-pencil"></i> Update</a></li>
-                                        <?php } ?>
-                                        <?php if(!isEmptyString($line['email']) && $acl->checkPermission('Message', ACTION_CREATE)){ ?>
-                                        	<li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/1'; ?>"><i class="glyphicon glyphicon-envelope"></i> Send Email</a></li>
-                                        <?php }?>
-                                        <?php if(!isEmptyString($line['phone']) && $acl->checkPermission('SMS', ACTION_CREATE)){ ?>
-                                        	<li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/2'; ?>"><i class="glyphicon glyphicon-phone"></i> Send SMS</a></li>
-                                        <?php } ?>
-                                    </ul>
-                                </div>
-                                <div class="thumb img-thumbnail">
-                                	<a href="<?php echo $viewurl; ?>" class="blockanchor"><img class="imagecontainer" src="<?php echo getImagePath($line['uid'], $line['profilephoto'], $line['gender']); ?>" /></a>
-                                </div>
-                                <div class="peopleinfo">
-                                    <h4><a href="<?php echo $viewurl; ?>" class="blockanchor"><?php echo $line['Name']; ?></a></h4>
-                                    <div class="row-fluid margin0">
-                                    	<div class="col-md-7 padding0">
-                                        	<ul>
-                                                <li><span class="bolded">Position:</span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['position'], $positions) ? '' : $positions[$line['position']]; ?></span></li>
-                                                <li><span class="bolded">Department: </span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['departmentid'], $departments) ? '' : $departments[$line['departmentid']]; ?></span></li>
-                                                <li><span class="bolded">Contract Status: </span><span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['empstatus'], $employeesstatuses) ? '':$employeesstatuses[$line['empstatus']]; ?></span></li>
-                                                <li><span class="bolded">Contract Start: </span> <span class="nullifempty"><?php echo formatDateAndTime($line['startdate'], false); ?></span></li>
-                                            </ul>
-                                        </div>
-                                        <div class="col-md-5 padding0">
-                                            <ul>
-                                            	<li><span class="bolded">Contacts</span></li>
-                                            	<li><span class="nullifempty"><?php echo $line['phone']; ?></span></li>
-                                                <li><span class="nullifempty"><?php echo snippet($line['email'], '23','...'); ?></span></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    
-                                </div>
-                            </div>
-                        </div>
-                   <?php } ?> 
-               	<?php } ?>
-                <?php if($style == 2){ ?>
-                	<div class="wrapper1">
-                        <div class="div1" style="width:4500px;"></div>
-                    </div>
-                    <div class="wrapper2">
-                        <div class="div2" style="width:4500px;">
-                			<table class="table list table-bordered table-striped data-table" id="datatable">
-                                <thead class="paginationheader">
-                                    <th class="nowrapping">Actions <img style="width:15px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /> </th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('o.id',  'Employee ID#'); ?>
-                                        <img style="width:10px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /> </th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.firstname',  'Fist Name'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.lastname',  'Last Name'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.othername',  'Other Name(s)'); ?>
-                                        <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.othername',  'Full Names'); ?>
-                                        <img style="width:100px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.gender', 'Gender'); ?></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.salutation', 'Title'); ?>
-                                        <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.positionid',  'Position'); ?>
-                                        <img style="width:150px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.departmentid',  'Department'); ?>
-                                        <img style="width:100px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.empstatus',  'Contract Status'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.phone', 'Phone'); ?>
-                                    	<img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.email', 'Email'); ?>
-                                    	<img style="width:150px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.username', 'Username'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.type', 'User Type'); ?>
-                                        <img style="width:100px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.status', 'User Status'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                   
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.nationality', 'Nationality'); ?>
-                                        <img style="width:15px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.town', 'Town / City'); ?>
-                                        <img style="width:100px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.address1', 'Address'); ?>
-                                        <img style="width:200px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.dateofbirth', 'Date of Birth'); ?>
-                                        <img style="width:60px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.datecreated', 'Contract Start'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.datecreated', 'Probation End'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.datecreated', 'Contract End'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                        
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.datecreated', 'Created Date'); ?>
-                                        <img style="width:50px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                    <th class="nowrapping"><?php echo $paginate->getSortLinkForColumn('u.createdby', 'Created By'); ?>
-                                        <img style="width:100px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                </thead>
-                                <tbody>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                            <?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                                <li><a title="New <?php echo $moduleitem; ?>" class="btn btn-primary xbtn-sm blockanchor" href="<?php echo $addurl; ?>">New <?php echo $moduleitem; ?></a></li>
+                            <?php } ?>
+                            <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('departmentid',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Departments'), $departments),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("xautofilter", "form-control", 'width150', 'input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('departmentid')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                             <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('position',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Positions'), $positions),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('position')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                            <li>
+                                <?php
+                                    $dropdown = new Zend_Form_Element_Select('empstatus',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Contract Statuses'), $employeesstatuses),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array("xautofilter", "form-control", 'width150', 'input-sm')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($request->getParam('empstatus')); 
+                                    echo $dropdown->render();
+                                ?>                    
+                            </li>
+                            <?php if(isAdmin()){ ?>
+                                <li>
                                     <?php
-                                        foreach($result as $line){
-                                            $viewurl = $this->baseUrl('profile/view/id/'.encode($line['uid']));
-                                            $indexurl = $this->baseUrl('profile/index/id/'.encode($line['uid']));
-											
-											$allowedit = false;
-											if($acl->checkPermission("User Account", ACTION_EDIT)){
-												$allowedit = true;
-											}
-                                    ?>
-                                        <tr style="font-size:13px;">
-                                            <td class="padding2">
-                                            	<ul class="nav listactions">
-													<?php if ($acl->checkPermission("User Account", ACTION_VIEW)) { ?>
-                                                        <li><a class="blockanchor" href="<?php echo $viewurl; ?>" title="View"><i class="glyphicon glyphicon-list"></i></a></li>
-                                                    <?php } ?>
-                                                    <?php if ($allowedit) { ?>
-                                                        <li><a class="blockanchor" href="<?php echo $indexurl; ?>" title="Update"><i class="glyphicon glyphicon-pencil"></i> </a></li>
-                                                    <?php } ?>
-                                                </ul>
-                                            </td>
-                                            <td class="nullifempty"><a href="<?php echo $viewurl; ?>" class="blockanchor"><?php echo 'U'.number_pad($line['uid'], 4); ?></a></td>
-                                            <td class="nullifempty"><?php echo $line['firstname']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['lastname']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['othername']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['Name']; ?></td>
-                                            <td class="nullifempty"><?php echo getGenderText($line['gender']); ?></td>
-                                            <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['salutation'], $salutations) ? '' : $salutations[$line['salutation']]; ?></td>
-                                            
-                                            <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['position'], $positions) ? '' : $positions[$line['position']]; ?></td>
-                                            <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['departmentid'], $departments) ? '' : $departments[$line['departmentid']]; ?></td>
-                                            <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['empstatus'], $employeesstatuses) ? '' : $employeesstatuses[$line['empstatus']]; ?></td>
-                                            <td class="nullifempty"><?php echo $line['phone']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['email']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['username']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['Group']; ?></td>
-                                            <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['status'], $allstatus) ? '' : $allstatus[$line['status']]; ?></td>	
-                                            <td class="nullifempty"><?php echo $line['country'] == 'UG' ? 'Uganda': ''; ?></td>
-                                            <td class="nullifempty"><?php echo $line['town']; ?></td>
-                                            <td class="nullifempty"><?php echo $line['address1']; ?></td>
-                                            <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['dateofbirth']); ?></td>
-                                            <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?></td>
-                                            <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['probationend']); ?></td>
-                                            <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['enddate']); ?></td>
-                                            <td class="nullifempty"><?php echo formatDateAndTime($line['mdatecreated']); ?></td>
-                                            <td class="nullifempty"><?php echo $line['addedby']; ?></td>
-                                        </tr>
+                                        $dropdown = new Zend_Form_Element_Select('type',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All User Types'), $allroles),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                               'class' => array("autofilter", "form-control", 'width150', 'input-sm')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('type')); 
+                                        echo $dropdown->render();
+                                    ?>                    
+                                </li>
+                            <?php } ?>
+                            <li>
+                                <button type="submit" class="btn btn-default btn-sm blockanchor" id="filter"><i class="fa fa-filter"></i></button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="divider5"></div>
+                        <div class="col-sm-12 padding0">
+                            <div class="input-group">
+                                <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." />
+                                <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                            </div>
+                        </div>	
+                        <input type="hidden" name="letter" id="letter" value="<?php echo $request->getParam('letter'); ?>" />
+                        <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
+                        <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
+                    </div>
+                </div>
+                <div class="row">
+					<div class="col-sm-12">
+						<div class="box box-color box-bordered">
+							<div class="box-title condensed">
+								<h3><i class="glyphicon-group"></i> List of Employees</h3>
+                                <div class="actions">
+                                	<a class="btn bluelinks" href="<?php echo $this->baseUrl('report/employeedetails'); ?>">View Detailed Employee Report</a> &nbsp;
+                                	<a href="<?php echo $listurl; ?>" title="Reset List and Clear all Filters" rel="tooltip"><i class="fa fa-refresh"></i></a> &nbsp;
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+								<div class="row-fluid peoplelist clearfix <?php echo $style == '2' ? 'whitebg' : ''; ?>">
+                                    <?php if($has_no_data){ ?>
+                                        <div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div>
+                                    <?php } else { ?>
+                                        <div class="divider10"></div>
+                                            <?php
+                                                foreach($result as $line){
+                                                    $viewurl = stripUrl($this->baseUrl('profile/view/id/'.encode($line['uid'])));
+                                                    $indexurl = stripUrl($this->baseUrl('profile/index/id/'.encode($line['uid'])));
+                                                    
+                                                    $isme = false;
+                                                    if($line['uid'] == $userid){
+                                                        $isme = true;
+                                                    }
+                                                    $allowedit = false;
+                                                    if($acl->checkPermission("User Account", ACTION_EDIT)){
+                                                        $allowedit = true;
+                                                    }
+                                            ?>
+                                                 <div class="col-xs-12 col-sm-6">
+                                                    <div class="peoplewrapper makerelative">
+                                                        <div class="btn-group gridactions" style="z-index:1000;">
+                                                            <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
+                                                            <ul class="dropdown-menu" role="menu" style="left:-102px;">
+                                                                <?php if ($acl->checkPermission("User Account", ACTION_VIEW)) { ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $viewurl; ?>">View Profile</a></li>
+                                                                <?php } ?>
+                                                                <?php if ($allowedit) { ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $indexurl; ?>">Update</a></li>
+                                                                <?php } ?>
+                                                                <?php if(!isEmptyString($line['email']) && $acl->checkPermission('Message', ACTION_CREATE) && false){ ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/1'; ?>">Send Email</a></li>
+                                                                <?php }?>
+                                                                <?php if(!isEmptyString($line['phone']) && $acl->checkPermission('SMS', ACTION_CREATE) && false){ ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/2'; ?>">Send SMS</a></li>
+                                                                <?php } ?>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="col-sm-3 padding0 centeralign">
+                                                            <a href="<?php echo $viewurl; ?>" class="blockanchor centeralign"><img class="imagecontainer imagecontainer thumb img-thumbnail" src="<?php echo getImagePath($line['uid'], $line['profilephoto'], $line['gender']); ?>" style="width:80%; text-align:center;" /></a>
+                                                        </div>
+                                                        <div class="peopleinfo col-sm-9">
+                                                            <h4><a href="<?php echo $viewurl; ?>" class="blockanchor"><?php echo $line['Name']; ?></a></h4>
+                                                            <div class="row-fluid margin0">
+                                                                <div class="col-sm-7 padding0">
+                                                                    <ul class="resetlist">
+                                                                        <li><span class="bolded">Position:</span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['position'], $positions) ? '' : $positions[$line['position']]; ?></span></li>
+                                                                        <li><span class="bolded">Department: </span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['departmentid'], $departments) ? '' : $departments[$line['departmentid']]; ?></span></li>
+                                                                        <li><span class="bolded">Contract Status: </span><span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['empstatus'], $employeesstatuses) ? '':$employeesstatuses[$line['empstatus']]; ?></span></li>
+                                                                        <li><span class="bolded">Contract Start: </span> <span class="nullifempty"><?php echo formatDateAndTime($line['startdate'], false); ?></span></li>
+                                                                    </ul>
+                                                                </div>
+                                                                <div class="col-sm-5 padding0">
+                                                                    <ul class="resetlist">
+                                                                        <li><span class="bolded">Contacts</span></li>
+                                                                        <li><span class="nullifempty"><?php echo $line['phone']; ?></span></li>
+                                                                        <li><span class="nullifempty"><?php echo snippet($line['email'], '23','...'); ?></span></li>
+                                                                    </ul>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                           <?php } ?> 
                                     <?php } ?>
-                                </tbody>
-                            </table>
-                  		</div>
-                    </div>
-                    <div class="divider10"></div>
-                    <div class="row-fluid">
-                        <div class="table-footer">
-                            <div class="col-md-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
-                            <div class="col-md-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
-                            <div class="col-md-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
-                        </div>
-                    </div>
-                    <div class="divider10"></div>
-                <?php } ?> 
-            </div>
-        <?php } ?>
-	</form>
-</div>            
+                                    <?php if(!$has_no_data){ ?> 
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <div class="form-actions">
+                                                    <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                                                    <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                                                    <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php } ?>
+								</div>
+							</div>
+						</div>
+					</div>
+          		</div>
+			</div>
+        </div>
+        </form>          
+	</div>            
+</div>        
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

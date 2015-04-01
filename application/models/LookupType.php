@@ -101,10 +101,26 @@ class LookupType extends BaseEntity  {
 	# return all the variable data 
 	function getAllDataValues($type = '') {
 		$conn = Doctrine_Manager::connection();
-		$resultvalues = $conn->fetchAll("SELECT * FROM lookuptypevalue WHERE lookuptypeid = '".$this->getID()."' order by lookupvaluedescription asc ");
-		if($this->getName() == 'BENEFIT_TYPES'){
-			$resultvalues = $conn->fetchAll("SELECT c.id as id, c.id as lookuptypevalue, c.name as lookupvaluedescription, c.defaultamount as alias, c.amounttype as alias2 FROM benefittype c order by c.name asc ");
+		$companyid = getCompanyID();
+		if($this->getID() == 7){
+			if($companyid == DEFAULT_COMPANYID){
+				$company_query = " AND (companyid = '".$companyid."' OR companyid is null) ";
+			} else {
+				$company_query = " AND companyid = '".$companyid."' ";
+			}
 		}
+		$query = "SELECT * FROM lookuptypevalue WHERE lookuptypeid = '".$this->getID()."' ".$company_query." order by lookupvaluedescription asc ";
+		$resultvalues = $conn->fetchAll($query);
+		if($this->getName() == 'BENEFIT_TYPES'){
+			if($companyid == DEFAULT_COMPANYID){
+				$company_query = " AND (c.companyid = '".$companyid."' OR c.companyid is null) ";
+			} else {
+				$company_query = " AND (c.companyid = '".$companyid."' OR c.companyid is null) ";
+			}
+			$query = "SELECT c.id as id, c.id as lookuptypevalue, c.name as lookupvaluedescription, c.defaultamount as alias, c.amounttype as alias2 FROM benefittype c order by c.name asc ";
+			$resultvalues = $conn->fetchAll($query);
+		}
+		// debugMessage($query);
 		return $resultvalues;	
 	}
 	function getNextInsertIndex(){

@@ -49,7 +49,7 @@
 		$typeoptions = getDatavariables('EMPLOYEE_RATE_TYPES');
 	}
 	
-	
+	$pageid = "config_variables";
 	$this->headTitle($title.$browserappend);
 	$showsearch = true;
 	
@@ -59,7 +59,7 @@ $(document).ready(function(){
 	$('.titlebreadcrumb').html('<?php echo $homedir.'Variables / '.$breadcrumbtitle; ?>');
 	$('.titlelabel').html("<?php echo $title; ?>");
 	$('.desclabel').html("<?php echo $description; ?>");
-	$('.pageicon').html('<span class="glyphicon glyphicon-list-alt"></span>');
+	$('.pageicon').html('<span class="fa fa-list-alt"></span>');
 	
 	$(".updatevalue").click(function(){
 		var rowid = $(this).attr('rowid');
@@ -97,7 +97,7 @@ $(document).ready(function(){
 			return false;
 		} else {
 			$(this).hide();
-			$("#wait_0").show();
+			$("#wait_0").show().removeClass('hidden');
 			var url = '<?php echo $this->baseUrl("config/processvariables"); ?>/id/'+id+'/lookupid/'+lookupid+'/value/'+base64_encode(value)+'/index/'+index+'/alias/'+alias;
 			if(lookupid == '9'){
 				var alias2 = $("#newalias2").val();
@@ -105,7 +105,7 @@ $(document).ready(function(){
 			}
 			// alert(url);
 			window.location.href = url;
-			$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+			//$.blockUI({ message: '<?php //echo $blockcontent; ?>' }); 
 		}
 	});
 	$('#newvalue, #newalias').bind('keypress', function(e) {
@@ -131,7 +131,7 @@ $(document).ready(function(){
 			return false;
 		} else {
 			$(this).hide(); $('#cancel_'+id).hide();
-			$("#wait_"+id).show();
+			$("#wait_"+id).show().removeClass('hidden');
 			var url = '<?php echo $this->baseUrl("config/processvariables"); ?>/id/'+id+'/lookupid/'+lookupid+'/value/'+base64_encode(value)+'/index/'+index+'/alias/'+base64_encode(alias);
 			if(lookupid == '9'){
 				var alias2 = $("#alias2_"+id).val();
@@ -139,7 +139,7 @@ $(document).ready(function(){
 			}
 			//alert(url);
 			
-			$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+			// $.blockUI({ message: '<?php //echo $blockcontent; ?>' }); 
 			window.location.href = url;
 		}
 	});
@@ -147,235 +147,209 @@ $(document).ready(function(){
 	$("#type").change(function(){
 		var type = $(this).val();
 		var url = "<?php echo $this->baseUrl("config/variables/type/"); ?>"+type;
-		$.blockUI({ message: '<?php echo $blockcontent; ?>' }); 
+		//$.blockUI({ message: '<?php //echo $blockcontent; ?>' }); 
 		window.location.href = url;
 	});
 });
 </script>
-<div class="row-fluid margin0">
-    <?php if ($sessionhaserror) { ?>
-        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-    <?php } ?>
-    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-    <?php } ?>
-    <form class="form margin0 listform" action="<?php echo $this->baseUrl("config/variablessearch"); ?>" method="get" id="listform">
-    	<div class="row-fluid margin0">
-            <div class="col-md-12 paddingleft0">
-                <div class="divider5"></div>
-                <ul class="listfilter maxwidth" style="margin-left:10px;">
-                    <li>
-                        <?php
-                            $dropdown = new Zend_Form_Element_Select('type',
-                                                array(
-                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select Variable Type'), getListableLookupTypes()),
-                                                    'view' => new Zend_View(),
-                                                    'decorators' => array('ViewHelper'),
-                                                    'class' => array("form-control", 'chosen-select'),
-                                                    'style' => 'width:350px;'
-                                                )
-                            );  
-                            $dropdown->setValue($request->getParam('type')); 
-                            echo $dropdown->render();
-                        ?>                    
-                    </li>
-                    <?php if($islistable){ ?>
-                    <li class="col-md-3">
-                  		<div class="padding0">
-                        	<input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><span class="glyphicon glyphicon-search glyphicon-list-search"></span>
-                        	<button type="submit" class="hidden"></button>
-                        </div>
-                    </li>
-                    <?php } ?>
-                </ul>
-            </div>
-        </div>
-    </form>
-    <div class="contentcontainer clearfix">
-	<table class="table list table-hover table-bordered" style="margin:5px; <?php echo $widthstyle; ?>">
-		<thead>
-			<tr>
-				<th style="width:20px;" class="centeralign">#</th>
-				<th><?php echo $namelabel; ?></th>
-                <?php if(in_array($lookupid, $aliasedtypes)){ ?>
-					<?php if($lookupid == 7){ ?>
-                        <th>Department</th>
-                    <?php } ?>
-                    <?php if($lookupid == 9){ ?>
-                        <th>Default Amount (<?php echo $config->country->currencycode; ?>)</th>
-                    <?php } ?>
-                <?php } ?>
-                <th style="width:150px; text-align:right;">Action</th>
-			</tr>
-		</thead>
-		<?php if(isEmptyString($lookuptype->getID())){ ?>
-			<tbody><tr><td colspan="3"><div class="alert alert-info clear padding10 margin10">Select a Variable Type</div></td></tr></tbody>
-		<?php } ?>
-		<?php if(!isEmptyString($request->type)){ ?>
-			<tbody id="global">
-				<?php 
-					$itemvalues = $lookuptype->getAllDataValues();
-					$allbenefittypes = getDatavariables('EMPLOYEE_RATE_TYPES');
-					// debugMessage($itemvalues);
-					$x = 1;
-					foreach($itemvalues as $value){
-				?>
-				<tr id="lookup_<?php echo $value['id']; ?>" class="editable">
-					<td class="centeralign"><?php echo $x; ?></td>
-					<td>
-						<div style="position:relative;">
-							<span class="display" id="text_<?php echo $value['id']; ?>"><?php echo stripcslashes($value['lookupvaluedescription']); ?></span>
-							<span class="edit" id="html_<?php echo $value['id']; ?>">
-								<input type="text" name="newvalue_<?php echo $value['id']; ?>" id="newvalue_<?php echo $value['id']; ?>" class="form-control input-sm updatevariable" rowid="<?php echo $value['id']; ?>" value="<?php echo $value['lookupvaluedescription']; ?>" />
-							</span>
-						</div>
-                        <div class="divider5"></div>
-                        <div id="add_error_<?php echo $value['id']; ?>" class="margin0"></div>
-					</td>
-                    <?php if(in_array($lookupid, $aliasedtypes)){ ?>
-						<?php if($lookupid == 7){ ?>
-                            <td>
-                    			<div style="position:relative;">
-                                    <span class="display" id="text_alias_<?php echo $value['id']; ?>">
-                                        <?php echo isArrayKeyAnEmptyString($value['alias'], $departments) ? '--' : $departments[$value['alias']]; ?>
-                                    </span>
-                                    <span class="edit" id="html_alias_<?php echo $value['id']; ?>">
-                                        <?php
-                                            $dropdown = new Zend_Form_Element_Select('newalias_'.$value['id'],
-                                                                array(
-                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $departments),
-                                                                    'view' => new Zend_View(),
-                                                                    'decorators' => array('ViewHelper'),
-                                                                    'class' => array('form-control','input-sm','width200')
-                                                                )
-                                            );  
-                                            $dropdown->setValue($value['alias']); 
-                                            echo $dropdown->render();
-                                        ?>
-                                    </span>
-                                </div>
-                                <div id="code_error_<?php echo $value['id']; ?>" class="margin0" style=""></div>
-                                <div id="newalias_error_<?php echo $value['id']; ?>" class="margin0"></div>
-                            </td>
-                        <?php } ?>
-                        <?php if($lookupid == 9){ ?>
-                            <td>
-                    			<div style="position:relative;">
-                                    <span class="display" id="text_alias_<?php echo $value['id']; ?>">
-                                    	<?php echo $value['alias']; ?>
-                                        <?php echo isArrayKeyAnEmptyString($value['alias2'], $allbenefittypes) ? '' : $allbenefittypes[$value['alias2']]; ?>
-                                    </span>
-                                    <span class="edit" id="html_alias_<?php echo $value['id']; ?>">
-                                    	<input type="text" name="newalias_<?php echo $value['id']; ?>" id="newalias_<?php echo $value['id']; ?>" class="form-control inline floatleft updatevariable centeralign input-sm width100" rowid="<?php echo $value['id']; ?>" value="<?php echo $value['alias']; ?>" /> &nbsp;
-                                        <?php
-											$dropdown = new Zend_Form_Element_Select('alias2_'.$value['id'],
-																array(
-																	'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
-																	'view' => new Zend_View(),
-																	'decorators' => array('ViewHelper'),
-																	'class' => array('form-control','input-sm','width100','inline')
-																)
-											);  
-											$dropdown->setValue($value['alias2']); 
-											echo $dropdown->render();
-										?>
-                                    </span>
-                              	</div>
-                          	</td>
-                    	<?php } ?>
-                    <?php } ?>
-                    <td class="rightalign">
-                    	<div style="position:relative;">
-                            <span class="edit" id="btn_<?php echo $value['id']; ?>">
-                                <label class="pull-right">
-                                    <a href="javascript:void(0)" id="save_<?php echo $value['id']; ?>" theid="<?php echo $value['id']; ?>" index="<?php echo $value['lookuptypevalue']; ?>" class="btn btn-success btn-sm lineblocked update" title="Update Item" ><i class="glyphicon glyphicon-ok"></i> Save</a>&nbsp;
-                                    <a href="javascript:void(0)" style="font-size:10px;" class="cancel_edit" id="cancel_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>">Cancel</a>
-                                    <label class="hidden margin0 padding0" id="wait_<?php echo $value['id']; ?>" style="position:absolute; right:0; top:0;">
-                                        <span class="pagedescription">wait...</span>
-                                        <img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/farmisloader.gif'); ?>" />
-                                    </label>
-                                </label>
-                            </span>
-                            <div class="buttons" id="buttons_<?php echo $value['id']; ?>" style="position:absolute; right:0; top:-3px;">
-                                <?php if($lookuptype->updatesAllowed()){ ?>
-                                    <a href="javascript:void(0)" id="updatevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="updatevalue btn btn-info btn-sm" title="Update Value"><i class="glyphicon glyphicon-pencil"></i></a>
-                                <?php } ?>    
-                                <?php if($lookuptype->addNoDeleteAllowed()){ 
-                                    $classname = "LookupTypeValue";
-                                    $deleteline = $value['id'];
-                                    
-                                ?>
-                                    <a id="deletevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="xdeletevalue btn btn-sm deleteline xremoveline gonowhere" title="Delete Value" action="<?php echo $this->baseUrl('config/delete/id/'.$deleteline."/entityname/".$classname."/successurl/".encode($this->baseUrl('config/variables/type/'.$request->type))); ?>"><i class="glyphicon glyphicon-remove"></i></a>
-                                <?php } else { ?>
-                                    <a class="gonowhere alert-dialog" title="Delete disabled" message="<div class='alert alert-danger'>Delete on this resource is disabled. Contact super Admin</div>">--</a>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+        <div class="<?php echo in_array($lookupid, $aliasedtypes) ? 'col-sm-9' : 'col-sm-6'; ?>">
+            <div class="box box box-color box-bordered">
+                <div class="box-title noheader">
+                    <h3></h3>
+                </div>
+                <div class="box-content nopadding">
+                    <table class="table table-nomargin table-bordered table-hover table-colored-header" id="">
+                        <thead>
+                            <tr>
+                                <th style="width:25px;" class="centeralign">#</th>
+                                <th><?php echo $namelabel; ?></th>
+                                <?php if(in_array($lookupid, $aliasedtypes)){ ?>
+                                    <?php if($lookupid == 7){ ?>
+                                        <th>Department</th>
+                                    <?php } ?>
+                                    <?php if($lookupid == 9){ ?>
+                                        <th>Default Amount (<?php echo $config->country->currencycode; ?>)</th>
+                                    <?php } ?>
                                 <?php } ?>
-                            </div>
-                      	</div>
-                    </td>
-				</tr>
-				<?php $x++;} ?>
-				<?php if($lookuptype->updatesAllowed() && !isEmptyString($lookupid)){ ?>
-					<tr>
-						<td class="centeralign"><?php echo $x; ?></td>
-						<td>
-							<div style="position:relative;">
-								<input type="text" name="newvalue" id="newvalue" class="form-control input-sm" />&nbsp;
-								<div id="add_error" class="margin0"></div>
-							</div>
-						</td>
-                        <?php if(in_array($lookupid, $aliasedtypes)){ ?>
-							<?php if($lookupid == 7){ ?>
-                                <td><?php
-                                        $dropdown = new Zend_Form_Element_Select('newalias',
-                                                            array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $departments),
-                                                                'view' => new Zend_View(),
-                                                                'decorators' => array('ViewHelper'),
-                                                                'class' => array('form-control','input-sm','width200','inline')
-                                                            )
-                                        );  
-                                        $dropdown->setValue(''); 
-                                        echo $dropdown->render();
-                                    ?>
-                                    <div id="newalias_error" class="margin0" style=""></div>
-                                </td>
-                            <?php } ?>
-                            <?php if($lookupid == 9){ ?>
-                            	<td>
-                                	<input type="text" name="newalias" id="newalias" class="form-control centeralign input-sm width100 inline floatleft" value="0" /> &nbsp;
-                                    <?php
-										$dropdown = new Zend_Form_Element_Select('newalias2',
-															array(
-																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
-																'view' => new Zend_View(),
-																'decorators' => array('ViewHelper'),
-																'class' => array('form-control','input-sm','width125','inline')
-															)
-										);  
-										$dropdown->setValue(4); 
-										echo $dropdown->render();
-									?>
-                                </td>
-                            <?php } ?>
-						<?php } ?>
-                        <td>
-                    		<label class="pull-right">
-                                <a href="javascript:void(0)" id="save" theid="<?php echo $lookuptype->getID(); ?>" class="btn btn-success btn-sm lineblocked" title="Save New Item" ><i class="glyphicon glyphicon-ok"></i> Add</a>
-                                <label class="margin0 padding0 hidden" id="wait_0" style="position:absolute; right:0; top:0;">
-                                    <span class="pagedescription">wait...</span>
-                                    <img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/farmisloader.gif'); ?>" />
-                                </label>
-                            </label>
-                    	</td>
-					</tr>
-				<?php } ?>
-			</tbody>
-		<?php } ?>    
-	</table>
-	<?php if(!$lookuptype->updatesAllowed()){ ?>
-		<div class="alert alert-info" style="margin:10px;">Updates to this variable are currently disabled. <br />Contact Super Admin</div>
-	<?php } ?>
-    </div>
+                                <th style="width:150px;">Action</th>
+                            </tr>
+                        </thead>
+                        <?php if(isEmptyString($lookuptype->getID())){ ?>
+                            <tbody><tr><td colspan="3"><div class="alert alert-info clear padding10 margin10">Select a Variable Type</div></td></tr></tbody>
+                        <?php } ?>
+                        <?php if(!isEmptyString($request->type)){ ?>
+                            <tbody id="global">
+                                <?php 
+                                    $itemvalues = $lookuptype->getAllDataValues();
+                                    $allbenefittypes = getDatavariables('EMPLOYEE_RATE_TYPES');
+                                    // debugMessage($itemvalues);
+                                    $x = 1;
+                                    foreach($itemvalues as $value){
+                                ?>
+                                <tr id="lookup_<?php echo $value['id']; ?>" class="editable">
+                                    <td class="centeralign"><?php echo $x; ?></td>
+                                    <td>
+                                        <div style="position:relative;">
+                                            <span class="display" id="text_<?php echo $value['id']; ?>"><?php echo stripcslashes($value['lookupvaluedescription']); ?></span>
+                                            <span class="edit" id="html_<?php echo $value['id']; ?>">
+                                                <input type="text" name="newvalue_<?php echo $value['id']; ?>" id="newvalue_<?php echo $value['id']; ?>" class="form-control input-sm updatevariable" rowid="<?php echo $value['id']; ?>" value="<?php echo $value['lookupvaluedescription']; ?>" />
+                                            </span>
+                                        </div>
+                                        <div class="divider5"></div>
+                                        <div id="add_error_<?php echo $value['id']; ?>" class="margin0"></div>
+                                    </td>
+                                    <?php if(in_array($lookupid, $aliasedtypes)){ ?>
+                                        <?php if($lookupid == 7){ ?>
+                                            <td>
+                                                <div style="position:relative;">
+                                                    <span class="display" id="text_alias_<?php echo $value['id']; ?>">
+                                                        <?php echo isArrayKeyAnEmptyString($value['alias'], $departments) ? '--' : $departments[$value['alias']]; ?>
+                                                    </span>
+                                                    <span class="edit" id="html_alias_<?php echo $value['id']; ?>">
+                                                        <?php
+                                                            $dropdown = new Zend_Form_Element_Select('newalias_'.$value['id'],
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $departments),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array('form-control','input-sm','width200')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($value['alias']); 
+                                                            echo $dropdown->render();
+                                                        ?>
+                                                    </span>
+                                                </div>
+                                                <div id="code_error_<?php echo $value['id']; ?>" class="margin0" style=""></div>
+                                                <div id="newalias_error_<?php echo $value['id']; ?>" class="margin0"></div>
+                                            </td>
+                                        <?php } ?>
+                                        <?php if($lookupid == 9){ ?>
+                                            <td>
+                                                <div style="position:relative;">
+                                                    <span class="display" id="text_alias_<?php echo $value['id']; ?>">
+                                                        <?php echo $value['alias']; ?>
+                                                        <?php echo isArrayKeyAnEmptyString($value['alias2'], $allbenefittypes) ? '' : $allbenefittypes[$value['alias2']]; ?>
+                                                    </span>
+                                                    <span class="edit" id="html_alias_<?php echo $value['id']; ?>">
+                                                        <input type="text" name="newalias_<?php echo $value['id']; ?>" id="newalias_<?php echo $value['id']; ?>" class="form-control inline floatleft updatevariable centeralign input-sm width100" rowid="<?php echo $value['id']; ?>" value="<?php echo $value['alias']; ?>" /> &nbsp;
+                                                        <?php
+                                                            $dropdown = new Zend_Form_Element_Select('alias2_'.$value['id'],
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array('form-control','input-sm','width100','inline')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($value['alias2']); 
+                                                            echo $dropdown->render();
+                                                        ?>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        <?php } ?>
+                                    <?php } ?>
+                                    <td class="rightalign">
+                                        <div style="position:relative;">
+                                            <span class="edit" id="btn_<?php echo $value['id']; ?>">
+                                                <label class="pull-right">
+                                                    <a href="javascript:void(0)" id="save_<?php echo $value['id']; ?>" theid="<?php echo $value['id']; ?>" index="<?php echo $value['lookuptypevalue']; ?>" class="btn btn-green lineblocked update" title="Update Item" rel="tooltip" ><i class="fa fa-ok"></i> Save</a>&nbsp;
+                                                    <a href="javascript:void(0)" style="font-size:10px;" class="cancel_edit" id="cancel_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" rel="tooltip">Cancel</a>
+                                                    <label class="hidden margin0 padding0" id="wait_<?php echo $value['id']; ?>" style="position:relative;">
+                                                        <span class="pagedescription">wait...</span>
+                                                        <img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/loader.gif'); ?>" />
+                                                    </label>
+                                                </label>
+                                            </span>
+                                            <div class="buttons" id="buttons_<?php echo $value['id']; ?>" style="position:absolute; right:0; top:-3px;">
+                                                <?php if($lookuptype->updatesAllowed()){ ?>
+                                                    <a href="javascript:void(0)" id="updatevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="updatevalue btn btn-info btn-sm" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a>
+                                                <?php } ?>    
+                                                <?php if($lookuptype->addNoDeleteAllowed()){ 
+                                                    $classname = "LookupTypeValue";
+                                                    $deleteline = $value['id'];
+                                                    if($lookupid == 7){
+														$classname = "Department";
+													}
+													if($lookupid == 9){
+														$classname = "BenefitType";
+													}
+                                                ?>
+                                                    <a id="deletevalue_<?php echo $value['id']; ?>" rowid="<?php echo $value['id']; ?>" class="xdeletevalue btn btn-sm deleteline xremoveline gonowhere" title="Delete Value" rel="tooltip" action="<?php echo $this->baseUrl('config/delete/id/'.$deleteline."/entityname/".$classname."/successurl/".encode($this->baseUrl('config/variables/type/'.$request->type))); ?>"><i class="fa fa-remove"></i></a>
+                                                <?php } else { ?>
+                                                    <a class="gonowhere alert-dialog" title="Delete disabled" rel="tooltip" message="<div class='alert alert-danger'>Delete on this resource is disabled. Contact super Admin</div>">--</a>
+                                                <?php } ?>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php $x++;} ?>
+                                <?php if($lookuptype->updatesAllowed() && !isEmptyString($lookupid)){ ?>
+                                    <tr>
+                                        <td class="centeralign"><?php echo $x; ?></td>
+                                        <td>
+                                            <div style="position:relative;">
+                                                <input type="text" name="newvalue" id="newvalue" class="form-control input-sm" placeholder="Enter new value" />&nbsp;
+                                                <div id="add_error" class="margin0"></div>
+                                            </div>
+                                        </td>
+                                        <?php if(in_array($lookupid, $aliasedtypes)){ ?>
+                                            <?php if($lookupid == 7){ ?>
+                                                <td><?php
+                                                        $dropdown = new Zend_Form_Element_Select('newalias',
+                                                                            array(
+                                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $departments),
+                                                                                'view' => new Zend_View(),
+                                                                                'decorators' => array('ViewHelper'),
+                                                                                'class' => array('form-control','input-sm','width200','inline')
+                                                                            )
+                                                        );  
+                                                        $dropdown->setValue(''); 
+                                                        echo $dropdown->render();
+                                                    ?>
+                                                    <div id="newalias_error" class="margin0" style=""></div>
+                                                </td>
+                                            <?php } ?>
+                                            <?php if($lookupid == 9){ ?>
+                                                <td>
+                                                    <input type="text" name="newalias" id="newalias" class="form-control centeralign input-sm width100 inline floatleft" value="0" /> &nbsp;
+                                                    <?php
+                                                        $dropdown = new Zend_Form_Element_Select('newalias2',
+                                                                            array(
+                                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allbenefittypes),
+                                                                                'view' => new Zend_View(),
+                                                                                'decorators' => array('ViewHelper'),
+                                                                                'class' => array('form-control','input-sm','width125','inline')
+                                                                            )
+                                                        );  
+                                                        $dropdown->setValue(4); 
+                                                        echo $dropdown->render();
+                                                    ?>
+                                                </td>
+                                            <?php } ?>
+                                        <?php } ?>
+                                        <td>
+                                            <label class="pull-right">
+                                                <a href="javascript:void(0)" id="save" theid="<?php echo $lookuptype->getID(); ?>" class="btn btn-green lineblocked" title="Save New Item" rel="tooltip">Save </a>
+                                                <label class="margin0 padding0 hidden" id="wait_0" style="position:relative;">
+                                                    <span class="pagedescription">wait...</span>
+                                                    <img style="margin-left:0; width:26px;" src="<?php echo $this->baseUrl('images/loader.gif'); ?>" />
+                                                </label>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        <?php } ?>
+                    </table>
+                </div>
+          	</div>
+      	</div>
+  	</div>
 </div>
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';

@@ -1,0 +1,602 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$session->setVar('toggled', "1");
+	$title = "";
+	$subtitle = '';  $reporttitle = "";
+	$description = ''; $periodlabel = '';
+	$result = array(); $has_no_data = false;
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	
+	$mytext = "";
+	$istimesheetuser = isTimesheetEmployee() ? true : false;
+	if($istimesheetuser){
+		$mytext = "My ";
+	}
+	
+	$reporttype = "";
+	$type = $request->type;
+	$reporttitle = "Benefits Report";
+	$subtitle = "Transactions";
+	$maxfilters = 5;
+	
+	$conditions = array(
+		1 => 'is equal to',
+		2 => 'is not equal to',
+		3 => 'is less than',
+		4 => 'is less than or equal to',
+		5 => 'is greater than',
+		6 => 'is greater than or equal to',
+		7 => 'contains',
+		8 => 'does not contain',
+		9 => 'begins with',
+		10 => 'ends with',
+		11 => 'is empty',
+		12 => 'is not empty',
+		13 => 'is between',
+		14 => 'is not between',
+		15 => 'is in list',
+		16 => 'is not in list'
+	);
+	$sql_condition_parts = array(
+		1 => " = ",
+		2 => " <> ",
+		3 => " < ",
+		4 => " <= ",
+		5 => " > ",
+		6 => " >= ",
+		7 => " LIKE '%x%' ",
+		8 => " NOT LIKE '%x%' ",
+		9 => " LIKE 'x%' ",
+		10 => " LIKE '%x' ",
+		11 => " = '' ",
+		12 => " <> '' ",
+		13 => " BETWEEN ",
+		14 => " NOT BETWEEN ",
+		15 => " IN x ",
+		16 => " NOT IN x "
+	);
+	
+	$selectable = array(
+		"userid"=>"userid",
+		"benefitid"=>"benefitid",
+		"trxntype"=>"trxntype",
+		"isrequest"=>"isrequest",
+		"istaxable"=>"istaxable",
+		"status"=>"status",
+		"payrollid"=>"payrollid",
+		"createdby" => "createdby",
+		"approvedbyid"=>"approvedbyid",
+	);
+	
+	$datetable = array(
+		"trxndate"=>"trxndate",
+		"datecreated"=>"datecreated",
+		"dateapproved"=>"dateapproved",
+	);
+	
+	$attributes = array(
+		"userid"=>"Employee",
+		"benefitid"=>"Category",
+		"trxntype"=>"Trxn Type",
+		"trxndate"=>"Trxn Date",
+		"amount"=>"Amount",
+		"istaxable"=>"Is Taxable",
+		"status"=>"Approval Status",
+		"payrollid"=>"Payment Status",
+		"remarks"=>"Remarks",
+		"dateapproved"=>"Date Approved",
+		"approvedbyid"=>"Approved By",
+		"isrequest"=>"Request By User",
+		"createdby"=>"Input By",
+		"datecreated"=>"Input Date",
+	);
+	if($istimesheetuser){
+		unset($attributes['userid']);
+		unset($attributes['createdby']);
+		unset($attributes['isrequest']);
+	}
+	
+	$isgenerated = false; 
+	
+	$where_query = " WHERE (l.id <> '' AND l.ledgertype = 1 AND u.companyid = '".$companyid."')  ";
+	if($istimesheetuser){
+		$where_query .= " AND l.userid = '".$userid."' ";
+	}
+	$filters_query = ""; $xwhere_query = " ";
+	$sqlpart = ""; $has_subq = false; $rowcount = 1;
+	
+	for($i = 1; $i <=$maxfilters; $i++){
+		$filter_query = ""; 
+		$attr = $request->{'attr_'.$i};
+		$condition = $request->{'condition_'.$i};
+		$value = $request->{'value_'.$i}; 
+		$start = $request->{'startdate_'.$i}; $startdate = date('Y-m-d', strtotime($start));
+		$end = $request->{'enddate_'.$i}; $enddate = date('Y-m-d', strtotime($end)); 
+		if(!isEmptyString($attr) && !isEmptyString($condition)){
+			$sqlpart = $sql_condition_parts[$condition];
+			if(in_array($condition, array(1,2,3,4,5,6))){
+				if(!in_array($attr, $selectable) && !in_array($attr, $datetable)){
+					$filter_query = " l.".$attr." ". $sqlpart." '".$value."' "; $has_subq = true;
+				} else {
+					if(in_array($attr, $selectable)){
+						$col = $attr.'_'.$i; 
+						$filter_query = " l.".$attr." ".$sqlpart." '".$request->{$col}."' "; $has_subq = true;
+					}
+					if(in_array($attr, $datetable)){
+						$filter_query = " (TO_DAYS(l.".$attr.") ".$sqlpart." TO_DAYS('".$startdate."')) "; $has_subq = true;
+					}
+				}
+			}
+			if(in_array($condition, array(7,8,9,10))){
+				if(!in_array($attr, $selectable) && !in_array($attr, $datetable) && !isEmptyString($value)){
+					$filter_query = " l.".$attr." ".str_replace('x', $value, $sqlpart)." "; $has_subq = true;
+				}
+			}
+			if(in_array($condition, array(11,12))){
+				$filter_query = " l.".$attr." ".$sqlpart." "; $has_subq = true;
+			}
+			if(in_array($condition, array(13,14))){
+				if(in_array($attr, $datetable)){
+					$filter_query = " (TO_DAYS(l.".$attr.") ".$sqlpart." TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."'))"; $has_subq = true;
+				} else {
+					$range_array = explode(',',str_replace(' ', '', trim($value))); 
+					if(count($range_array) == 2){
+						$filter_query = " l.".$attr." ".$sqlpart." '".$range_array[0]."' AND '".$range_array[1]."' "; $has_subq = true;
+					}
+				}
+			}
+			if(in_array($condition, array(15,16))){
+				$range_array = explode(',',str_replace(' ', '', trim($value))); 
+				$in_string = "('".implode("','", $range_array)."')";
+				$filter_query = " l.".$attr." ".str_replace('x', $in_string, $sqlpart)." "; $has_subq = true;
+			}
+			if($has_subq){
+				$filters_query .= " AND ".$filter_query.""; $rowcount ++;
+			}
+		}
+	}
+	if(!isEmptyString($filters_query)){
+		$where_query .= $filters_query;
+		$isgenerated = true;
+	}
+	// debugMessage($filters_query); // exit;
+	
+	$order = trim($request->order);
+	$order_query = " ORDER BY l.trxndate DESC, l.id desc ";
+	
+	$sortcolumn = $request->sortby;
+	$sortorder = $request->sortorder;
+	if(!isEmptyString($sortcolumn) && !isEmptyString($sortorder)){
+		$order_query = " ORDER BY " . $sortcolumn. " " .$sortorder. " ";
+	}
+
+	$all_results_query = "SELECT l.* FROM ledger l inner join useraccount u on l.userid = u.id ".$where_query."  GROUP BY l.id ".$order_query;
+	// debugMessage($all_results_query); // exit;
+	
+	if($isgenerated){
+		$conn = Doctrine_Manager::connection(); 
+		$result = $conn->fetchAll($all_results_query); // debugMessage($result);
+		$has_no_data = count($result) == 0 ? true : false;
+	}
+	
+	$users = getUsers();
+	$trxtypes = getTrxnTypes();
+	$benefits = getBenefits(2); // debugMessage($benefits);
+	$allstatuses = getBenefitStatuses();
+	$resource = "Benefits Detailed Report";
+	$isdatatable = true;
+		
+	$title = $reporttitle;
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	$("#all").attr('checked', true);
+	$(".iscolumn").attr('checked', true);
+	$("#all").click(function(){				
+		if (this.checked == true) {			
+			$(".iscolumn").attr('checked', true);
+			$("#datatable tr td, #datatable thead.paginationheader th").removeClass("hidden").addClass("visible");
+		} else {			
+			$(".iscolumn").attr('checked', false);
+			$("#datatable tr td, #datatable thead.paginationheader th").removeClass("visible").addClass("hidden");
+		} 
+	});
+	
+	$(".iscolumn").click(function(){
+		var id = $(this).attr('id');
+		if (this.checked == true) {
+			$("#datatable tr td."+id+", #datatable thead.paginationheader th."+id).removeClass("hidden").addClass("visible");
+		} else {
+			$("#datatable tr td."+id+", #datatable thead.paginationheader th."+id).removeClass("visible").addClass("hidden");
+		}
+	});
+	
+	$("#columnsection").removeClass("visible").addClass("hidden");
+	$("#reportcontents").css({'margin-left':'0'});
+	$("#checkboxtoggle").click(function(){
+		if (this.checked == true) {
+			$("#all").attr('checked', true);
+			$("#columnsection").removeClass("hidden").addClass("visible");
+			$("#reportcontents").css({'margin-left':'150px'});
+		} else {
+			$("#columnsection").removeClass("visible").addClass("hidden");
+			$("#reportcontents").css({'margin-left':'0'});
+		}
+	});
+	
+	var dateable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($datetable); ?>'));
+	var selectable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($selectable); ?>'));
+	var attributes = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($attributes); ?>'));
+	
+	// alert(selectable); alert(dateable);
+	$(".selects, .dates, .ui-datepicker-trigger").addClass("hidden").hide();
+	$(".values").removeClass("hidden").show(); 
+	<?php for($i = 1; $i <=$maxfilters; $i++){ ?>
+		// alert(dateable);
+		$("#attr_<?php echo $i; ?>, #condition_<?php echo $i; ?>").change(function(){
+			var attribute = $("#attr_<?php echo $i; ?>").val(); //alert(attribute);
+			var cond = $("#condition_<?php echo $i; ?>").val();  //alert(cond);
+			$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+			if(!isEmptyString(attribute)){
+				// alert(selectable.indexOf(attribute)); alert(dateable.indexOf(attribute));
+				if(selectable.indexOf(attribute) == -1 && dateable.indexOf(attribute) == -1){
+					$("#value_<?php echo $i; ?>").removeClass("hidden").show();
+					$(".selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+					$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+					$("#condition_<?php echo $i; ?>").attr('readonly', false);
+					if(cond == '13' || cond == '14' || cond == '15' || cond == '16'){
+						if(cond == '13' || cond == '14'){
+							$("#value_<?php echo $i; ?>").attr('placeholder','Comma separated e.g 5,10');
+						}
+						if(cond == '15' || cond == '16'){
+							$("#value_<?php echo $i; ?>").attr('placeholder','Comma separated e.g 5,10,15,20');
+						}
+					} else {
+						$("#value_<?php echo $i; ?>").attr('placeholder','enter search value');
+					}
+				} else {
+					if(selectable.indexOf(attribute) >= 0 ){
+						$("#value_<?php echo $i; ?>, .selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+						$("#"+attribute+"_<?php echo $i; ?>").removeClass("hidden").show();
+						$("#condition_<?php echo $i; ?> option").attr('disabled', false).removeClass("disabledoption");
+						// $("#condition").val('1').attr('readonly', true);
+						disabledoptions = '3,4,5,6,7,8,9,10,13,14,15,16';
+						var fieldsarray = disabledoptions.replace(/ /g,'').split(',');
+						// alert(fieldsarray);
+						$.each(fieldsarray, function(index, value) {
+							$("#condition_<?php echo $i; ?> option:eq("+value+")").attr('disabled', true).addClass("disabledoption"); 
+						});
+					}
+					if(dateable.indexOf(attribute) >= 0){
+						$("#value_<?php echo $i; ?>, .selects_<?php echo $i; ?>, .dates_<?php echo $i; ?>").addClass("hidden").hide();
+						$(".dates_<?php echo $i; ?>").removeClass("hidden").show();
+						$("#condition_<?php echo $i; ?>").attr('readonly', false);
+						
+						disabledoptions = '7,8,9,10,15,16';
+						var fieldsarray = disabledoptions.replace(/ /g,'').split(',');
+						// alert(fieldsarray);
+						$.each(fieldsarray, function(index, value) {
+							$("#condition_<?php echo $i; ?> option:eq("+value+")").attr('disabled', true).addClass("disabledoption"); 
+						});
+					} 
+				}
+			}
+		});
+		$("#attr_<?php echo $i; ?>, #condition_<?php echo $i; ?>").trigger("change");
+	<?php } ?>
+	
+	function getArrayFromJsonObject(obj){
+		var arr = [];
+		for(var x in obj){
+		  arr.push(obj[x]);
+		}
+		return arr;
+	}
+
+	
+});
+</script>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+        <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" orginalaction="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
+        <ul class="nav nav-tabs hideonprint">
+            <li class="<?php echo $action == 'benefitstats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'benefitstats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'benefitstats' ? '' : $this->baseUrl('report/benefitstats'); ?>">Summary Report</a></li>
+            <li class="<?php echo $action == 'benefitdetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'benefitdetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/benefitdetails'); ?>">Detailed Report</a></li>
+        </ul>
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
+            </div>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                           	<li style="width:170px; font-size:12px !important;"><label class="bolded">Filter By</label></li>
+                            <li style="width:200px; font-size:12px !important;"><label class="bolded">Condition</label></li>
+                            <li style="width:250px; font-size:12px !important;"><label class="bolded">Values / Range</label></li>
+                        </ul>
+                        <div class="divider2"></div>
+                        <?php for($i = 1; $i <=$maxfilters; $i++){ ?>
+                        	<ul class="resetlist listactions <?php echo $i <= ($rowcount) ? 'visible_row_ref' : 'hidden_row_ref'; ?>" style="margin-bottom:0;">
+                        		<li style="width:170px;">
+									<?php
+                                        $dropdown = new Zend_Form_Element_Select('attr_'.$i,
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $attributes),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control","input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->{'attr_'.$i}); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li style="width:200px;">
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('condition_'.$i,
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $conditions),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control","input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->{'condition_'.$i}); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li style="width:250px;">
+                                    <input type="text" name="value_<?php echo $i; ?>" id="value_<?php echo $i; ?>" value="<?php echo $request->{'value_'.$i}; ?>" class="form-control values values_<?php echo $i; ?> input-sm" />
+                                    <span id="selects_<?php echo $i; ?>">
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('userid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $users),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'userid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('createdby_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $users),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+    
+                                            $dropdown->setValue($request->{'createdby_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('approvedbyid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $users),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'approvedbyid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('benefitid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $benefits),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'benefitid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('trxntype_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $trxtypes),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'trxntype_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('status_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $allstatuses),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'status_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('payrollid_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), array('0'=>'Not Paid', '1'=>'Paid')),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'payrollid_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('istaxable_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), array('0'=>'Non Taxable', '1'=>'Taxable')),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'istaxable_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('isrequest_'.$i,
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), array('0'=>'No', '1'=>'Yes')),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control","input-sm","selects","selects_".$i)
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->{'isrequest_'.$i}); 
+                                            echo $dropdown->render();
+                                        ?>
+                                    </span>
+                                    <span id="dates_<?php echo $i; ?>">
+                                        <input type="text" name="startdate_<?php echo $i; ?>" id="startdate_<?php echo $i; ?>" class="form-control input-sm datefield dates dates_<?php echo $i; ?> ordinary readonly width100" value="<?php echo $request->{'startdate_'.$i}; ?>" placeholder="Start" />
+                                        <input name="enddate_<?php echo $i; ?>" id="enddate_<?php echo $i; ?>" type="text" class="form-control input-sm datefield dates dates_<?php echo $i; ?> ordinary readonly width100" placeholder="End" value="<?php echo $request->{'enddate_'.$i}; ?>" />
+                                    </span>
+                                </li>
+                               <li style="width:150px;">And</li>
+                        	</ul>
+                            <div class="divider1"></div>
+                        <?php } ?>
+                        <div class="divider5"></div>
+                        <a id="ref" class="addline gonowhere btn btn-primary btn-xs">Add</a>&nbsp
+                        <a id="clearfilters" class="blockanchor btn btn-default btn-xs" href="<?php echo $this->baseUrl("report/".$action); ?>">Clear</a>
+                        <div id="listpagerrors" class="lineblocked nowrapping"></div>
+                  	</div>
+                    <div class="col-sm-3">
+                    	<div class="divider20"></div>
+                        <button type="submit" class="btn btn-primary btn-sm" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button>
+                    	<input type="hidden" name="csv_text" id="csv_text" value="" />
+                    </div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+                    	<div class="box box-color box-bordered">
+							<div class="box-title condensed">
+								<h3><i class="fa fa-bars"></i> <?php echo $subtitle; ?></h3>
+                                <div class="actions">
+                                	<a href="<?php echo $this->baseUrl($controller.'/'.$action); ?>" title="Reset and Clear all Filters" rel="tooltip"><i class="fa fa-refresh"></i></a> &nbsp;
+                                	<?php if ($acl->checkPermission($resource, ACTION_EXPORT) && $isgenerated && !$has_no_data) { ?>
+                                        <button type="button" class="btn btn-default btn-xs noround submitexcel" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</button>
+                                        <input type="hidden" name="csv_text" id="csv_text" value="" />
+                                    <?php } ?>
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+                            	<?php if($isgenerated){ ?>
+									<?php if($has_no_data) { ?>
+                                        <div class="divider10"></div>
+                                        <div class="alert alert-warning">There are no records for this report</div>
+                                    <?php } else { ?>
+                                    	<table class="table table-hover table-nomargin table-bordered dataTable dataTable-fixedcolumn dataTable-scroll-x dataTable-scroll-y dataTable-colvis" id="datatable" data-nosearch >
+                                            <thead>
+                                                <tr>
+                                                	<?php if(!$istimesheetuser){ ?>
+                                                        <th class="nowrapping userid" style="width:170px;">Employee</th>
+                                                    <?php } ?>
+                                                    <th class="nowrapping trxndate" style="width:100px;">Trxn Date</th>
+                                                    <th class="nowrapping trxntype" style="width:100px;">Trxn Type</th>
+                                                    <th class="nowrapping benefitid" style="width:150px;">Category</th>
+                                                    <th class="nowrapping amount" style="width:120px;">Amount</th>
+                                                    <th class="nowrapping istaxable" style="width:120px;">Is Taxable</th>
+                                                    <th class="nowrapping status" style="width:100px;">Approval Status</th>
+                                                    <th class="nowrapping payrollid" style="width:100px;">Payment Status</th>
+                                                    <th class="nowrapping dateapproved" style="width:100px;">Date Approved</th>
+                                                    <th class="nowrapping approvedbyid" style="width:150px;">Approved By</th>
+                                                    <?php if(!$istimesheetuser){ ?>
+                                                        <th class="nowrapping isrequest" style="width:100px;">Request By User</th>
+                                                    <?php } ?>
+                                                    <th class="nowrapping datecreated" style="width:100px;">Input Date</th>
+                                                    <?php if(!$istimesheetuser){ ?>
+                                                        <th class="nowrapping createdby" style="width:150px;">Input By</th>
+                                                    <?php } ?>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+												<?php
+                                                    $total = 0;
+                                                    foreach($result as $line){
+                                                        $total += $line['amount'];
+                                                ?>
+                                                    <tr style="font-size:12px;">
+                                                        <?php if(!$istimesheetuser){ ?>
+                                                            <td class="userid"><?php echo isArrayKeyAnEmptyString($line['userid'], $users) ? '' : $users[$line['userid']]; ?></td>
+                                                        <?php } ?>
+                                                        <td class="trxndate"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?></td>
+                                                        <td class="trxntype"><?php echo isArrayKeyAnEmptyString($line['trxntype'], $trxtypes) ? '' : $trxtypes[$line['trxntype']]; ?></td>
+                                                        <td class="benefitid"><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '' : $benefits[$line['benefitid']]; ?></td>
+                                                        <td class="amount bolded" style="text-align:right;"><?php echo formatMoneyOnly($line['amount']); ?></td>
+                                                        <td class="istaxable"><?php echo $line['istaxable'] == 1 ? 'Yes' : 'No'; ?></td>
+                                                        <td class="status"><?php echo isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; ?></td>
+                                                        <td class="payrollid"><?php echo !isEmptyString($line['payrollid']) ? 'Paid' : 'Not Paid'; ?></td>
+                                                        <td class="dateapproved"><?php echo changeMySQLDateToPageFormat($line['dateapproved']); ?></td>
+                                                        <td class="approvedbyid"><?php echo isArrayKeyAnEmptyString($line['approvedbyid'], $users) ? '' : $users[$line['approvedbyid']]; ?></td>
+                                                        <?php if(!$istimesheetuser){ ?>
+                                                            <td class="isrequest"><?php echo $line['isrequest'] == 1 ? 'Yes' : 'No'; ?></td>
+                                                        <?php } ?>
+                                                        <td class="datecreated"><?php echo changeMySQLDateToPageFormat($line['datecreated']); ?></td>
+                                                        <?php if(!$istimesheetuser){ ?>
+                                                            <td class="createdby"><?php echo isArrayKeyAnEmptyString($line['createdby'], $users) ? '' : $users[$line['createdby']]; ?></td>
+                                                        <?php } ?>    
+                                                    </tr>
+                                                <?php } ?>
+                                                <tr style="font-size:12px;">
+                                                    <?php if(!$istimesheetuser){ ?>
+                                                        <td class="userid bolded" style="text-align:right;">Totals</td>
+                                                        <td class="trxndate"></td>
+                                                    <?php } else { ?>
+                                                        <td class="trxndate bolded" style="text-align:right;">Totals</td>
+                                                    <?php } ?>
+                                                    <td class="trxntype"></td>
+                                                    <td class="benefitid"></td>
+                                                    <td class="amount bolded" style="text-align:right;"><?php echo formatMoneyOnly($total); ?></td>
+                                                    <td class="istaxable"></td>
+                                                    <td class="status"></td>
+                                                    <td class="payrollid"></td>
+                                                    <td class="dateapproved"></td>
+                                                    <td class="approvedbyid"></td>
+                                                    <?php if(!$istimesheetuser){ ?>
+                                                        <td class="isrequest"></td>
+                                                    <?php } ?>
+                                                    <td class="datecreated"></td>
+                                                    <?php if(!$istimesheetuser){ ?>
+                                                        <td class="createdby"></td>
+                                                    <?php } ?>
+                                                </tr>
+                                            </tbody>
+                                      	</table>
+                                    <?php } ?>
+								<?php } else { ?>
+                                    <label class="labeldescription noresults" style="font-size:16px !important;">Select reporting parameters to Generate</label>
+                                <?php } ?>
+                           	</div>
+                       	</div>
+                 	</div>
+             	</div>
+         	</div>
+      	</div>
+    	</form>
+   	</div>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

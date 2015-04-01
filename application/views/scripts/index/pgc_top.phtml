@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<!-- Apple devices fullscreen -->
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<!-- Apple devices fullscreen -->
+	<meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/bootstrap.min.css')); ?>" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/bootstrap-theme.min.css')); ?>" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/style.css')); ?>" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/themes.css')); ?>" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/custom.css')); ?>" rel="stylesheet" type="text/css" />
+    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/app.css')); ?>" rel="stylesheet" type="text/css" />
+    <title><?php echo $title.$browserappend; ?></title>
+<body class="print DTTT_Print">
+	<style>
+		.edit, .requiredmark, .save_trigger, .cancel_trigger {
+			display:none;
+		}
+		body.print #headercontainer, body.print #sidebar, body.print .breadcrumbs, body.print .pageheader, body.print #tabs #left, body.print .hideonprint {
+			display:none;
+		}
+		body.print .showonprint {
+			display:block;
+		}
+		body.print div.controls, body.print .nullifempty {
+			display:inline-block;
+		}
+		p.view {
+			display:inline-block;
+		}
+    </style>
+    <div id="container-fluid">
+        <div id="contentcontainer" class="container-fluid">
+            <div id="centercolumn" class="container-fluid padding5">
+            <div class="showonprint <?php echo isEmptyString($request->print) ? 'hidden' : ''; ?>">
+                <div class="divider15"></div>
+                <span id="reportactions">			
+                    <div id="print_page_action_buttons" style="margin-left:25px;">
+                        <a title="Close Window" onClick="window.close()" href="javascript: void(0)"><i class="fa fa-times"></i> Close</a> &nbsp;
+                        <?php if($request->print == '1'){ ?>
+                            <a title="Print" onClick="window.print()" href="javascript: void(0)" class="print" ><i class="fa fa-print"></i> Print</a> &nbsp; 
+                        <?php } ?>
+                    </div>
+                </span>
+            </div>

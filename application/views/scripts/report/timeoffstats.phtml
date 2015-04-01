@@ -1,0 +1,425 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	$mytext = "";
+	$istimesheetuser = isTimesheetEmployee() ? true : false;
+	if($istimesheetuser){
+		$mytext = "My ";
+	}
+	
+	// $session->setVar('toggled', "1");
+	$title = $reporttitle = "Timeoff Analysis";
+	$subtitle = 'Analysis'; 
+	$description = ''; 
+	
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	if(isEmptyString($startdate)){
+		$startdate = $this->firstdayofyear_iso; //$startdate = '2015-01-01';
+		$request->setParam('startdate', date('M d, Y', strtotime($startdate)));
+	} else {
+		$startdate = date('Y-m-d', strtotime($startdate));
+	}
+	if(isEmptyString($enddate)){
+		$enddate = $this->lastdayofthismonth_iso; //$enddate = '2015-01-31';
+		$request->setParam('enddate', date('M d, Y', strtotime($enddate)));
+	} else {
+		$enddate = date('Y-m-d', strtotime($enddate));
+	}
+    
+	$status = $request->status;
+	if(isEmptyString($request->status)){
+		$status = 1;
+		$request->setParam('status', 1);
+	}
+	$trxntype = $request->trxntype;
+	if(isEmptyString($request->trxntype)){
+		$trxntype = 1;
+		$request->setParam('trxntype', 1);
+	}
+	
+	$users = getUsers();
+	$trxtypes = getTrxnTypes();
+	$timeoffs = getTimeoffTypes();
+	$timeoffoptions = getHoursDaysDropdown();
+	$allstatuses = getBenefitStatuses();
+	$conn = Doctrine_Manager::connection();
+	
+	# approved hours report
+	$where_query = " where u.id <> '' AND u.companyid = '".$companyid."' ";
+	if($istimesheetuser){
+		$where_query .= " AND b.userid = '".$userid."' ";
+	}
+	$approvedbenefits_query = "SELECT 
+	u.id as id,
+	IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name,
+	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->today_iso."') AND b.status = 1, b.timeofflength, 0)) as today, 
+	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->yestday_iso."') AND b.status = 1, b.timeofflength, 0)) as yesterday, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND b.status = 1, b.timeofflength, 0)) as thisweek, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND b.status = 1, b.timeofflength, 0)) as lastweek ,
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND b.status = 1, b.timeofflength, 0)) as thismonth,
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND b.status = 1, b.timeofflength, 0)) as lastmonth, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayof2monthago_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayof2monthago_iso."') AND b.status = 1, b.timeofflength, 0)) as 2monthago, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofyear_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofyear_iso."') AND b.status = 1, b.timeofflength, 0)) as thisyear
+	FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id AND b.ledgertype = 2 AND b.trxntype = 1) ".$where_query." GROUP BY u.id order by name ";
+	// debugMessage($approvedbenefits_query);
+	$approvedbenefits_result = $conn->fetchAll($approvedbenefits_query); // debugMessage($approvedbenefits_result); // exit;
+	
+	# approved hours report
+	$where_query = " WHERE u.companyid = '".$companyid."' AND b.ledgertype = 2 AND TO_DAYS(b.trxndate) >= TO_DAYS('".$startdate."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$enddate."') "; 	
+	if($istimesheetuser){
+		$request->setParam('userid', $userid);
+	}
+	if(!isEmptyString($request->userid)){
+		$where_query .= " AND b.userid = '".$request->userid."' ";
+	}
+	if(!isEmptyString($request->timeoffid)){
+		$where_query .= " AND b.timeoffid = '".$request->timeoffid."' ";
+	}
+	if(!isEmptyString($request->status)){
+		$where_query .= " AND b.status = '".$request->status."' ";
+	}
+	if(!isEmptyString($request->trxntype)){
+		$where_query .= " AND b.trxntype = '".$request->trxntype."' ";
+	}
+	$groupby = $request->groupby; $group_query = "";
+	if(isEmptyString($groupby)){
+		$groupby = 3;
+	}
+	if($groupby == "1"){
+		$group_query = " GROUP BY u.id, DAY(b.trxndate) ";
+	}
+	if($groupby == "2"){
+		$group_query = " GROUP BY u.id, YEARWEEK(b.trxndate) ";
+	}
+	if($groupby == "3"){
+		$group_query = " GROUP BY u.id, YEAR(b.trxndate), MONTH(b.trxndate) ";
+	}
+	if($groupby == "4"){
+		$group_query = " GROUP BY u.id, YEAR(b.trxndate) ";
+	}
+	
+	$trends_query = "SELECT u.id as id, IF(u.displayname <> '', u.displayname, concat(u.firstname, ' ', u.lastname, ' ', u.othername)) as name, b.trxndate, DAY(b.trxndate) as theday, MONTH(b.trxndate) as themonth, YEAR(b.trxndate) as theyear, YEARWEEK(b.trxndate, 3) as theyearweek, WEEK(b.trxndate,3) as theweek, SUM(b.timeofflength) as timeofflength FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id) ".$where_query." ".$group_query." order by b.trxndate asc, name asc ";
+	// debugMessage($trends_query);
+	$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
+	
+	$processeddata = array(); $userids = array();
+	foreach($trends_result as $key => $line){
+		$userids[$line['id']]['id'] = $line['id'];
+		$userids[$line['id']]['name'] = $line['name'];
+		if($groupby == "1"){
+			$processeddata[$line['trxndate']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['trxndate']][$line['id']]['name'] = $line['name'];
+			$processeddata[$line['trxndate']][$line['id']]['date'] = $line['trxndate'];
+			$processeddata[$line['trxndate']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['trxndate']][$line['id']]['timeofflength'] = $line['timeofflength'];
+		}
+		if($groupby == "2"){
+			$processeddata[$line['theyearweek']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyearweek']][$line['id']]['name'] = $line['name'];
+			$processeddata[$line['theyearweek']][$line['id']]['theyear'] = $line['theyear'];
+			$processeddata[$line['theyearweek']][$line['id']]['themonth'] = $line['themonth'];
+			$processeddata[$line['theyearweek']][$line['id']]['theweek'] = $line['theweek'];
+			$processeddata[$line['theyearweek']][$line['id']]['theyearweek'] = $line['theyearweek'];
+			$processeddata[$line['theyearweek']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyearweek']][$line['id']]['timeofflength'] = $line['timeofflength'];
+		}
+		if($groupby == "3"){
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['name'] = $line['name'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['theyear'] = $line['theyear'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['themonth'] = $line['themonth'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['timeofflength'] = $line['timeofflength'];
+		}
+		if($groupby == "4"){
+			$processeddata[$line['theyear']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyear']][$line['id']]['name'] = $line['name'];
+			$processeddata[$line['theyear']][$line['id']]['theyear'] = $line['theyear'];
+			$processeddata[$line['theyear']][$line['id']]['id'] = $line['id'];
+			$processeddata[$line['theyear']][$line['id']]['timeofflength'] = $line['timeofflength'];
+		}
+	}/**/
+	// debugMessage($processeddata); exit;
+
+	$title = $reporttitle;
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	$('#container').highcharts({
+        data: {
+            table: 'datatable'
+        },
+        chart: {
+            type: 'line'
+        },
+		exporting: {
+			enabled: true
+		},
+		credits: {
+			enabled: false
+		},
+        title: {
+            text: 'Timeoff Accruals (<?php echo $request->startdate; ?> - <?php echo $request->enddate; ?>)',
+			style: {
+                color: '#4a6694',
+                fontSize: '14px'
+            }
+        },
+        yAxis: {
+            title: {
+                text: 'Time Accrued (Hrs)'
+            }
+        },
+		xAxis: {
+            labels: {
+                autoRotation: [-90]
+            }
+        },
+		plotOptions: {
+            line: {
+                dataLabels: {
+                    enabled: true
+                }
+            }
+        },
+        tooltip: {
+            formatter: function () {
+                return '<b>' + this.series.name + '</b><br/>' +
+                     this.point.name+ ' - ' + this.point.y + 'Hrs';
+            }
+        }
+    });
+});
+</script>
+<style>
+table.table tbody.monitorbody tr td.variabletd {
+	font-size:12 !important;
+}
+</style>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+        <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
+            <ul class="nav nav-tabs hideonprint">
+                <li class="<?php echo $action == 'timeoffstats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'timeoffstats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'timeoffstats' ? '' : $this->baseUrl('report/timeoffstats'); ?>">Summary Report</a></li>
+                <li class="<?php echo $action == 'timeoffdetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'timeoffdetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/timeoffdetails'); ?>">Detailed Report</a></li>
+            </ul>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="box box-color box-bordered">
+                        <div class="box-title condensed">
+                            <h3><i class="fa fa-bars"></i> <?php echo $mytext; ?> Accrued Hours Summary</h3>
+                            <div class="actions">
+                            
+                            </div>
+                        </div>
+                        <div class="box-content nopadding">
+                            <table class="table table-striped">
+                                <thead class="monitor">
+                                    <tr>
+                                        <th style="width:20px; text-align:left;" class="monitorhead"></th>
+                                        <?php if(!$istimesheetuser){ ?>
+                                        	<th style="width:200px; text-align:left;" class="monitorhead">Employee</th>
+                                        <?php } ?>
+                                        <th class="monitorhead">This week <span><?php echo date('M j', strtotime($this->mondaythisweek_iso)).' - '.date('j', strtotime($this->sundaythisweek_iso)); ?></span></th>
+                                        <th class="monitorhead">Last week <span><?php echo date('M j', strtotime($this->mondaylastweek_iso)).' - '.date('j', strtotime($this->sundaylastweek_iso)); ?></span></th>
+                                        <th class="monitorhead">This month <span><?php echo date('M j', strtotime($this->firstdayofthismonth_iso)).' - '.date('j', strtotime($this->lastdayofthismonth_iso)); ?></span></th>
+                                        <th class="monitorhead">Last month <span><?php echo date('M j', strtotime($this->firstdayoflastmonth_iso)).' - '.date('j', strtotime($this->lastdayoflastmonth_iso)); ?></span></th>
+                                        <th class="monitorhead">Two Months Ago <span><?php echo date('M j', strtotime($this->firstdayof2monthago_iso)).' - '.date('j', strtotime($this->lastdayof2monthago_iso)); ?></span></th>
+                                        <th class="monitorhead">This year <span><?php echo date('Y'); ?> Total</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="monitorbody">
+                                	<?php foreach($approvedbenefits_result as $line){ ?>
+                                	<tr>
+                                        <td class="icontd"><span class="label label-info blocked">&nbsp;</span></td>
+                                        <?php if(!$istimesheetuser){ ?>
+	                                        <td class="variabletd"><?php echo isArrayKeyAnEmptyString($line['id'], $users) ? '' : $users[$line['id']]; ?></td>
+                                       	<?php } ?>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['thisweek']); ?></td>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['lastweek']); ?></td>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['thismonth']); ?></td>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['lastmonth']); ?></td>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['2monthago']); ?></td>
+                                        <td class="zeroifnull"><?php echo formatNumber($line['thisyear']); ?></td>
+                                    </tr>
+                                    <?php } ?>
+                                </tbody>
+                           	</table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="divider10"></div>
+        	<div class="box box box-color xbox-bordered">
+                <div class="box-title noheader">
+                    <h3></h3>
+                </div>
+                <div class="box-content nopadding">
+                    <div class="row">
+                        <div class="col-sm-9">
+                            <ul class="resetlist listactions">
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">Start Date</label>
+                                    <input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From" />
+                                </li>
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">End Date</label>
+                                    <input name="enddate" id="enddate" type="text" class="form-control input-sm datefield dates dates ordinary readonly width100" placeholder="To" value="<?php echo $request->enddate; ?>" />
+                                </li>
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">Group By</label>
+                                    <?php
+                                        $groups = array('1'=>'Day', '2' => 'Week', '3' => 'Month', '4' => 'Year');
+                                        $dropdown = new Zend_Form_Element_Select('groupby',
+                                                            array(
+                                                                'multiOptions' => $groups,
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control", "input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($groupby); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">Trxn Type</label>
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('trxntype',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $trxtypes),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control", "input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('trxntype')); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">Status</label>
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('status',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $allstatuses),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control", "input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('status')); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <li>
+                                    <label class="blocked" style="font-size:12px !important;">Category</label>
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $timeoffs),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array("form-control", "input-sm")
+                                                            )
+                                        );  
+                                        $dropdown->setValue($request->getParam('timeoffid')); 
+                                        echo $dropdown->render();
+                                    ?>
+                                </li>
+                                <?php if(!$istimesheetuser){ ?>
+                                    <li>
+                                   		<label class="blocked" style="font-size:12px !important;">Employee</label>
+                                        <?php
+                                            $dropdown = new Zend_Form_Element_Select('userid',
+                                                                array(
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $users),
+                                                                    'view' => new Zend_View(),
+                                                                    'decorators' => array('ViewHelper'),
+                                                                    'class' => array("form-control", "input-sm", "chosen-select")
+                                                                )
+                                            );  
+                                            $dropdown->setValue($request->getParam('userid')); 
+                                            echo $dropdown->render();
+                                        ?>
+                                    </li>
+                                <?php } ?>
+                            </ul>
+                        </div>
+                        <div class="col-sm-3">
+                    		<div class="divider20"></div>
+                            <button type="submit" class="btn btn-primary btn-sm xpull-right" title="Generate Report" id="filter"><i class="fa fa-filter"></i> Generate</button> &nbsp; 
+                            <a href="<?php echo $this->baseUrl($controller."/".$action); ?>" class="blockanchor">Reset</a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="box box-color box-bordered">
+                                <div class="box-title condensed">
+                                    <h3><i class="fa fa-user"></i> <?php echo $subtitle; ?></h3>
+                                    <div class="actions">
+                                    </div>
+                                </div>
+                                <div class="box-content nopadding">
+                                    <?php if(count($processeddata) == 0){ ?>
+                                        <div class="divider10"></div>
+                                        <div style="clear:both;" class="alert alert-warning margin5">There are no records for this report</div>
+                                    <?php } ?>
+                                    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+                                    <table id="datatable" class="table table-bordered table-striped hidden" style="font-size:12px !important; width:auto; margin:10px auto !important;">
+                                        <thead>
+                                            <tr>
+                                                <th>Period</th>
+                                                <?php foreach($userids as $id => $user){ ?>
+                                                    <th><?php echo $user['name']; ?></th>
+                                                <?php } ?>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach($processeddata as $key => $line){ ?>
+                                                <tr>
+                                                    <td>
+                                                        <?php if($groupby == 1){ ?>
+                                                            <?php echo date('jS M', strtotime($key)); ?>
+                                                        <?php } ?>
+                                                        <?php if($groupby == 2){ 
+                                                            $dates = getStartAndEndDate(substr($key, -2), substr($key, 0, 4));
+                                                        ?>
+                                                            <?php echo date('jS', strtotime($dates['week_start'])).' - '.date('jS M Y', strtotime($dates['week_end'])); ?> 
+                                                        <?php } ?>
+                                                        <?php if($groupby == 3){ 
+                                                            $dateinmonth = getFirstDayOfNextMonth(substr($key, -1), substr($key, 0, 4));
+                                                        ?>
+                                                            <?php echo date('M Y', strtotime($dateinmonth)); ?> 
+                                                        <?php } ?>
+                                                        <?php if($groupby == 4){ ?>
+                                                            <?php echo $key; ?> 
+                                                        <?php } ?>
+                                                    </td>
+                                                    <?php foreach($userids as $id => $user){ ?>
+                                                        <td class="rightalign"><?php echo isArrayKeyAnEmptyString($id, $line) ? '' : $line[$id]['timeofflength']; ?></td>
+                                                    <?php } ?>
+                                                </tr>
+                                            <?php } ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+          	</div>
+		</form>
+  	</div>
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

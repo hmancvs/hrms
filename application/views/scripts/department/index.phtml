@@ -2,77 +2,90 @@
 	require_once APPLICATION_PATH.'/includes/header.php';
 	
 	$department = new Department();
+	
 	if(isEmptyString($request->id)){
-		$successmessage = "Successfully Added";
-	} else { 
+		$pagetitle = 'Add Department';
+		$button_title = $this->translate('global_button_save'); 
+		$successmessage = 'global_save_success'; 
+		$posturl = $this->baseUrl("department/create");
+	} else {
 		$department->populate(decode($request->id)); 
-		$successmessage = "Updated Successfully";
+		$pagetitle = 'Update Department';
+		$button_title = $this->translate('global_button_save_changes'); 
+		$successmessage = 'global_update_success'; 
+		$posturl = $this->baseUrl("timeoff/edit");
 	}
-	// debugMessage($department->toArray());
+	
+	$successurl = $this->baseUrl('department/list');
+	$addnewsuccessurl = $this->baseUrl('department/index');
+	$failureurl = $this->viewurl;
+	
+	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+		$department->processPost($session->getVar(FORM_VALUES));	
+	}
+	
+	$icon = "";
+	$description = "";
+	$pageid = "department_index";
+	$title = "Departments";
+	$this->headTitle($title.$browserappend);
 ?>
 <script>
-	$(document).ready(function() {		
-		
-		$("#indexform").validate({		
-			// define the validation rules one field at a time
-			rules: {
-				name: "required"
-			}, 
-			// the messages for each of the fields being validated
-			messages: {				
-				name: "Please enter a Name"
-			},
-			// custom error positions
-			errorPlacement: function(error, element) {
-				switch(element.attr("name")){					
-					default:
-						error.appendTo("#"+element.attr("name")+"_error")
-						break;
-				}			
-			}
-		});
+$(document).ready(function() {		
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title.' / '.$pagetitle; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+	
+	$("#indexform").validate({		
+		// define the validation rules one field at a time
+		rules: {
+			name: "required"
+		}, 
+		// the messages for each of the fields being validated
+		messages: {		
+			name: "<?php echo $this->translate('global_name_error'); ?>"
+		}
 	});
+	
+});
 </script>
-<style>
-.modal-body {
-	padding-top: 10px;
-}
-</style>
-<div class="popupdiv">
-    <form id="indexform" class="form-horizontal profile" role="form" method="post">
-        <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
-            <input name="entityname" id="entityname" type="hidden" value="Department" />
-            <input type="hidden" id="id" name="id" value="<?php echo encode($department->getID()); ?>" />
-            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
-            <input type="hidden" id="headid_old" name="headid_old" value="<?php echo $department->getHeadID(); ?>" />
-            <div class="panel-body well-sm" style="min-height:150px;">
-                <div class="row-fluid marginleft5">
-                    <div class="col-md-12 paddingleft10">
-                    	<div class="form-group">
-                            <label class="col-md-3 control-label">Name: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                            <div class="col-md-8">
-                             	<input type="text" name="name" id="name" class="form-control input-sm" value="<?php echo $department->getName(); ?>" />
-                                <div id="name_error"></div>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+		<div class="col-sm-8">
+        	<div class="box box-color box-bordered">
+                <div class="box-title">
+                    <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
+                </div>
+                <div class="box-content nopadding">
+                    <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
+                        <input name="entityname" id="entityname" type="hidden" value="Department" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($department->getID()); ?>" />
+                        <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                        <input type="hidden" id="headid_old" name="headid_old" value="<?php echo $department->getHeadID(); ?>" />
+                        <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                        <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
+                        <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" /> 
+                        <input type="hidden" id="companyid" name="companyid" value="<?php echo $companyid; ?>" /> 
+                        <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                        <div class="form-group">
+                            <label class="control-label col-sm-3" for="textfield">Name: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" placeholder="Name of department" id="name" name="name" value="<?php echo $department->getName(); ?>" />
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-md-3 control-label">Description:</label>
-                            <div class="col-md-8">
-                             	<textarea name="description" id="description" class="form-control input-sm expanding"><?php echo $department->getDescription(); ?></textarea>
-                                        
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-md-3 control-label">Manager / Head:</label>
-                            <div class="col-md-8">
-                             	<?php
+                            <label class="col-sm-3 control-label">Head of Department:</label>
+                            <div class="col-sm-9">
+                                <?php
 									$allvalues = getUsers();
 									$dropdown = new Zend_Form_Element_Select('headid',
 														array(
 															'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
 															'view' => new Zend_View(),
 															'decorators' => array('ViewHelper'),
-															'class' => array('form-control','input-sm','width200')
+															'class' => array('form-control', 'width200')
 														)
 									);  
 									$dropdown->setValue($department->getHeadID()); 
@@ -80,11 +93,24 @@
 								?>
                             </div>
                         </div>
-                    </div>
-               	</div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-3" for="textarea">Description</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control expanding" id="description" name="description" placeholder="About the department"><?php echo $department->getDescription(); ?></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                            <?php if(isEmptyString($request->id)){ ?>
+                                <button class="btn btn-primary btn-green savebutton changesuccessurl" successurl="<?php echo encode($addnewsuccessurl); ?>" type="submit">Save and Add New</button>
+                            <?php } ?>
+                            <button class="btn btn-primary btn-green changesuccessurl savebutton" type="submit" successurl="<?php echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                        </div>
+                    </form>
+                </div>
             </div>
-      	</fieldset>
-    </form>
+      	</div>
+   	</div>
 </div>
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';

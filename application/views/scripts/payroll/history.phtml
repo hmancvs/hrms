@@ -1,1 +1,141 @@
-<?php require APPLICATION_PATH."/views/scripts/payroll/list.phtml"; ?>
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	# Page title
+	$title = "Payroll History";
+	
+	$style = '1';
+	
+	# Create an instance of the class to handle the pagination
+	$paginate = new Pagination();	
+	$paginate->setView($this);
+	# set the search columns to be used on this list
+	$paginate->setSearchColumns(array());
+	$paginate->setDefaultSortBy('');	
+	$paginate->setItemCountPerPage("10");
+	
+	# define the letter to be clicked to ease navigation 
+	$where_query = " WHERE p.id <> '' AND p.companyid = '".$companyid."' ";
+	$allowclear = false;
+	
+	if(!isEmptyString($request->searchterm)){
+		$allowclear = true;
+	}
+	
+	$paginate->processPost($request->getParams());
+	$all_results_query = "select p.id as id, p.type, p.createdby, p.payrolldate, p.startdate, p.enddate, p.middate, p.status, count(d.id) as employeecount, SUM(IF(d.isignored = 0, d.netearning, 0)) as netearning, u.displayname as addedby
+	from payroll p 
+	left join payrolldetail d on d.payrollid = p.id 
+	inner join useraccount u on p.createdby = u.id
+	".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY p.id order by p.startdate desc ";
+	
+	// debugMessage($all_results_query);
+	$paginate->setItemCountFromSQLQuery($all_results_query);
+	
+	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+	//echo $current_results_query;
+	$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+	$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+	
+	$conn = Doctrine_Manager::connection(); 
+	$result = $conn->fetchAll($current_results_query);
+	$has_no_data = (count($result) == 0) ? true : false; 
+	
+	$listurl = $this->baseUrl('payroll/history');
+	$addurl = $this->baseUrl('payroll/list');
+	$resource = "Payroll"; // $resource = "Department";
+	$icon = "glyphicon glyphicon-signal";
+	$users = getUsers();
+	
+	$description = '';
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+	$(document).ready(function() {
+		$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+		$('.titlelabel').html('<?php echo $title; ?>');
+		$('.desclabel').html('<?php echo $description; ?>');
+		$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+		
+	});
+</script>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
+            </div>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                        <ul class="resetlist listactions">
+                            <?php if ($acl->checkPermission("Payroll", ACTION_CREATE)) { ?>
+                                <li><a class="btn btn-primary blockanchor" href="<?php echo $this->baseUrl('payroll/list'); ?>"  title="Generate Payroll">New Payroll</a>
+                                </li>
+                            <?php } ?>
+                        </ul>
+                    </div>
+                    <div class="col-sm-3">
+                       
+                    </div>
+                </div>
+                <div class="row">
+					<div class="col-sm-12">
+						<div class="box box-color box-bordered lightgrey">
+							<div class="box-title condensed noheader">
+								<h3><i class="glyphicon-group"></i> Reports</h3>
+							</div>
+							<div class="box-content nopadding">
+                            	<?php if ($has_no_data) { ?>
+                                    <div class="divider30"></div>
+                                    <div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div>
+                                <?php } ?>
+								<div class="row-fluid peoplelist clearfix">
+                                <div class="divider10"></div>
+                                <?php
+                                    foreach($result as $line){
+                                        $viewurl = $this->baseUrl('payroll/list/id/'.encode($line['id']));
+                                        $name = $line['type'] == 1 ? "Payroll Report for ".changeMySQLDateToPageFormat($line['startdate']) : "Payroll Report (".changeMySQLDateToPageFormat($line['startdate'])." - ".changeMySQLDateToPageFormat($line['enddate']).")";
+                                ?>
+                                     <div class="col-xs-12 col-sm-6">
+                                        <div class="peoplewrapper makerelative">
+                                            <div class="peopleinfo col-sm-12">
+                                                <a href="<?php echo $viewurl; ?>" class="blockanchor"><h3 style="font-size:16px;"><i class="fa fa-bars"></i> <?php echo $name; ?></h3></a>
+                                                <div class="makeabsolute" style="right:10px; bottom:15px;"><?php echo $line['status'] == 2 ? '<span class="alert-success padding10">Completed</span>' : '<span class="alert-info padding10">Draft</span>'; ?></div>
+                                                <div class="col-sm-12 paddingleft0" style="font-size:12px;">
+                                                    <ul class="resetlist">
+                                                        <li><span class="bolded lineblocked" style="width:125px;">No of Employees:</span> <span class="nullifempty"><?php echo $line['employeecount']; ?></span></li>
+                                                        <li><span class="bolded lineblocked" style="width:125px;">Payroll Amount: </span> <span class="nullifempty"><?php echo formatMoneyOnly($line['netearning']); ?></span></li>
+                                                        <li><span class="bolded lineblocked" style="width:125px;">Current Status: </span> <span class="nullifempty"><?php echo $line['status'] == 2 ? 'Completed' : 'Draft'; ?></span></li>
+                                                        <li><span class="bolded lineblocked" style="width:125px;">Report Date: </span> <span class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['payrolldate']); ?></span></li>
+                                                        <li><span class="bolded lineblocked" style="width:125px;">Generated By: </span> <span class="nullifempty"><?php echo $line['addedby']; ?></span></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php } ?>
+                                <?php if(!$has_no_data) { ?>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-actions">
+                                            <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                                            <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                                            <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="divider5"></div>
+                                <?php } ?>
+							</div>
+						</div>
+					</div>
+				</div>
+          	</div>
+		</div>            
+	</div>            
+</div>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

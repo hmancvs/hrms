@@ -65,7 +65,7 @@
 	$unread_messages = $c->execute()->count();
 	$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:14px;">('.$unread_messages.' Unread)</span>';
 	
-	$title = "Messaging: Inbox";
+	$title = "Message Center";
 	$description = '';
 	$listurl = $this->baseUrl('notifications/list');	
 	$addurl = $this->baseUrl('notifications');
@@ -200,139 +200,145 @@ $(document).ready(function() {
 	});	
 });
 </script>
-<div class="row margin0">
-    <div class="col-md-12 padding0">
-    <form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("notifications/listsearch"); ?>" method="get" id="listform">
-		<?php if ($sessionhaserror) { ?>
-            <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-            <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
-        <div class="row-fluid clearfix whitebg" style="border: 1px solid #D9D9D9; padding:2px;">
-            <div class="col-md-9 padding0">
-                <div class="divider5"></div>
-                <ul class="clearfix managelist">
-                    <li class="selector" style="width:30px; padding-left:15px;"><input type="checkbox" name="all" class="all" id="all" /></li>
-                    <?php if ($acl->checkPermission($resourcename, ACTION_DELETE)) { ?>
-                    	<li><a class="gonowhere removesorttitle btn btn-default btn-sm padding3" style="" id="deletemessages" title="Delete message(s)">Delete</a></li>
-                    <?php } ?>
-                    <li>
-                        <?php							
-                            $read = new Zend_Form_Element_Select('markaction',
-                                        array(
-                                            'multiOptions' => array("" => "Mark As", "1" => "Read", "0" => "Unread"), 
-                                            'view' => new Zend_View(),
-                                            'decorators' => array('ViewHelper'),
-                                            'class' => array("removesorttitle","form-control","input-sm","inline"),
-											'style' => 'width:90px;'
-                                        )
-                            );
-                            $read->setValue(''); 
-                            echo $read->render();	
-                        ?>
-                   	</li>
-                    <li style="width:110px; position:relative;">                                                      
-                        <?php							
-                            $read = new Zend_Form_Element_Select('mr'.HTML_TABLE_COLUMN_SEPARATOR.'isread',
-                                        array(
-                                            'multiOptions' => array("" => "Show All", "0" => "Unread", "1" => "Read"), 
-                                            'view' => new Zend_View(),
-                                            'decorators' => array('ViewHelper'),
-                                            'class' => array("autofilter","form-control","input-sm"),
-											'style' => 'width:90px;'
-                                        )
-                            );
-                            $read->setValue($request->getParam('mr'.HTML_TABLE_COLUMN_SEPARATOR.'isread')); 
-                            echo $read->render();	
-                        ?> &nbsp;<img id="wait" class="hidden" src="<?php echo $this->baseUrl('images/loader.gif'); ?>" style="position:absolute; right:0; top:7px;" />
-                    </li>
-                    <?php if($acl->checkPermission($resourcename, ACTION_CREATE) && false) { ?>
-                        <li>
-                            <a href="<?php echo $this->baseUrl('notifications/index/type/1'); ?>" class="btn btn-sm btn-primary blockanchor"><i class="icon-email"></i> Compose Email</a>
-                        </li>
-                    <?php } ?>
-                    <?php if($acl->checkPermission('SMS', ACTION_CREATE) && false) { ?>
-                    	<li>
-                            <a href="<?php echo $this->baseUrl('notifications/index/type/2'); ?>" class="btn btn-sm btn-primary blockanchor"><i class="icon-email"></i> Compose SMS</a>
-                        </li>
-                    <?php } ?>
-                    <li>
-                        <label class="control-label">Key: </label>
-                    </li>
-                    <li>
-                       <div style="width:auto; padding:4px 10px; background-color:#e0eef8; border:1px solid #999999; color:#333333; text-align:center;">Unread</div>
-                    </li>
-                    <li>
-                    	<div style="width:auto; padding:4px 10px; background-color:#f9fcfd; border:1px solid #999999; color:#333333; text-align:center;">Read</div>
-                    </li>
-                </ul>
-                <div class="errors"><div id="errormessage"></div></div>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+    	<form class="form-horizontal" action="<?php echo $this->baseUrl("notifications/listsearch"); ?>" method="get" id="listform">
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
             </div>
-            <div class="col-md-3 padding0">
-            	<div class="divider5"></div>
-            	<div class="col-md-12 padding0"><input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><button type="submit" class="btn btn-default blockanchor searchbtn"><i class="glyphicon glyphicon-search"></i></button></div>
-                <?php if($allowclear){ ?>
-                    <a href="<?php echo $listurl; ?>" title="Clear Search and Filters" class="reset close button btn resetlink blockanchor">&times;</a>
-                <?php } ?>
-            </div>
-        </div>
-		<?php if($has_no_data) { ?>
-            <div class="divider30"></div>
-            <div style="clear:both;" class="alert alert-warning margin5"><?php echo $this->translate("message_list_norecords"); ?></div>
-        <?php } ?>
-        <div class="divider5"></div>
-        <div class="row margin0">
-            <div class="col-md-12 padding0">
-                <div class="widget-content well" style="background:none;background-color:#fff; padding:5px;">
-                    <ul id="datalist" class="nav nav-stacked">
-                        <?php 				  		
-                            foreach($result as $line){
-                                $readclass = "read";
-                                if($line['Is Read'] == 0){
-                                    $readclass = "unread";
-                                }
-                                $message_title = "View message details";
-                                $reply_path = $this->baseUrl("notifications/view/id/".encode($line['id']));
-								if(!isEmptyString($line['parentid'])){
-									$reply_path = $this->baseUrl("notifications/view/id/".encode($line['parentid'])."/readid/".encode($line['id']));
-								}
-                                $reply_title = "Reply this message";
-                                $sendtype = '';
-                        	?>
-                                <li class="<?php echo $readclass; ?>" id="row_<?php echo $line['id']; ?>">
-                                    <div class="col-md-12 padding10 clearfix">
-                                        <div class="selector col-md-2 padding0">
-                                        	<div class="divider5"></div>
-                                        	<input type="checkbox" name="checkor" class="isread messagechecker" id="message_<?php echo $line['id']; ?>" value="<?php echo $line['messagerecipientid']; ?>" style="margin-right:15px; vertical-align:top;" /> 
-                                        	<img class="imagecontainer" src="<?php echo getImagePath($line['senderid'], $line['profilephoto'], $line['gender']); ?>" style="width:65px; display:inline;" />
-                                            <div class="divider10"></div>
-                                        </div>
-                                        <div class="message col-md-10 padding0">
-                                        	<a href="<?php echo $reply_path; ?>" id="link_<?php echo $line['id']; ?>" class="blockanchor" title="<?php echo $message_title; ?>">
-                                                <h3 class="sender col-md-12 padding0"><?php echo $line['Sender'].$sendtype; ?> </h3>
-                                                <div class="summary clearfix col-md-12 padding0">   
-                                                    <span>Subject: <?php echo isEmptyString($line['Subject']) ? snippet($line['Contents'], 100, '...' ) : $line['Subject']; ?></span>
-                                                </div>
-                                            </a>
-                                            <div class="divider10"></div>
-                                            <div class="actions clearfix col-md-12 padding0">
-                                                <label class="messagedate">Sent on <?php echo date('m/d/Y - g:i A', strtotime($line['Message Date'])); ?></label>
-                                            </div>
-                                            <input type="hidden" class="message_<?php echo $line['id']; ?> link_<?php echo $line['id']; ?>" title="<?php echo $line['messagerecipientid']; ?>" value="<?php echo $line['id']; ?>" />
-                                            <input type="hidden" class="empty" name="messagesfordelete[]" id="selected_<?php echo $line['id']; ?>" value="" />
-                                            <input type="hidden" class="empty" name="messagesformarking[]" id="marked_<?php echo $line['id']; ?>" value="" />
-                                            <input type="hidden" name="deletemultiple" id="deletemultiple" value="1" />
-                                        </div>
-                                    </div>
+            <div class="box-content nopadding">
+                <div class="row margin0">
+                	<div class="row clearfix  margin0 whitebg" style="border: 1px solid #D9D9D9; padding:2px;">
+                        <div class="col-sm-9">
+                            <ul class="clearfix managelist">
+                                <li class="selector" style="width:30px; padding-left:15px;"><input type="checkbox" name="all" class="all" id="all" /></li>
+                                <?php if ($acl->checkPermission($resourcename, ACTION_DELETE)) { ?>
+                                    <li><a class="gonowhere removesorttitle btn btn-default btn-sm" style="" id="deletemessages" title="Delete message(s)">Delete</a></li>
+                                <?php } ?>
+                                <li>
+                                    <?php							
+                                        $read = new Zend_Form_Element_Select('markaction',
+                                                    array(
+                                                        'multiOptions' => array("" => "Mark As", "1" => "Read", "0" => "Unread"), 
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("removesorttitle","form-control","input-sm","inline"),
+                                                        'style' => 'width:90px;'
+                                                    )
+                                        );
+                                        $read->setValue(''); 
+                                        echo $read->render();	
+                                    ?>
                                 </li>
-                    	<?php } ?>
-                    </ul>
-               	</div>
-         	</div>
-      	</div>
-    </form>
-</div>            
+                                <li style="width:110px; position:relative;">                                                      
+                                    <?php							
+                                        $read = new Zend_Form_Element_Select('mr'.HTML_TABLE_COLUMN_SEPARATOR.'isread',
+                                                    array(
+                                                        'multiOptions' => array("" => "Show All", "0" => "Unread", "1" => "Read"), 
+                                                        'view' => new Zend_View(),
+                                                        'decorators' => array('ViewHelper'),
+                                                        'class' => array("autofilter","form-control","input-sm"),
+                                                        'style' => 'width:90px;'
+                                                    )
+                                        );
+                                        $read->setValue($request->getParam('mr'.HTML_TABLE_COLUMN_SEPARATOR.'isread')); 
+                                        echo $read->render();	
+                                    ?> &nbsp;<img id="wait" class="hidden" src="<?php echo $this->baseUrl('images/loader.gif'); ?>" style="position:absolute; right:0; top:7px;" />
+                                </li>
+                                <?php if($acl->checkPermission($resourcename, ACTION_CREATE) && false) { ?>
+                                    <li>
+                                        <a href="<?php echo $this->baseUrl('notifications/index/type/1'); ?>" class="btn btn-sm btn-primary blockanchor"><i class="icon-email"></i> Compose Email</a>
+                                    </li>
+                                <?php } ?>
+                                <?php if($acl->checkPermission('SMS', ACTION_CREATE) && false) { ?>
+                                    <li>
+                                        <a href="<?php echo $this->baseUrl('notifications/index/type/2'); ?>" class="btn btn-sm btn-primary blockanchor"><i class="icon-email"></i> Compose SMS</a>
+                                    </li>
+                                <?php } ?>
+                                <li>
+                                    <label class="control-label">Key: </label>
+                                </li>
+                                <li>
+                                   <div style="width:auto; padding:4px 10px; background-color:#e0eef8; border:1px solid #999999; color:#333333; text-align:center;">Unread</div>
+                                </li>
+                                <li>
+                                    <div style="width:auto; padding:4px 10px; background-color:#f9fcfd; border:1px solid #999999; color:#333333; text-align:center;">Read</div>
+                                </li>
+                            </ul>
+                            <div class="errors"><div id="errormessage"></div></div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="divider5"></div>
+                            <div class="col-sm-12 padding0">
+                                <div class="input-group">
+                                    <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." />
+                                    <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+               </div>
+               <?php if($has_no_data) { ?>
+                    <div class="divider30"></div>
+                    <div class="alert alert-warning"><?php echo $this->translate("message_list_norecords"); ?></div>
+                <?php } ?>
+                <div class="divider5"></div>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="widget-content well" style="background:none;background-color:#fff; padding:5px;">
+                            <ul id="datalist" class="nav nav-stacked">
+                                <?php 				  		
+                                    foreach($result as $line){
+                                        $readclass = "read";
+                                        if($line['Is Read'] == 0){
+                                            $readclass = "unread";
+                                        }
+                                        $message_title = "View message details";
+                                        $reply_path = $this->baseUrl("notifications/view/id/".encode($line['id']));
+                                        if(!isEmptyString($line['parentid'])){
+                                            $reply_path = $this->baseUrl("notifications/view/id/".encode($line['parentid'])."/readid/".encode($line['id']));
+                                        }
+                                        $reply_title = "Reply this message";
+                                        $sendtype = '';
+                                    ?>
+                                        <li class="<?php echo $readclass; ?> clearfix" id="row_<?php echo $line['id']; ?>">
+                                            <div class="col-sm-12 padding10 clearfix">
+                                                <div class="selector col-sm-2 padding0">
+                                                    <div class="divider5"></div>
+                                                    <input type="checkbox" name="checkor" class="isread messagechecker" id="message_<?php echo $line['id']; ?>" value="<?php echo $line['messagerecipientid']; ?>" style="margin-right:15px; vertical-align:top;" /> 
+                                                    <img class="imagecontainer" src="<?php echo getImagePath($line['senderid'], $line['profilephoto'], $line['gender']); ?>" style="width:65px; display:inline;" />
+                                                    <div class="divider10"></div>
+                                                </div>
+                                                <div class="message col-sm-10 padding0">
+                                                    <a href="<?php echo $reply_path; ?>" id="link_<?php echo $line['id']; ?>" class="blockanchor" title="<?php echo $message_title; ?>">
+                                                        <h3 class="sender col-sm-12 padding0"><?php echo $line['Sender'].$sendtype; ?> </h3>
+                                                        <div class="summary clearfix col-sm-12 padding0">   
+                                                            <span>Subject: <?php echo isEmptyString($line['Subject']) ? snippet($line['Contents'], 100, '...' ) : $line['Subject']; ?></span>
+                                                        </div>
+                                                    </a>
+                                                    <div class="divider10"></div>
+                                                    <div class="actions clearfix col-sm-12 padding0">
+                                                        <label class="messagedate">Sent on <?php echo formatDateAndTime($line['Message Date']); ?></label>
+                                                    </div>
+                                                    <input type="hidden" class="message_<?php echo $line['id']; ?> link_<?php echo $line['id']; ?>" title="<?php echo $line['messagerecipientid']; ?>" value="<?php echo $line['id']; ?>" />
+                                                    <input type="hidden" class="empty" name="messagesfordelete[]" id="selected_<?php echo $line['id']; ?>" value="" />
+                                                    <input type="hidden" class="empty" name="messagesformarking[]" id="marked_<?php echo $line['id']; ?>" value="" />
+                                                    <input type="hidden" name="deletemultiple" id="deletemultiple" value="1" />
+                                                </div>
+                                            </div>
+                                        </li>
+                                <?php } ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+           	</div>
+		</div>
+		</form>                        
+    </div>
+</div>        
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

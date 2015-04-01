@@ -66,6 +66,12 @@ define('DEFAULT_REGULAR_LEAVE_HRS', 160);
 define('DEFAULT_SICK_LEAVE_HRS', 320);
 define('DEFAULT_REGULAR_LEAVE_DAYS', 21);
 define('DEFAULT_SICK_LEAVE_DAYS', 4);
+define('HOURS_IN_DAY', 8);
+define('DEFAULT_COMPANYID', 8);
+define('PAYEID', 2);
+define('NSSFID', 3);
+define('ADVANCE', 5);
+define('TPID', 16);
 
 function getAppName(){
 	$config = Zend_Registry::get("config"); 
@@ -187,10 +193,10 @@ function formatDateAndTime($mysqldate, $ignoretime = true){
 	}
 	$timestr = '';
 	if($ignoretime === true){
-		$timestr = '  H:i';
+		$timestr = '  g:i A';
 	}
 	$oDate = new DateTime($mysqldate);
-	$sDate = $oDate->format("d/m/Y".$timestr);
+	$sDate = $oDate->format("M j, Y".$timestr);
 	return $sDate;
 }
 function formatTime($timestring){
@@ -482,26 +488,34 @@ function generateJSONStringForSelectChain($data, $default_option_value = "", $de
  * @param Number $number The number to be formatted
  * @return Number The formatted version of the number
  */
-function formatNumber($number) {
-	if (isEmptyString($number) || !is_numeric($number)) {
-		return $number;
+function formatNumber($number, $pts = '') {
+	if(isEmptyString($number)) {
+		return '0.00';
 	}
 	$aconfig = Zend_Registry::get("config"); 
-	return number_format($number, $aconfig->country->currencydecimalplaces);
+	$decimals = $aconfig->country->numberdecimalplaces;
+	if(!isEmptyString($pts)){
+		$decimals = $pts;
+	}
+	return number_format($number, $decimals);
 }
 function formatMoney($amount) {
 	$aconfig = Zend_Registry::get("config");
 	if (isEmptyString($amount)) {
-		return '--';
+		return '';
 	}
 	return formatNumber($amount)."&nbsp;<span class='pagedescription'>(".$aconfig->country->currencydecimalplaces.")</span>";
 }
-function formatMoneyOnly($amount) {
-	$aconfig = Zend_Registry::get("config");
-	if (isEmptyString($amount)) {
-		return '0';
+function formatMoneyOnly($amount, $pts = '') {
+	if(isEmptyString($amount)) {
+		return '0.00';
 	}
-	return formatNumber($amount);
+	$aconfig = Zend_Registry::get("config");
+	$decimals = $aconfig->country->currencydecimalplaces;
+	if(!isEmptyString($pts)){
+		$decimals = $pts;
+	}
+	return number_format($amount, $decimals);
 }
 /**
  * Generate an HTML list from an array of values
@@ -855,16 +869,22 @@ function isAdmin() {
 	}
 	return $return;
 }
+function isCompanyAdmin() {
+	$session = SessionWrapper::getInstance(); 
+	$return = false;
+	if($session->getVar('type') == '3'){
+		$return = true;
+	}
+	return $return;
+}
 # determine if loggedin user is data clerk
 function isTimesheetEmployee() {
 	$session = SessionWrapper::getInstance(); 
-	$acl = getACLInstance();
-	
-	return $session->getVar('type') == '2' || $acl->checkPermission("Check In", ACTION_YESNO) || $session->getVar('istimesheetuser') == '1' ? true : false;
+	return $session->getVar('type') == 2 || $session->getVar('istimesheetuser') == 1 || $session->getVar('istimesheetuser') == 2 ? true : false;
 }
-function isManager() {
+function getCompanyID() {
 	$session = SessionWrapper::getInstance(); 
-	return $session->getVar('type') == '4' ? true : false;
+	return isEmptyString($session->getVar('companyid')) ? DEFAULT_COMPANYID : $session->getVar('companyid');
 }
 # determine if user is logged in
 function isLoggedIn(){
@@ -1044,44 +1064,46 @@ function format($str){
 function getStyleIncludes(){
 	$files = array(
 		# major css to run application
-		// 'stylesheets/bootstrap-3.1.1.css', ## due to breaking of minificaition, this file is appended directly in the layout script
-		'stylesheets/bootstrap-theme.css',
-		// 'stylesheets/jquery.ui.1.8.14.css',
-		'stylesheets/jquery-ui.1.11.1.css',
+		// "stylesheets/bootstrap.min.css", # <!-- Bootstrap v3.2.0 -->
+		"stylesheets/plugins/jquery-ui/jquery-ui.min.css", # <!-- jQuery UI v1.11.1 -->
+		"stylesheets/style.css", # <!-- Theme CSS -->
+		"stylesheets/themes.css", # <!-- Color CSS -->
 			
-		# append all plugins and extensions styles to end of plugins.css so as to keep includes to minimal
-		'stylesheets/plugins.css',
-		'stylesheets/jquery.mCustomScrollbar.css',
-		
+		# theme styles
+		"stylesheets/plugins/datepicker/datepicker.css",
+		"stylesheets/plugins/timepicker/bootstrap-timepicker.min.css",
+		"stylesheets/plugins/chosen/chosen.css",
+		"stylesheets/plugins/datatable/TableTools.css",
+			
 		# application specific
 		'stylesheets/custom.css', // templated styles
-		'stylesheets/app.css'
+		//'stylesheets/app.css'
 	);
 	return $files;
 }
 function getJsIncludes(){
 	$files = array(
 		# major javascript to run application
-		'javascript/jquery-1.11.1.min.js',
-		'javascript/bootstrap-3.1.1.min.js',
-		// 'javascript/plugins/jquery-ui-1.11.1.min.js',
-		'javascript/jquery-migrate-1.0.0.js',
+		"javascript/jquery.min.js", # <!-- jQuery v2.1.1 -->
+		"javascript/plugins/nicescroll/jquery.nicescroll.min.js", #<!-- Nice Scroll -->
+		"javascript/plugins/jquery-ui/jquery-ui.js", #<!-- jQuery UI v1.11.1 -->
+		"javascript/plugins/slimscroll/jquery.slimscroll.min.js", #<!-- slimScroll -->
+		"javascript/bootstrap.min.js", #<!-- Bootstrap -->
+		"javascript/plugins/form/jquery.form.min.js", #<!-- Form -->
+		"javascript/eakroko.min.js", #<!-- Theme framework -->
+		"javascript/application.min.js", #<!-- Theme scripts -->
 		
 		# include here all plugins and extensions
-		'javascript/plugins/jquery.validate-1.11.1.min.js',
-		// 'javascript/plugins/jquery.validate.min.js',
-		'javascript/plugins/select-chain.js',
-		'javascript/plugins/chosen.jquery-1.0.0.min.js',
-		'javascript/plugins/jquery.elastic.source.1.6.11.js',		
-		'javascript/plugins/jquery.placeholder.min.js',				
-		'javascript/plugins/bootbox-4.2.0.min.js',
-		'javascript/plugins/jquery.blockUI.js',
-		
-		'javascript/plugins/table2CSV.js',
-		// 'javascript/plugins/pdfobject.js',
-		//'javascript/plugins/highcharts.js',
-		//'javascript/plugins/exporting.js',
-		
+		"javascript/plugins/validation/jquery.validate.min.js", #<!-- validate v1.13.1 -->
+		"javascript/plugins/validation/additional-methods.min.js",
+		"javascript/plugins/custom/highcharts/highcharts.js", 
+		"javascript/plugins/custom/highcharts/exporting.js", 
+		"javascript/plugins/custom/highcharts/data.js",
+		"javascript/plugins/bootbox/jquery.bootbox.js",
+		"javascript/plugins/datepicker/bootstrap-datepicker.js",
+		"javascript/plugins/timepicker/bootstrap-timepicker.min.js",
+		"javascript/plugins/custom/table2CSV.js",
+	
 		# application specific js
 		'javascript/app.js'
 	);
@@ -1414,5 +1436,44 @@ function getTranslations(){
 	);
 	
 	return $labels;
+}
+function getStartAndEndDate($week, $year) {
+	$dto = new DateTime();
+	$dto->setISODate($year, $week);
+	$ret['week_start'] = $dto->format('Y-m-d');
+	$dto->modify('+6 days');
+	$ret['week_end'] = $dto->format('Y-m-d');
+	return $ret;
+}
+# relative path to file
+function hasAttachment($filename, $userid){
+	$real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."users".DIRECTORY_SEPARATOR."user_".$userid.DIRECTORY_SEPARATOR."benefits".DIRECTORY_SEPARATOR.$filename;
+	if(file_exists($real_path) && !isEmptyString($filename)){
+		return true;
+	}
+	return false;
+}
+function hasAttachment2($filename){
+	$alt_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$filename;
+	if(file_exists($alt_path) && !isEmptyString($filename)){
+		return true;
+	}
+	return false;
+}
+# determine path to attachment
+function getFilePath($filename, $userid) {
+	$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
+	$path = '';
+	if(hasAttachment($filename, $userid)){
+		$path = $baseUrl.'/uploads/users/user_'.$userid.'/benefits/'.$filename;
+	} else {
+		if(hasAttachment2($filename)){
+			$path = $baseUrl.'/uploads/temp/'.$filename;
+		}
+		if(!hasAttachment2($filename) && !isEmptyString($filename)){
+			// $path = $baseUrl.'/uploads/temp/'.$filename;
+		}
+	}
+	return $path;
 }
 ?>

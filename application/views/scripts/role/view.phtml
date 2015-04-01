@@ -8,111 +8,102 @@
     $resourcearray = getResources();
 	$definedactions = ACL::getActions();
 	
-	$description = $role->getName()." - ".$role->getDescription();
+	$pageid = "row_view";
+	$description = "Permissions Matrix - ".$role->getName();
 	$listurl = $this->baseUrl("role/list");
 	$listitems  = "Roles";
-	$title = $role->getName().' Permissions';
+	$title = 'User Permissions';
 	$this->headTitle($role->getName().$browserappend);
 ?>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo $homedir.'Role / '.$role->getName(); ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.'User Role / '.$role->getName(); ?>');
 	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="glyphicon glyphicon-cog"></span>');
 	
 });
 </script>
-<div class="row-fluid margin0 view">
-    <div class="col-md-12 padding0">
-    	<div class="headerbox">
-            <table class="table border0 nohover margin0">                       
-                <tr>		                    
-                    <td class="padding2">
-                    	<div class="btn-group gridactions">
-                            <button type="button" class="btn btn-default btn-sm dropdown-toggle noround" data-toggle="dropdown">Actions <span class="caret"></span></button>
-                            <ul class="dropdown-menu" role="menu" style="left:-86px;">
-                                <?php if ($acl->checkPermission('Role', ACTION_EDIT)) { ?>	
-                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('role/index/id/'.encode($role->getID())); ?>" id="update"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a></li>
-                                <?php } ?>
-                                <?php if ($acl->checkPermission('Role', ACTION_LIST)) { ?>
-                                    <li><a class="blockanchor" href="<?php echo $listurl; ?>"><i class="glyphicon glyphicon-list"></i>&nbsp; List Roles</a></li>
-                                <?php } ?>
-                                <?php if ($acl->checkPermission('Role', ACTION_DELETE)) { ?>	
-                                    <li><a class="deleteline gonowhere" action="<?php echo $this->baseUrl('role/delete/id/'.encode($role->getID())."/entityname/AclGroup/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="glyphicon  glyphicon-trash"></i>&nbsp; Delete</a></li>
-                                <?php } ?>
-                            </ul>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+    <form id="indexform" name="viewform" class="form-horizontal">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="box">
+                    <div class="box-title">
+                        <h3><i class="fa fa-cog"></i><?php echo $description; ?></h3>
+                        <div class="actions">
+                        	<?php if ($acl->checkPermission('Role', ACTION_EDIT)) { ?>	
+                            	<a class="btn btn-primary" href="<?php echo $this->baseUrl('role/index/id/'.encode($role->getID())); ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a>
+                            <?php } ?>
+                            <?php if ($acl->checkPermission('Role', ACTION_DELETE)) { ?>	
+                                <a class="deleteline btn btn-default" action="<?php echo $this->baseUrl('role/delete/id/'.encode($role->getID())."/entityname/AclGroup/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Remove Entry" rel="tooltip"><i class="fa fa-trash"></i></a>
+                            <?php } ?>
+                            <?php if ($acl->checkPermission('Role', ACTION_LIST)) { ?>
+                            	<a class="btn btn-default" href="<?php echo $listurl; ?>" title="All Roles" rel="tooltip"><i class="fa fa-arrow-right"></i></a>
+                            <?php } ?>
                         </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-    <?php if($sessionhaserror) { ?>
-        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-    <?php } ?>
-    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-    <?php } ?>
-    <div class="contentcontainer clearfix">
-    	<form id="viewform" class="form-horizontal" role="form" method="get">
-        	<div class="row-fluid margin0">
-            	<div class="col-md-12">
-                    <fieldset class="fieldsetcontainer">
-                        <legend><?php echo $role->getName(); ?> - Access Control List</legend>
-                        <div class="panel-body well-sm">
-                            <table class="table contentviewtable">
-                                <thead>
-                                    <tr>
-                                        <th class="xlabel nowrapping">Resources <img style="width:80px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>                    	
-                                        <?php
-                                            foreach($definedactions as $value) {
-                                        ?>
-                                        <th class="xlabel" style="width:11%; text-align:center;"><?php echo $value == 'flag' ? 'Yes/No' : ucfirst($value); ?></th>
-                                        <?php 
-                                            } // end creating the header column for each action
-                                        ?> 
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php 
-                                        foreach($resourcearray as $resourceid => $resourceName) {
-                                        // load the permission instance for the specified resource, since for each group and resource there is only one permission instance
-                                        $theresource = new AclResource();
-                                        $theresource->populate($resourceid);
-                                        //debugMessage($resource->toArray());
-                                        $permission = $role->getPermissionForResource($resourceid); 
+                    </div>
+                    <div class="box-content nopadding">
+                        <div class="divider5"></div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                
+                            </div>
+                        </div>
+                        <div class="divider5"></div>
+                        <table class="table margin0 table-bordered table-striped table-colored-header">
+                        	<thead style="font-size:12px !important;">
+                                <tr>
+                                    <th class="xlabel nowrapping">Resources <img style="width:80px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>                    	
+                                    <?php
+                                        foreach($definedactions as $value) {
                                     ?>
+                                    <th class="hidden-xs" style="width:9%; text-align:center;"><?php echo $value == 'flag' ? 'Yes/No' : ucfirst($value); ?></th>
+                                    <?php 
+                                        } // end creating the header column for each action
+                                    ?> 
+                                </tr>
+                            </thead>
+                            <tbody>
+								<?php 
+                                    foreach($resourcearray as $resourceid => $resourceName) {
+                                    // load the permission instance for the specified resource, since for each group and resource there is only one permission instance
+                                    $theresource = new AclResource();
+                                    $theresource->populate($resourceid);
+                                    //debugMessage($resource->toArray());
+                                    $permission = $role->getPermissionForResource($resourceid); 
+                                ?>
                                     <tr>
                                         <td class="xlabel"><?php echo $resourceName; ?></td>                            
-                                        <?php 
-                                            foreach($definedactions as $theaction) {
-                                                if($theresource->get($theaction) == 1) {
-                                        ?>
-                                                <td align="center">
+                                        <?php foreach($definedactions as $theaction) { ?>
+                                            <?php if($theresource->get($theaction) == 1) { ?>
+                                                <td align="center hidden-xs">
                                                     <?php echo ($permission->checkPermissionForAction($theaction) ? 
-                                                    '<img src="'.$this->baseUrl("images/tick.png").'" alt="Permission Granted" />' : 
-                                                    '<img src="'.$this->baseUrl("images/cross.png").'" alt="Permission Denied" />');  
+                                                    '<i class="fa fa-check btn btn-green" title="Granted" rel="tooltip"></i>' : 
+                                                    '<i class="fa fa-remove btn" title="Denied" rel="tooltip"></i>');  
                                                     ?>
                                                 </td>                        
-                                        <?php } else { ?>
-                                                <td>&nbsp;</td>     
-                                        <?php 
-                                                }// end checking if there are available permissions
-                                            } // end creating checkboxes for each available action
-                                        ?>  
-                                    </tr><?php 
-                                    } // end creating a row for each resource
-                                    ?> 
-                                </tbody>                             
-                            </table>
-                		</div>
-               		</fieldset>
-              	</div>
-        	</div>
-		</form>
-	</div>                   
-</div>
+                                            <?php } else { ?>
+                                                <td align="center hidden-xs">&nbsp;</td>     
+                                            <?php } ?>
+                                        <?php } ?>  
+                                    </tr>
+								<?php } ?> 
+                            </tbody>
+                        </table>
+                        <div class="divider10"></div>
+                        <div class="form-actions testborder clearfix">
+                        	<?php if ($acl->checkPermission('Role', ACTION_EDIT)) { ?>	
+                            	<a class="btn btn-primary pull-right" href="<?php echo $this->baseUrl('role/index/id/'.encode($role->getID())); ?>" title="Update" rel="tooltip">Update Settings</a>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>  
+    </form>
+</div>                                                  
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

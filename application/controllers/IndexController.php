@@ -557,145 +557,48 @@ class IndexController extends Zend_Controller_Action  {
 		}
 	}
 	
-	public function committeeAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-	}
-	
-	public function profileAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-	}
-
-	public function churchAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-	}
-	
-	public function ministriesAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-	}
-	
-	public function searchAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-	}
-	
-	public function processsearchAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-		//$this->_helper->viewRenderer->setNoRender(TRUE);
-		$formvalues = $this->_getAllParams();
-		
-		//debugMessage($this->getRequest()->getQuery());
-    	// debugMessage($this->_getAllParams()); exit();
-    	$this->_helper->redirector->gotoSimple('search', $this->getRequest()->getControllerName(), 
-    											$this->getRequest()->getModuleName(),
-    											array_remove_empty(array_merge_maintain_keys($this->_getAllParams(), $this->getRequest()->getQuery())));
-    }
-	
-	function processcontactAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
+	public function themechangeAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		$formvalues = $this->_getAllParams();
 		// debugMessage($formvalues);
-		
-		$recipients_array = array(); 
-	    $messagedata = array(); 
-		$users = array($formvalues['id']);
-	    $execresult = array('result'=>'', 'msg'=>'');
-		
-		if(count($users) == 0){
-	    	$session->setVar(ERROR_MESSAGE, "Error: No Member specified!");
-	    	$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
-	    	$execresult = array('result'=>'fail', 'msg'=>"Error: No Receipients specified!");
-	    }
-		
-		$messages = array(); $sent = array(); $phones = array();
-	    $messages['contents'] = $formvalues['contents'];
-	    $messages['type'] = 1;
-		$messages['subject'] = '';
-	    if(!isArrayKeyAnEmptyString('subject', $formvalues)){
-	    	$messages['subject'] = $formvalues['subject'];
-	    }
-		$messages['senderid'] = NULL;
-		if(!isArrayKeyAnEmptyString('senderid', $formvalues)){
-			$messages['senderid'] = $formvalues['senderid'];
-		}
-		if(!isArrayKeyAnEmptyString('senderemail', $formvalues)){
-			$messages['senderemail'] = $formvalues['senderemail'];
-		}
-		if(!isArrayKeyAnEmptyString('sendername', $formvalues)){
-			$messages['sendername'] = $formvalues['sendername'];
-		}
-		# process receipients depending on select type
-		foreach ($users as $key => $userid){
-			$memb = new UserAccount();
-			$id = $userid;
-			
-			$memb->populate($id); // debugMessage($memb->toArray());
-			if($memb->isUser()){
-				$recipients_array[$id]['recipientid'] = $memb->getID();
-			}
-			$messagedata[$id]['id'] = $memb->getID();
-			$messagedata[$id]['name'] = $memb->getName();
-			$messagedata[$id]['email'] = $memb->getEmail();
-			$messagedata[$id]['phone'] = $memb->getPhone();
-			$sent[] = $memb->getName();
-			
-			$messages['recipients'] = $recipients_array;
-			$messages['membertotal'] = count($messagedata);
-			$messages['usertotal'] = count($recipients_array);
-			// debugMessage($sent); 
-			// debugMessage($messagedata); 
-				
-			$msg = new Message();
-			$msg->processPost($messages);
-			/*debugMessage($msg->toArray());
-			debugMessage('error is '.$msg->getErrorStackAsString()); exit();*/
-		}
-		
-		if($msg->hasError()){
-			$session->setVar(ERROR_MESSAGE, "Error: ".$msg->getErrorStackAsString());
-			$session->setVar(FORM_VALUES, $this->_getAllParams());
-			$execresult = array('result'=>'fail', 'msg'=>"Error: ".$msg->getErrorStackAsString());
-			$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
-		} else {
-			try {
-				$msg->save();
-				// send message to emails
-				if(count($messagedata) > 0){
-					foreach($messagedata as $key => $receipient){
-						$msgdetail = new MessageRecipient();
-						if(!isArrayKeyAnEmptyString('email', $receipient)){
-							// debugMessage($formvalues['senderemail'].'-'.$formvalues['sendername'].'-'.$messages['subject'].'-'. $receipient['email'].'-'.$receipient['name'].'-'.$messages['contents']);
-							// $msgdetail->sendInboxEmailNotification($formvalues['senderemail'], $formvalues['sendername'], $messages['subject'], $receipient['email'], $receipient['name'], $messages['contents']);
-						}
-					}
-				}
-							
-				if(count($messagedata) == 1){
-					$key = current(array_keys($messagedata));
-					$rcpt = $messagedata[$key]['name'];
-					$sentmessage = "Message sent to ".$rcpt;
-					$session->setVar(SUCCESS_MESSAGE, $sentmessage);
-					
-				} else { 
-					$sentmessage = "Message successfully sent to <b>".count($messagedata)."</b> member(s). <br />See full list of recipient(s) at the bottom of this page.";
-					$sentresult = createHTMLListFromArray($sent, 'successmsg alert alert-success');
-					$session->setVar('sentlist', $sentresult);
-					$session->setVar(SUCCESS_MESSAGE, "Message sent to ".count($messagedata)." members. <br />See full list of recipients at the bottom of this page.");
-				}
-				$execresult = array('result'=>'success', 'msg'=>$sentmessage);
-			} catch (Exception $e) {
-				$session->setVar(ERROR_MESSAGE, "An error occured in sending the message. ".$e->getMessage());
-				$session->setVar(FORM_VALUES, $this->_getAllParams());
-				$execresult = array('result'=>'success', 'msg'=>"An error occured in sending the message. ".$e->getMessage());
-			}
-		}
-	    // exit;
-	   	$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
+		$session->setVar($this->_getParam('type'), $this->_getParam('value'));
 	}
+	
+	public function colorchangeAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+		$formvalues = $this->_getAllParams();
+		// debugMessage($formvalues);
+		$session->setVar('colortheme', $this->_getParam('value'));
+		echo 'colortheme now '.$session->getVar('colortheme');
+	}
+	
+	public function sidebarconfigAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+		$formvalues = $this->_getAllParams();
+		// debugMessage($formvalues);
+		$session->setVar('showsidebar', $this->_getParam('value'));
+		// echo 'toggle now is '.$session->getVar('show_sidebar');
+	}
+	
+	public function changecompanyAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+		
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
+		$session->setVar('companyid', $this->_getParam('companyid'));
+		
+		$company = new Company();
+		$company->populate($this->_getParam('companyid'));
+		$companyname = $company->getName();
+		$session->setVar(SUCCESS_MESSAGE, "Successfully switched default Company to ".$companyname.".");
+		$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
+	}
+	
 }

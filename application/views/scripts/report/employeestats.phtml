@@ -1,0 +1,373 @@
+<?php
+	include APPLICATION_PATH.'/includes/header.php';
+	
+	// $session->setVar('toggled', "1");
+	$title = $reporttitle = "Employee Statistics";
+	$subtitle = 'Analysis'; 
+	$description = ''; 
+	$periodlabel = '';
+	$result = array(); 
+	$has_no_data = false;
+	$startdate = $request->startdate;
+	$enddate = $request->enddate;
+	$departmentlist = getDepartments();
+	$typelist = getUserType();
+	 
+	// emp status and gender 
+	$status_empstatus_sql = "SELECT 
+	COUNT(DISTINCT(u.id)) as 'Total Employees', 
+	SUM(if(u.empstatus = '1', 1, 0)) as 'Permanent', 
+	SUM(if(u.empstatus = '2', 1, 0)) as 'Temporaly', 
+	SUM(if(u.empstatus = '3', 1, 0)) as 'Intern',
+	SUM(if(u.gender = '1', 1, 0)) as 'Male',
+	SUM(if(u.gender = '2', 2, 0)) as 'Female',
+	SUM(if(u.payrolltype = '1', 1, 0)) as 'Paid Daily',
+	SUM(if(u.payrolltype = '2', 1, 0)) as 'Paid Weekly',
+	SUM(if(u.payrolltype = '3', 1, 0)) as 'Paid Fortnightly',
+	SUM(if(u.payrolltype = '4', 1, 0)) as 'Paid Monthly'
+	FROM useraccount AS u where u.companyid = '".$companyid."'"; // debugMessage($status_pie_sql);
+	$conn = Doctrine_Manager::connection(); 
+	$count_empstatus_result = $conn->fetchRow($status_empstatus_sql);  // debugMessage($status_empstatus_sql);
+	
+	// department
+	$department_pie_sql = "SELECT 
+	COUNT(DISTINCT(u.id)) as 'Total Employees' ,
+	d.name as 'Department',
+	u.departmentid as 'departmentid'
+	FROM useraccount AS u left join department d on (u.departmentid = d.id) WHERE u.departmentid <> '' AND u.departmentid is not null AND u.companyid = '".$companyid."' GROUP BY u.departmentid "; // debugMessage($department_pie_sql);
+	$department_pie_result = $conn->fetchAll($department_pie_sql);  //debugMessage($department_pie_result);
+	$processeddata = array();
+	foreach($department_pie_result as $key => $line){			
+		$processeddata['departmentids'][] = $line['departmentid'];
+		$processeddata['Departments'][] = $departmentlist[$line['departmentid']];
+		$processeddata['Total Employees'][] = $line['Total Employees'];
+	}
+	
+	$data_arrray = '';
+	$department_list = '';
+	foreach($processeddata['Departments'] as $key => $departmentname){
+		$data_arrray[] = "['".$departmentname."', ".$processeddata['Total Employees'][$key]."]";
+	}
+	$datalist_department = implode(", ",$data_arrray); // debugMessage($datalist);
+	
+	// type
+	$type_pie_sql = "SELECT 
+	COUNT(DISTINCT(u.id)) as 'Total Employees' ,
+	g.name as 'Group',
+	u.type as 'type'
+	FROM useraccount AS u inner join aclgroup g on (u.type = g.id) WHERE u.type <> '' AND u.type is not null AND u.companyid = '".$companyid."' GROUP BY u.type "; // debugMessage($department_pie_sql);
+	$type_pie_result = $conn->fetchAll($type_pie_sql); // debugMessage($type_pie_result);
+	$processeddata = array();
+	foreach($type_pie_result as $key => $line){			
+		$processeddata['types'][] = $line['type'];
+		$processeddata['Groups'][] = $typelist[$line['type']];
+		$processeddata['Total Employees'][] = $line['Total Employees'];
+	}
+	
+	$data_arrray = '';
+	$type_list = '';
+	foreach($processeddata['Groups'] as $key => $typename){
+		$data_arrray[] = "['".$typename."', ".$processeddata['Total Employees'][$key]."]";
+	}
+	$datalist_type = implode(", ",$data_arrray); // debugMessage($datalist);
+	
+	$title = $reporttitle;
+	$this->headTitle($title.$browserappend);
+?>
+<script>
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Reports / '.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="glyphicon glyphicon-signal"></span>');
+	
+	// Radialize the colors
+	Highcharts.getOptions().colors = Highcharts.map(Highcharts.getOptions().colors, function(color) {
+		return {
+			radialGradient: { cx: 0.5, cy: 0.3, r: 0.7 },
+			stops: [
+				[0, color],
+				[1, Highcharts.Color(color).brighten(-0.3).get('rgb')] // darken
+			]
+		};
+	});
+	$(function () {
+		$('#container_pie_empstatus').highcharts({
+			chart: {
+				width: 500,
+				height:400,
+				margin: [60, 0, 60, 0]
+			},
+			title: {
+				text: 'Employees by Contract Status'
+			},
+			tooltip: {
+				formatter: function() {
+					return '<b>'+ this.point.name +'</b>: '+ Math.round(this.percentage) +' % ['+this.point.y+' Employees]';
+				 }
+			},
+			exporting: {
+				enabled: true
+			},
+			credits: {
+				enabled: false
+			},
+			plotOptions: {
+				pie: {
+					allowPointSelect: true,
+					cursor: 'pointer',
+					dataLabels: {
+						enabled: true,
+						color: '#000000',
+						connectorColor: '#000000',
+						format: "<b>{point.name}</b>: {point.percentage:.0f} %"
+					}
+				}
+			},
+			series: [{
+				type: 'pie',
+				name: 'No of Employees',
+				data: [
+					['Permanent', <?php echo $count_empstatus_result['Permanent']; ?>],
+					['Temporaly', <?php echo $count_empstatus_result['Temporaly']; ?>],
+					['Intern', <?php echo $count_empstatus_result['Intern']; ?>]
+				]
+			}]
+		});
+		
+		$('#container_pie_gender').highcharts({
+			chart: {
+				width: 500,
+				height:400,
+				margin: [60, 0, 60, 0]
+			},
+			title: {
+				text: 'Employees by Gender'
+			},
+			tooltip: {
+				formatter: function() {
+					return '<b>'+ this.point.name +'</b>: '+ Math.round(this.percentage) +' % ['+this.point.y+' Employees]';
+				 }
+			},
+			exporting: {
+				enabled: true
+			},
+			credits: {
+				enabled: false
+			},
+			plotOptions: {
+				pie: {
+					allowPointSelect: true,
+					cursor: 'pointer',
+					dataLabels: {
+						enabled: true,
+						color: '#000000',
+						connectorColor: '#000000',
+						format: "<b>{point.name}</b>: {point.percentage:.0f} %"
+					}
+				}
+			},
+			series: [{
+				type: 'pie',
+				name: 'No of Employees',
+				data: [
+					['Male', <?php echo $count_empstatus_result['Male']; ?>],
+					['Female', <?php echo $count_empstatus_result['Female']; ?>]
+				]
+			}]
+		});
+		
+		$('#container_pie_payrolltype').highcharts({
+			chart: {
+				width: 500,
+				height:400,
+				margin: [60, 0, 60, 0]
+			},
+			title: {
+				text: 'Employees by Payroll Method'
+			},
+			tooltip: {
+				formatter: function() {
+					return '<b>'+ this.point.name +'</b>: '+ Math.round(this.percentage) +' % ['+this.point.y+' Employees]';
+				 }
+			},
+			exporting: {
+				enabled: true
+			},
+			credits: {
+				enabled: false
+			},
+			plotOptions: {
+				pie: {
+					allowPointSelect: true,
+					cursor: 'pointer',
+					dataLabels: {
+						enabled: true,
+						color: '#000000',
+						connectorColor: '#000000',
+						format: "<b>{point.name}</b>: {point.percentage:.0f} %"
+					}
+				}
+			},
+			series: [{
+				type: 'pie',
+				name: 'No of Employees',
+				data: [
+					['Paid Monthly', <?php echo $count_empstatus_result['Paid Monthly']; ?>],
+					['Paid Fortnightly', <?php echo $count_empstatus_result['Paid Fortnightly']; ?>],
+					['Paid Weekly', <?php echo $count_empstatus_result['Paid Weekly']; ?>],
+					['Paid Daily', <?php echo $count_empstatus_result['Paid Daily']; ?>]
+				]
+			}]
+		});
+	});
+	
+	$(function () {
+		$('#container_pie_department').highcharts({
+			chart: {
+				width: 500,
+				height:400,
+				margin: [60, 0, 60, 0]
+			},
+			title: {
+				text: 'Employees by Department'
+			},
+			tooltip: {
+				formatter: function() {
+					return '<b>'+ this.point.name +'</b>: '+ Math.round(this.percentage) +' % ['+this.point.y+' Employees]';
+				 }
+			},
+			exporting: {
+				enabled: true
+			},
+			credits: {
+				enabled: false
+			},
+			plotOptions: {
+				pie: {
+					allowPointSelect: true,
+					cursor: 'pointer',
+					dataLabels: {
+						enabled: true,
+						color: '#000000',
+						connectorColor: '#000000',
+						format: "<b>{point.name}</b>: {point.percentage:.0f} %"
+					}
+				}
+			},
+			series: [{
+				type: 'pie',
+				name: 'Departments',
+				data: [<?php echo $datalist_department; ?>]
+			}]
+		});
+		
+		$('#container_pie_type').highcharts({
+			chart: {
+				width: 500,
+				height:400,
+				margin: [60, 0, 60, 0]
+			},
+			title: {
+				text: 'Employees by User Type'
+			},
+			tooltip: {
+				formatter: function() {
+					return '<b>'+ this.point.name +'</b>: '+ Math.round(this.percentage) +' % ['+this.point.y+' Employees]';
+				 }
+			},
+			exporting: {
+				enabled: true
+			},
+			credits: {
+				enabled: false
+			},
+			plotOptions: {
+				pie: {
+					allowPointSelect: true,
+					cursor: 'pointer',
+					dataLabels: {
+						enabled: true,
+						color: '#000000',
+						connectorColor: '#000000',
+						format: "<b>{point.name}</b>: {point.percentage:.0f} %"
+					}
+				}
+			},
+			series: [{
+				type: 'pie',
+				name: 'User Types',
+				data: [<?php echo $datalist_type; ?>]
+			}]
+		});
+	});
+});
+</script>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div class="row">
+	<div class="col-sm-12">
+        <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
+        <ul class="nav nav-tabs hideonprint">
+            <li class="<?php echo $action == 'employeestats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'employeestats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'employeestats' ? '' : $this->baseUrl('report/employeestats'); ?>">Summary Report</a></li>
+            <li class="<?php echo $action == 'employeedetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'employeedetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/employeedetails'); ?>">Detailed Report</a></li>
+        </ul>
+		<div class="box box box-color xbox-bordered">
+			<div class="box-title noheader">
+                <h3></h3>
+            </div>
+            <div class="box-content nopadding">
+                <div class="row">
+                    <div class="col-sm-9">
+                    	
+                    </div>
+                    <div class="col-sm-3">
+                
+              		</div>
+              	</div>
+                <div class="row">
+					<div class="col-sm-12">
+                    	<div class="box box-color box-bordered">
+							<div class="box-title condensed">
+								<h3><i class="fa fa-user"></i> <?php echo $subtitle; ?></h3>
+                                <div class="actions">
+                                </div>
+							</div>
+							<div class="box-content nopadding">
+                            	<div class="row">
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_department"></div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_type"></div>
+                                    </div>
+                                </div>
+                                <div class="divider20"></div>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_empstatus"></div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_gender"></div>
+                                    </div>
+                                </div>
+                                <div class="divider20"></div>
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_payrolltype"></div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div id="container_pie_shift"></div>
+                                    </div>
+                                </div>
+                            </div>
+                       	</div>
+                  	</div>
+             	</div>
+          	</div>
+      	</div>
+		</form>
+   	</div>
+</div>            
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

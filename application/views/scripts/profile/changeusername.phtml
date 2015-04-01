@@ -103,15 +103,15 @@
         <?php } ?>
 		<tr>
             <td width="30%"><label class="control-label pull-left">Current Username: </label></td>
-            <td><input name="oldusername" id="oldusername" type="hidden" value="<?php echo $useraccount->getUsername(); ?>" /><?php echo $useraccount->getUsername(); ?>
+            <td><input name="oldusername" id="oldusername" class="form-control" type="hidden" value="<?php echo $useraccount->getUsername(); ?>" /><?php echo $useraccount->getUsername(); ?>
             	<input type="hidden" name="entityname" value="UserAccount" />
                 <input type="hidden" id="id" name="id" value="<?php echo encode($useraccount->getID()); ?>" />
             </td>
         </tr>
         <tr>
             <td><label class="control-label pull-left">New Username: <?php echo $this->translate("global_required_field_marker"); ?></label></td>
-            <td><input name="username" id="username" type="text" class="strictalpha span2 hastooltip" style="width:150px;" />
-            	<label class='lineblocked'><a href="javascript: void(0);" class="btn btn-primary btn-mini" id='check_username_availability' title="Check Availability">Check</a></label><div id="username_error"></div><div id="username_availability_result" style="margin-top:5px;"></div>
+            <td><input name="username" id="username" type="text" class="strictalpha form-control input-sm inline" style="width:150px;" />
+            	<label class='lineblocked'><a href="javascript: void(0);" class="btn btn-primary btn-sm" id='check_username_availability' title="Check Availability">Check</a></label><div id="username_error"></div><div id="username_availability_result" style="margin-top:5px;"></div>
             </td>
         </tr>
 	</table>

@@ -8,6 +8,7 @@ class UserAccount extends BaseEntity {
 		
 		$this->setTableName('useraccount');
 		$this->hasColumn('type', 'integer', null);
+		$this->hasColumn('companyid', 'integer', null);
 		$this->hasColumn('empstatus', 'integer', null);
 		$this->hasColumn('firstname', 'string', 255, array('notblank' => true));
 		$this->hasColumn('lastname', 'string', 255, array('notblank' => true));
@@ -54,6 +55,9 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('enddate','date', null, array('default' => NULL));
 		$this->hasColumn('probationend','date', null, array('default' => NULL));
 		$this->hasColumn('idno', 'string', 50);
+		$this->hasColumn('nssfid', 'string', 15);
+		$this->hasColumn('uratin', 'string', 15);
+		$this->hasColumn('contributiontype', 'string', 25);
 		$this->hasColumn('linkedin', 'string', 255);
 		$this->hasColumn('skype', 'string', 255);
 		$this->hasColumn('maritalstatus', 'string', 255);
@@ -72,7 +76,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('maxhoursperweek', 'string', 50);
 		$this->hasColumn('shift', 'string', 50);
 		$this->hasColumn('rate', 'string', 10);
-		$this->hasColumn('ratetype', 'string', 15, array('default' => 1));
+		$this->hasColumn('ratetype', 'string', 15, array('default' => 4));
 		$this->hasColumn('ratecurrency', 'string', 15);
 		$this->hasColumn('bankname', 'string', 255);
 		$this->hasColumn('accname', 'string', 255);
@@ -80,6 +84,8 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('swiftcode', 'string', 255);
 		$this->hasColumn('branchname', 'string', 255);
 		$this->hasColumn('istimesheetuser', 'integer', null, array('default' => 1));
+		$this->hasColumn('payrolltype', 'integer', null, array('default' => 4));
+		$this->hasColumn('employmentstatus', 'string', 15, array('default' => 1));
 		
 		# override the not null and not blank properties for the createdby column in the BaseEntity
 		$this->hasColumn('createdby', 'integer', 11);
@@ -208,6 +214,12 @@ class UserAccount extends BaseEntity {
 								array(
 									'local' => 'managerid',
 									'foreign' => 'id',
+								)
+						);
+		$this->hasOne('Company as company',
+								array(
+										'local' => 'companyid',
+										'foreign' => 'id',
 								)
 						);
 		$this->hasMany('UserBenefit as userbenefits',
@@ -385,6 +397,9 @@ class UserAccount extends BaseEntity {
 			}
 		}
 		# force setting of default none string column values. enum, int and date 	
+		if(isArrayKeyAnEmptyString('companyid', $formvalues)){
+			unset($formvalues['companyid']);
+		}
 		if(isArrayKeyAnEmptyString('status', $formvalues)){
 			unset($formvalues['status']); 
 		}
@@ -396,6 +411,8 @@ class UserAccount extends BaseEntity {
 		}
 		if(isArrayKeyAnEmptyString('dateofbirth', $formvalues)){
 			unset($formvalues['dateofbirth']);
+		} else {
+			$formvalues['dateofbirth'] = date('Y-m-d', strtotime($formvalues['dateofbirth']));
 		}
 		if(isArrayKeyAnEmptyString('activationdate', $formvalues)){
 			unset($formvalues['activationdate']); 
@@ -502,18 +519,30 @@ class UserAccount extends BaseEntity {
 		}
 		if(isArrayKeyAnEmptyString('startdate', $formvalues)){
 			unset($formvalues['startdate']);
+		} else {
+			$formvalues['startdate'] = date('Y-m-d', strtotime($formvalues['startdate']));
 		}
 		if(isArrayKeyAnEmptyString('enddate', $formvalues)){
 			unset($formvalues['enddate']);
+		} else {
+			$formvalues['enddate'] = date('Y-m-d', strtotime($formvalues['enddate']));
 		}
 		if(isArrayKeyAnEmptyString('probationend', $formvalues)){
 			unset($formvalues['probationend']);
+		} else {
+			$formvalues['probationend'] = date('Y-m-d', strtotime($formvalues['probationend']));
 		}
 		if(isArrayKeyAnEmptyString('managerid', $formvalues)){
 			unset($formvalues['managerid']);
 		}
 		if(isArrayKeyAnEmptyString('departmentid', $formvalues)){
 			unset($formvalues['departmentid']);
+		}
+		if(isArrayKeyAnEmptyString('istimesheetuser', $formvalues)){
+			unset($formvalues['istimesheetuser']);
+		}
+		if(isArrayKeyAnEmptyString('payrolltype', $formvalues)){
+			unset($formvalues['payrolltype']);
 		}
 		
 		if(!isArrayKeyAnEmptyString('hasbenefits', $formvalues)){
@@ -528,9 +557,9 @@ class UserAccount extends BaseEntity {
 				$benefitsarray[md5(1)]['id'] = $formvalues['id_1'];
 			}
 			
-			for($i = 2; $i <= $totcash; $i++){
+			for($i = 2; $i <= $totcash+4; $i++){
 				if(!isArrayKeyAnEmptyString('amount_'.$i, $formvalues)){
-					if($formvalues['amount_'.$i] > 0  || !is_numeric($formvalues['amount_'.$i])){
+					if($formvalues['amount_'.$i] > 0){
 						if(!isArrayKeyAnEmptyString('id_'.$i, $formvalues)){
 							$benefitsarray[md5($i)]['id'] = $formvalues['id_'.$i];
 						}
@@ -542,6 +571,11 @@ class UserAccount extends BaseEntity {
 						$benefitsarray[md5($i)]['accrualtype'] = NULL;
 						$benefitsarray[md5($i)]['accrualfrequency'] = NULL;
 						$benefitsarray[md5($i)]['accrualvalue'] = NULL;
+						if(!isArrayKeyAnEmptyString('istaxable_'.$i, $formvalues)){
+							$benefitsarray[md5($i)]['istaxable'] = $formvalues['istaxable_'.$i];
+						} else {
+							$benefitsarray[md5($i)]['istaxable'] = 0;
+						}
 					}
 				}
 			}
@@ -570,8 +604,8 @@ class UserAccount extends BaseEntity {
 			}
 		}
 		
-		/* debugMessage($benefitsarray);
-		debugMessage($formvalues); exit(); */
+		/* debugMessage($formvalues); // debugMessage($benefitsarray);
+		exit(); */
 		parent::processPost($formvalues);
 	}
 	/*
@@ -580,6 +614,11 @@ class UserAccount extends BaseEntity {
 	function transactionSave(){
 		$conn = Doctrine_Manager::connection();
 		$session = SessionWrapper::getInstance();
+		
+		// invite via email
+		if($this->getIsInvited() == 1){
+			$this->inviteViaEmail();
+		}
 		
 		# begin transaction to save
 		try {
@@ -616,11 +655,6 @@ class UserAccount extends BaseEntity {
 			// debugMessage('Error is '.$e->getMessage());
 			throw new Exception($e->getMessage());
 			return false;
-		}
-		
-		// invite via email
-		if($this->getIsBeingInvited() == 1){
-			$this->inviteViaEmail();
 		}
 		
 		return true;
@@ -1159,6 +1193,8 @@ class UserAccount extends BaseEntity {
 		$view = new Zend_View(); 
 
 		// assign values
+		$template->assign('type', $this->getType());
+		$template->assign('company', $this->getCompany()->getName());
 		$template->assign('firstname', isEmptyString($this->getFirstName()) ? 'Friend' : $this->getFirstName());
 		$template->assign('inviter', $this->getInvitedBy()->getName());
 		// the actual url will be built in the view
@@ -1182,7 +1218,7 @@ class UserAccount extends BaseEntity {
 		try {
 			$mail->send();
 		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			$session->setVar("warningmessage", 'Email notification not sent! '.$e->getMessage());
 		}
 		
 		$mail->clearRecipients();
@@ -1409,9 +1445,20 @@ class UserAccount extends BaseEntity {
 	function isAdmin(){
     	return $this->getType() == 1 ? true : false; 
     }
+    # determinie if is a company admin
+    function isCompanyAdmin() {
+    	return $this->getType() == 3 ? true : false; 
+    }
     # determine if is an employee
     function isEmployee(){
-    	return true;
+    	return $this->getType() == 2 ? true : false; 
+    }
+    # determine if loggedin user is data clerk
+    function isTimesheetEmployee() {
+    	$session = SessionWrapper::getInstance();
+    	$acl = getACLInstance();
+    
+    	return $this->getType() == '2' && ($this->getIsTimesheetuser() == '1' || $this->getIsTimesheetuser() == '2') ? true : false;
     }
     # determine if user is a permanent staff
 	function isPermanent(){
@@ -1676,9 +1723,15 @@ class UserAccount extends BaseEntity {
 	# determine the timeoff events for user
 	function getTimeoffRequests($userid = '', $start, $end){
 		return true;
-		$q = Doctrine_Query::create()->from('Timeoff t')->where("t.userid = '".$this->getID()."' AND ")->orderby('t.datecreated desc');
+		$q = Doctrine_Query::create()->from('Timeoff t')->where("t.userid = '".$this->getID()."' ")->orderby('t.datecreated desc');
 		$result = $q->execute();
 		return $result;
+	}
+	# generate approved timesheets for user within a period
+	function getTimesheetDetails($startdate, $enddate, $status = 3) {
+		# query active user details using email
+		$q = Doctrine_Query::create()->from('Timesheet t')->where("t.userid = '".$this->getID()."' AND  TO_DAYS(t.timesheetdate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') AND t.status = '".$status."' ");
+		return $q->execute();;
 	}
 }
 ?>

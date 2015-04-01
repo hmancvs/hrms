@@ -10,10 +10,14 @@ class UserBenefit extends BaseRecord  {
 		$this->setTableName('userbenefit');
 		$this->hasColumn('userid', 'integer', null, array('notblank' => true));
 		$this->hasColumn('type', 'integer', null, array('default' => 1));
+		
 		$this->hasColumn('benefitid', 'integer', null, array('default' => NULL));
-		$this->hasColumn('amount', 'string', 25);
+		$this->hasColumn('amount', 'string', 10);
 		$this->hasColumn('benefitfrequency', 'integer', null, array('default' => NULL)); // 1=>Per Hour, 2=>Per Day, 3=>Per Week,4=>Per Month, 5=>Per Year
 		$this->hasColumn('benefitterms', 'integer', null, array('default' => NULL));
+		$this->hasColumn('istaxable', 'integer', null, array('default' => 0));
+		$this->hasColumn('taxabletype', 'integer', null, array('default' => NULL));
+		$this->hasColumn('taxvalue', 'string', 10);
 		
 		$this->hasColumn('timeofftypeid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('accrualtype', 'integer', null, array('default' => NULL));
