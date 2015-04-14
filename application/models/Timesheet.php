@@ -40,9 +40,8 @@ class Timesheet extends BaseEntity  {
 		
 		// set the custom error messages
 		$this->addCustomErrorMessages(array(
-										"userid.notblank" => $this->translate->_("timesheet_userid_error"),
-										"hours.notblank" => $this->translate->_("timesheet_hours_error"),
-				"timesheetdate.notblank" => $this->translate->_("timesheet_timesheetdate_error")
+										"userid.notblank" => "No user specified for Timesheet",
+										"timesheetdate.notblank" => "Please enter Timesheet Date"
        	       						));     
 	}
 	/*
@@ -74,6 +73,9 @@ class Timesheet extends BaseEntity  {
 		}
 		if(isArrayKeyAnEmptyString('companyid', $formvalues)){
 			unset($formvalues['companyid']);
+		}
+		if(isArrayKeyAnEmptyString('userid', $formvalues)){
+			unset($formvalues['userid']);
 		}
 		if(isArrayKeyAnEmptyString('startdate', $formvalues)){
 			unset($formvalues['startdate']);
@@ -133,6 +135,102 @@ class Timesheet extends BaseEntity  {
 			$hours = formatNumber($hours/3600); // debugMessage($hours);
 		}
 		return $hours;
+	}
+	# check if timesheet is approved
+	function isApproved(){
+		return $this->getStatus() == 3 ? true: false;
+	}
+	# check if timesheet is rejected
+	function isRejected(){
+		return $this->getStatus() == 4 ? true: false;
+	}
+	# save approval alert to application inbox and send email if specified on profile
+	function afterApprove(){
+		$this->sendApprovalConfirmationNotification();
+		return true;
+	}
+	# Send notification to inform user 
+	function sendApprovalConfirmationNotification() {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		$session = SessionWrapper::getInstance();
+	
+		// assign values
+		$template->assign('firstname', $this->getUser()->getFirstName());
+		
+		$statuslabel = $this->isApproved() ? "Approved" : "Rejected";
+		$subject = "Timesheet ".$statuslabel;
+		
+		$save_toinbox = true;
+		$type = "timesheet";
+		$subtype = "timesheet_".strtolower($statuslabel);
+		$viewurl = $template->serverUrl($template->baseUrl('timesheets/attendance'));
+		
+		$rejectreason = "";
+		if($this->isRejected()){
+			$rejectreason = "<br><b>Synopsis:</b> ".$this->getComments()."";
+		}
+		$message_contents = "<p>This is to confirm that your Timesheet for <b>".changeMySQLDateToPageFormat($this->getTimesheetdate())." (".formatNumber($this->getHours())." Hours)</b> has been successfully ".$statuslabel.$rejectreason.".</p>
+		<p>To view your Timesheet online <a href='".$viewurl."'>click here<a></p>
+		<br />
+		<p>".$this->getApprover()->getName()."<br />
+		".getAppName()."</p>
+		";
+		$template->assign('contents', $message_contents);
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+	
+		// configure base stuff
+		$mail->addTo($this->getUser()->getEmail(), $this->getUser()->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+	
+		$mail->setSubject($subject);
+		// render the view as the body of the email
+	
+		$html = $template->render('default.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); exit();
+
+		if($this->getUser()->allowEmailForTimesheetApproval() && !isEmptyString($this->getUser()->getEmail())){
+			try {
+				$mail->send();
+				$session->setVar("custommessage1", "Email sent to ".$this->getUser()->getEmail());
+			} catch (Exception $e) {
+				$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			}
+		}
+		
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+					"senderid" => DEFAULT_ID,
+					"subject" => $subject,
+					"contents" => $message_contents,
+					"html" => $html,
+					"type" => $type,
+					"subtype" => $subtype,
+					"refid" => $this->getID(),
+					"recipients" => array(
+							md5(1) => array("recipientid" => $this->getUserID())
+					)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+	
+		return true;
 	}
 }
 

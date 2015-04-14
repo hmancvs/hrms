@@ -14,70 +14,64 @@
 	}
 	
 	$listurl = $this->baseUrl('notifications/list'); 
-	$title = $message->getMessage()->getSubject();
+	$title = "Message Center";
 	$description = '';	
 	$icon = 'glyphicon glyphicon-envelope';
+	$pageid = "notification_view";
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo $homedir.'Messaging / View Message'; ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.'Message Center / View Message'; ?>');
 	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 	
 });
 </script>
-<div class="row-fluid margin0 view">
-    <div class="col-sm-12 padding0">
-    	<div class="headerbox">
-            <table class="table border0 nohover margin0">                       
-                <tr>		                    
-                    <td class="padding2">
-                        <?php if ($acl->checkPermission('Message', ACTION_LIST)) { ?>
-                            <a class="btn btn-sm btn-info blockanchor" href="<?php echo $listurl; ?>"><i class="glyphicon glyphicon-envelope"></i> Back to Inbox</a>&nbsp;
-                        <?php } ?>
+<?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
+<div id="<?php echo $pageid; ?>">
+	<div class="row">
+		<div class="col-sm-8">
+        	<div class="box box-color box-bordered box-condensed">
+                <div class="box-title">
+                    <h3><i class="fa fa-th-list"></i> Subject: <?php echo $message->getMessage()->getSubject(); ?></h3>
+                    <div class="actions" style="margin-top:5px;">
+                        <a class="btn-sm " title="Message Center" href="<?php echo $listurl; ?>">Back to Inbox</a> &nbsp;
                         <?php if ($acl->checkPermission('Message', ACTION_DELETE)) { ?>
-                            <a class="btn btn-danger btn-sm deleteline" action="<?php echo $this->baseUrl('index/delete/id/'.encode($message->getID())."/entityname/MessageRecipient/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message_nonote'); ?>" title="Delete Entry"><i class="glyphicon glyphicon-trash"></i> Delete</a>&nbsp;
+                        	<a class="btn-sm deleteline gonowhere" action="<?php echo $this->baseUrl('index/delete/id/'.encode($message->getID())."/entityname/MessageRecipient/successurl/".encode($listurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message_nonote'); ?>" title="Delete Entry">Delete</a>&nbsp;
                         <?php } ?>
-                    </td>
-                </tr>
-            </table>
-        </div>
-    </div>
-    <?php if($sessionhaserror) { ?>
-        <div class="alert alert-danger"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-    <?php } ?>
-    <?php if (!isEmptyString($session->getVar(SUCCESS_MESSAGE))) { ?>
-        <div class="alert alert-success alert-dismissable"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button> <?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-    <?php } ?>
-    <div class="contentcontainer clearfix">
-    	<form id="viewform" class="form-horizontal" role="form" method="get">
-        	<div class="divider10"></div>
-            <div class="row-fluid margin0">
-            	<div class="col-sm-12">
-                    <fieldset class="fieldsetcontainer">
-                        <legend><?php echo $message->getMessage()->getSender()->getName(); ?></legend>
-                        <div class="panel-body well-sm">
-                            <div class="row-fluid marginleft5">
-                                <div class="col-sm-2">
+                    </div>
+                </div>
+                <div class="box-content nopadding">    
+                	<div class="panel-body well-sm">
+                        <div class="row-fluid marginleft5">
+                            <div class="col-sm-2 centeralign">
+                                <div class="divider10"></div>
+                                <?php if($message->getMessage()->getSenderID() == 1){ ?>
+                                    <i class="fa fa-flag" style="font-size:80px; float:left; margin-left:5px;"></i>
+                                <?php } else { ?>
+                                    <img style="width:120px;" class="imagecontainer" src="<?php echo $message->getMessage()->getSender()->getMediumPicturePath(); ?>" />
                                     <div class="divider10"></div>
-                                    <img class="imagecontainer" src="<?php echo $message->getMessage()->getSender()->getMediumPicturePath(); ?>" />
-                                </div>
-                                <div class="col-sm-10" style="padding-right:50px; padding-left:50px;">
-                                	<div class="divider15"></div>
-                                    <div class="col-sm-12 padding0"><p style="margin-bottom:10px;"><?php echo nl2br($message->getMessage()->getContents()); ?></p></div>
-                                    <div class="divider10"></div>
-                                    <div class="col-sm-12 padding0" style="font-size:10px;">Sent on <?php echo date('m/d/Y - g:i A', strtotime($message->getMessage()->getDateCreated())); ?></div>
-                                </div>
+                                	<span style="font-size:11px;"><?php echo $message->getMessage()->getSender()->getName(); ?></span>	
+                                <?php } ?>
                             </div>
-                		</div>
-               		</fieldset>
-              	</div>
-        	</div>
-		</form>
-	</div>                   
-</div>    
+                            <div class="col-sm-10" style="padding-right:50px; padding-left:50px;">
+                                <div class="divider15"></div>
+                                <div class="col-sm-12 padding0"><p style="margin-bottom:10px;">
+									<?php echo nl2br($message->getMessage()->getContents()); ?>
+                                    <?php //echo $message->getMessage()->getHTML(); ?>
+                                </div>
+                                <div class="divider10"></div>
+                                <div class="col-sm-12 padding0" style="font-size:10px;">Sent on <?php echo date('m/d/Y - g:i A', strtotime($message->getMessage()->getDateCreated())); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+          	</div>
+        </div>
+	</div>
+</div>            
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

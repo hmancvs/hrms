@@ -297,6 +297,8 @@ $(document).ready(function() {
 		}
 	});
 	
+	$(".ColVis_collection").prepend('<li id="triggerall"><label><input type="checkbox"><span>Hide/Show All</span></label></li>');
+	
 	var dateable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($datetable); ?>'));
 	var selectable = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($selectable); ?>'));
 	var attributes = getArrayFromJsonObject(JSON.parse('<?php echo json_encode($attributes); ?>'));
@@ -365,7 +367,7 @@ $(document).ready(function() {
 		}
 		return arr;
 	}
-
+	
 });
 </script>
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
@@ -380,7 +382,7 @@ $(document).ready(function() {
 			<div class="box-title noheader">
                 <h3></h3>
             </div>
-            <div class="box-content nopadding">
+            <div class="box-content" style="padding: 5px 0px;">
                 <div class="row">
                     <div class="col-sm-9">
                         <ul class="resetlist listactions">
@@ -672,9 +674,8 @@ $(document).ready(function() {
                                                     <th class="nowrapping firstname" style="width:100px;">Fist Name</th>
                                                     <th class="nowrapping lastname" style="width:100px;">Last Name</th>
                                                     <th class="nowrapping othername" style="width:100px;">Other Names</th>
-                                                    <th class="nowrapping displayname" style="width:150px;">Full Display Names</th>
+                                                    <th class="nowrapping displayname" style="width:150px;">Full Name</th>
                                                     <th class="nowrapping salutation" style="width:80px;">Salutation</th>
-                                                    <th class="nowrapping id">ID No#</th>
                                                     <th class="nowrapping gender" style="width:80px;">Gender</th>
                                                     <th class="nowrapping maritalstatus" style="width:80px;">Marital Status</th>
                                                     <th class="nowrapping dateofbirth" style="width:100px;">Date of Birth</th>
@@ -712,7 +713,7 @@ $(document).ready(function() {
                                                     <th class="nowrapping maxhoursperday" style="width:125px;">Maximum Hours Per Day</th>
                                                     <th class="nowrapping maxhoursperweek" style="width:125px;">Maximum Hours Per Week</th>
                                                     <th class="nowrapping istimesheetuser" style="width:100px;">Submits Timesheets</th>
-                                                    <th class="nowrapping rate" style="width:125px;">Employee Rate (<?php echo $config->country->currencycode; ?>)</th>
+                                                    <th class="nowrapping rate" style="width:125px;">Employee Rate (<?php echo getCountryCurrencyCode(); ?>)</th>
                                                     <th class="nowrapping ratetype" style="width:80px;">Rate Type</th>
                                                     <th class="nowrapping payrolltype" style="width:125px;">Payroll Terms</th>
                                                     
@@ -723,7 +724,8 @@ $(document).ready(function() {
                                                     <th class="nowrapping nssfid" style="width:100px;">NSSF ID No#</th>
                                                     <th class="nowrapping contributiontype" style="width:120px;">NSSF Contribn Type</th>
                                                     <th class="nowrapping uratin" style="width:100px;">URA TIN No#</th>
-                                                    <th class="nowrapping idno" style="width:100px;">ID/Employee No#:</th>
+                                                    <th class="nowrapping idno">Employee ID#</th>
+                                                    <th class="nowrapping nationalid">National ID#</th>
                                                     
                                                     <th class="nowrapping type" style="width:125px;">User Type</th>
                                                     <th class="nowrapping status" style="width:100px;">User Status</th>
@@ -757,9 +759,9 @@ $(document).ready(function() {
                                                         <td class="firstname"><?php echo $line['firstname']; ?></td>
                                                         <td class="lastname"><?php echo $line['lastname']; ?></td>
                                                         <td class="othername"><?php echo $line['othername']; ?></td>
-                                                        <td class="displayname"><?php echo $line['displayname']; ?></td>
+                                                        <td class="displayname"><?php echo $line['firstname'].' '.$line['lastname'].' '.$line['othername']; ?></td>
                                                         <td class="salutation"><?php echo isArrayKeyAnEmptyString($line['salutation'], $salutations) ? '' : $salutations[$line['salutation']]; ?></td>
-                                                        <td class="id"><?php echo 'U'.number_pad($line['uid'], 4); ?></td>
+                                                        
                                                         <td class="gender"><?php echo getGenderText($line['gender']); ?></td>
                                                         <td class="maritalstatus"><?php echo isArrayKeyAnEmptyString($line['maritalstatus'], $maritalstatus) ? '' : $maritalstatus[$line['maritalstatus']]; ?></td>
                                                         <td class="dateofbirth"><?php echo changeMySQLDateToPageFormat($line['dateofbirth']); ?></td>
@@ -809,6 +811,7 @@ $(document).ready(function() {
                                                         <td class="contributiontype"><?php echo $line['contributiontype']; ?></td>
                                                         <td class="uratin"><?php echo $line['uratin']; ?></td>
                                                         <td class="idno"><?php echo $line['idno']; ?></td>
+                                                        <td class="nationalid"><?php echo $line['nationalid']; ?></td>
                                                         
                                                         <td class="type"><?php echo $line['Group']; ?></td>
                                                         <td class="status"><?php echo isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; ?></td>

@@ -41,10 +41,10 @@
 		$poscount_result = $conn->fetchOne($posquery);
 	} else {
 		// no of hours accrues
-		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
-		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
+		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
 		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/8);
-		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
 	}
 	
 	$custom_query = "";
@@ -271,9 +271,9 @@ $(document).ready(function() {
                                             <a href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>" class="blockanchor"><span><i class="fa fa-gift"></i></span><span class="name">My Benefits</span></a>
                                         </li>
                                     <?php } ?>
-                                    <?php if ($acl->checkPermission('Time off', ACTION_CREATE) && !$acl->checkPermission('Time off', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
+                                    <?php if ($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
                                         <li class="teal">
-                                            <a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/index'); ?>"><span><i class="fa fa-calendar"></i></span><span class="name">Request Timeoff</span> </a>
+                                            <a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>"><span><i class="fa fa-calendar"></i></span><span class="name">Request Leave</span> </a>
                                         </li>
                                     <?php } ?>
                                     <?php if($istimesheetuser) { ?>
@@ -391,21 +391,21 @@ $(document).ready(function() {
                                             <ul class="stats">
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($totalhrs / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($totalhrs / getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($totalhrs).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Annual Leave Time Accrued</small>
                                                 </li>
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($takenhrs / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($takenhrs / getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($takenhrs).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Annual Leave Time Taken</small>
                                                 </li>
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($hoursavailable / $config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($hoursavailable / getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($hoursavailable).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Leave Time Available</small>
@@ -560,7 +560,7 @@ $(document).ready(function() {
                     </div>
             	</div>
           	</div>
-            <?php if($acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+            <?php if($acl->checkPermission("Leave", ACTION_APPROVE)){ ?>
             <div class="row">
             	<div class="col-sm-12">
                 	<div class="box box-color lightgrey box-bordered">
@@ -571,15 +571,15 @@ $(document).ready(function() {
                             <?php
 								$conn = Doctrine_Manager::connection(); 
 								// off today
-								$offtoday_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) order by t.startdate desc limit 3 ";
-								$offtoday_count_query = "SELECT count(t.id) FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) "; $offtoday_count = $conn->fetchOne($offtoday_count_query); 
+								$offtoday_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM `leave` t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) order by t.startdate desc limit 3 ";
+								$offtoday_count_query = "SELECT count(t.id) FROM `leave` t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS('".$this->today_iso."') BETWEEN TO_DAYS(t.startdate) AND TO_DAYS(t.enddate) "; $offtoday_count = $conn->fetchOne($offtoday_count_query); 
 								
 								$offtoday_result = $conn->fetchAll($offtoday_query); // debugMessage($offtoday_query); debugMessage($offtoday_result);
 								
 								$conn = Doctrine_Manager::connection(); 
 								// off this
-								$offthismonth_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') order by t.startdate desc limit 3 ";
-								$offthismonth_count_query = "SELECT count(t.id) FROM timeoff t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') "; $offthismonth_count = $conn->fetchOne($offthismonth_count_query); 
+								$offthismonth_query = "SELECT t.id, t.userid, t.startdate, t.enddate, t.returndate, t.status, u.profilephoto, u.gender FROM `leave` t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') order by t.startdate desc limit 3 ";
+								$offthismonth_count_query = "SELECT count(t.id) FROM `leave` t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 1 AND u.companyid = '".$companyid."' AND TO_DAYS(t.startdate) BETWEEN TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS('".$this->lastdayofthismonth_iso."') "; $offthismonth_count = $conn->fetchOne($offthismonth_count_query); 
 								
 								$offthismonth_result = $conn->fetchAll($offthismonth_query); // debugMessage($offthismonth_query); debugMessage($offthismonth_result);
 							?>
@@ -594,12 +594,12 @@ $(document).ready(function() {
 														<span class="pagedescription">None at this time</span>
 													<?php } else { ?>
 														<?php foreach($offtoday_result as $line){ ?>
-															<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="blockanchor item" style="">
+															<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="blockanchor item" style="">
 																<img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
 																<span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
 															</a>
 														<?php } ?>
-														<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="btn btn-default btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon glyphicon-arrow-right"></i></a>
+														<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="btn btn-default btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon glyphicon-arrow-right"></i></a>
 													<?php } ?>
 												</div>
 											</td>
@@ -616,12 +616,12 @@ $(document).ready(function() {
 													<span class="pagedescription">None at this time</span>
 												<?php } else { ?>
 													<?php foreach($offthismonth_result as $line){ ?>
-														<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="blockanchor item" style="">
+														<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="blockanchor item" style="">
 															<img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
 															<span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
 														</a>
 													<?php } ?>
-													<a href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon-right_arrow"></i></a>
+													<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon-right_arrow"></i></a>
 												<?php } ?>
 												</div>
 											</td>
@@ -636,7 +636,7 @@ $(document).ready(function() {
            	<?php } ?>
         </div>
         <div class="col-sm-6">
-        	<?php if($acl->checkPermission("Attendance", ACTION_APPROVE) || $acl->checkPermission("Benefits", ACTION_APPROVE) || $acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+        	<?php if($acl->checkPermission("Attendance", ACTION_APPROVE) || $acl->checkPermission("Benefits", ACTION_APPROVE) || $acl->checkPermission("Leave", ACTION_APPROVE)){ ?>
                 <div class="row">
                     <div class="col-sm-12">
                         <div class="box box-color red box-bordered">
@@ -649,7 +649,7 @@ $(document).ready(function() {
 										<?php
                                             $conn = Doctrine_Manager::connection(); 
                                             // timesheets for approval
-                                            $timesheetsforapproval_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timesheetdate, t.status, u.profilephoto, u.gender FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 2 AND u.companyid = '".$companyid."' AND (t.isrequest = 1 OR (t.isrequest <> 1 AND t.timeout is not null)) order by t.timesheetdate desc limit 3 ";
+                                            $timesheetsforapproval_query = "SELECT t.id, t.userid, t.hours, t.datein, t.dateout, t.timesheetdate, t.status, u.profilephoto, u.gender, concat(u.firstname, ' ', u.lastname) as `name` FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 2 AND u.companyid = '".$companyid."' AND (t.isrequest = 1 OR (t.isrequest <> 1 AND t.timeout is not null)) order by t.timesheetdate desc limit 3 ";
                                             $timesheetsforapproval_result = $conn->fetchAll($timesheetsforapproval_query); // debugMessage($timesheetsforapproval_result); debugMessage($timesheetsforapproval_query);
                                             $timesheetsforapproval_count_query = "SELECT count(t.id) FROM timesheet t INNER JOIN useraccount u ON (t.userid = u.id) where t.status = 2 AND u.companyid = '".$companyid."' AND (t.isrequest = 1 OR (t.isrequest <> 1 AND t.timeout is not null)) "; $timesheetsforapproval_count = $conn->fetchOne($timesheetsforapproval_count_query); 
                                         ?>
@@ -659,18 +659,19 @@ $(document).ready(function() {
                                                 <table class="table margin0 forapprovalitems">
                                                     <tr>
                                                         <td style="padding:0;">
-                                                            <div style="min-height:50px;">
-                                                            <?php if(count($timesheetsforapproval_result) == 0){ ?>
-                                                                <span class="pagedescription">None available at this time</span>
-                                                            <?php } else { ?>
-                                                                <?php foreach($timesheetsforapproval_result as $line){ ?>
-                                                                    <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="blockanchor item" style="">
-                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
-                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?> - <?php echo $line['hours']; ?>Hrs</span>
-                                                                    </a>
+                                                            <div style="min-height:50px; margin-bottom:5px;">
+																<?php if(count($timesheetsforapproval_result) == 0){ ?>
+                                                                    <span class="pagedescription">None available at this time</span>
+                                                                <?php } else { ?>
+                                                                    <?php foreach($timesheetsforapproval_result as $line){ ?>
+                                                                        <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="blockanchor item" style="">
+                                                                            <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                            <span class="label label-default noround approvalsummary"><?php echo $line['name']; ?></span>
+                                                                            <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?> - <?php echo $line['hours']; ?>Hrs</span>
+                                                                        </a>
+                                                                    <?php } ?>
+                                                                    <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
                                                                 <?php } ?>
-                                                                <a href="<?php echo $this->baseUrl('timesheets/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
-                                                            <?php } ?>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -682,7 +683,7 @@ $(document).ready(function() {
                                     	<?php
                                             $conn = Doctrine_Manager::connection(); 
                                             // benefits for approval
-                                            $benefitsforapproval_query = "SELECT l.id, l.userid, l.amount, l.trxndate, l.status, u.profilephoto, u.gender FROM ledger l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' AND l.ledgertype = 1 AND l.trxntype = 1 order by l.trxndate desc limit 3 ";
+                                            $benefitsforapproval_query = "SELECT l.id, l.userid, l.amount, l.trxndate, l.status, u.profilephoto, u.gender, concat(u.firstname, ' ', u.lastname) as `name` FROM ledger l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' AND l.ledgertype = 1 AND l.trxntype = 1 order by l.trxndate desc limit 3 ";
                                             $benefitsforapproval_result = $conn->fetchAll($benefitsforapproval_query); // debugMessage($timesheetsforapproval_result); // debugMessage($timesheetsforapproval_query);
                                             $benefitsforapproval_count_query = "SELECT count(l.id) FROM ledger l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' AND l.ledgertype = 1 AND l.trxntype = 1 "; $benefitsforapproval_count = $conn->fetchOne($benefitsforapproval_count_query); 
                                         ?>
@@ -692,18 +693,19 @@ $(document).ready(function() {
                                                 <table class="table margin0 forapprovalitems">
                                                     <tr>
                                                         <td style="padding:0;">
-                                                            <div style="min-height:50px;">
-                                                            <?php if(count($benefitsforapproval_result) == 0){ ?>
-                                                                <span class="pagedescription">None available at this time</span>
-                                                            <?php } else { ?>
-                                                                <?php foreach($benefitsforapproval_result as $line){ ?>
-                                                                    <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="blockanchor item" style="">
-                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
-                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?> - UGX<?php echo formatMoneyOnly($line['amount']); ?></span>
-                                                                    </a>
+                                                            <div style="min-height:50px; margin-bottom:5px;">
+																<?php if(count($benefitsforapproval_result) == 0){ ?>
+                                                                    <span class="pagedescription">None available at this time</span>
+                                                                <?php } else { ?>
+                                                                    <?php foreach($benefitsforapproval_result as $line){ ?>
+                                                                        <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="blockanchor item" style="">
+                                                                            <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                            <span class="label label-default noround approvalsummary"><?php echo $line['name']; ?></span>
+                                                                            <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?> - UGX<?php echo formatMoneyOnly($line['amount']); ?></span>
+                                                                        </a>
+                                                                    <?php } ?>
+                                                                    <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
                                                                 <?php } ?>
-                                                                <a href="<?php echo $this->baseUrl('ledger/forapproval'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
-                                                            <?php } ?>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -711,32 +713,33 @@ $(document).ready(function() {
                                             </div>
                                         </div>
                                     <?php } ?>
-                                    <?php if($acl->checkPermission("Time off", ACTION_APPROVE)){ ?>
+                                    <?php if($acl->checkPermission("Leave", ACTION_APPROVE)){ ?>
                                     	<?php
                                             $conn = Doctrine_Manager::connection(); 
-                                            // timeoff requests for approval
-                                            $timeoffforapproval_query = "SELECT l.id, l.userid, l.duration, l.startdate, l.enddate, l.status, u.profilephoto, u.gender FROM timeoff l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' order by l.startdate desc limit 3 ";
-                                            $timeoffforapproval_result = $conn->fetchAll($timeoffforapproval_query); // debugMessage($timesheetsforapproval_result); // debugMessage($timesheetsforapproval_query);
-                                            $timeoffforapproval_count_query = "SELECT count(l.id) FROM timeoff l INNER JOIN useraccount u ON (l.userid = u.id)  where l.status = 0 AND u.companyid = '".$companyid."' "; $timeoffforapproval_count = $conn->fetchOne($timeoffforapproval_count_query); 
+                                            // leave requests for approval
+                                            $leaveforapproval_query = "SELECT l.id, l.userid, l.duration, l.startdate, l.enddate, l.status, u.profilephoto, u.gender, concat(u.firstname, ' ', u.lastname) as `name` FROM `leave` l INNER JOIN useraccount u ON (l.userid = u.id) where l.status = 0 AND u.companyid = '".$companyid."' order by l.startdate desc limit 3 ";
+                                            $leaveforapproval_result = $conn->fetchAll($leaveforapproval_query); // debugMessage($timesheetsforapproval_result); // debugMessage($timesheetsforapproval_query);
+                                            $leaveforapproval_count_query = "SELECT count(l.id) FROM `leave` l INNER JOIN useraccount u ON (l.userid = u.id)  where l.status = 0 AND u.companyid = '".$companyid."' "; $leaveforapproval_count = $conn->fetchOne($leaveforapproval_count_query); 
                                         ?>
                                         <div class="widget">
-                                            <span class="label label-default noround dashforapproval">Timeoff Requests for Approval (<?php echo $timeoffforapproval_count; ?>)</span>
+                                            <span class="label label-default noround dashforapproval">Leave Requests for Approval (<?php echo $leaveforapproval_count; ?>)</span>
                                             <div class="widget-content" style="padding-left:0;">
                                                 <table class="table margin0 forapprovalitems">
                                                     <tr>
                                                         <td style="padding:0;">
-                                                            <div style="min-height:50px;">
-                                                            <?php if(count($timeoffforapproval_result) == 0){ ?>
-                                                                <span class="pagedescription">None available at this time</span>
-                                                            <?php } else { ?>
-                                                                <?php foreach($timeoffforapproval_result as $line){ ?>
-                                                                    <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="blockanchor item" style="">
-                                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
-                                                                        <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
-                                                                    </a>
+                                                            <div style="min-height:50px; margin-bottom:5px;">
+																<?php if(count($leaveforapproval_result) == 0){ ?>
+                                                                    <span class="pagedescription">None available at this time</span>
+                                                                <?php } else { ?>
+                                                                    <?php foreach($leaveforapproval_result as $line){ ?>
+                                                                        <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="blockanchor item" style="">
+                                                                            <img class="imagecontainer" src="<?php echo getImagePath($line['userid'], $line['profilephoto'], $line['gender']); ?>" />
+                                                                            <span class="label label-default noround approvalsummary"><?php echo $line['name']; ?></span>
+                                                                            <span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
+                                                                        </a>
+                                                                    <?php } ?>
+                                                                    <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
                                                                 <?php } ?>
-                                                                <a href="<?php echo $this->baseUrl('ledger/list/status/0'); ?>" class="btn btn-primary btn-xs viewall blockanchor">View all Pending <i class="glyphicon-right_arrow"></i></a>
-                                                            <?php } ?>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -799,13 +802,19 @@ $(document).ready(function() {
                                     ?>
                                         <li style="position:relative; padding:10px;" class="clearfix <?php echo $readclass; ?>" id="row_<?php echo $message['id']; ?>">
                                             <div class="latest_message clearfix"> 
-                                                <div style="float:left; width:15%; text-align:center;"><img src="<?php echo getImagePath($message->getSenderID(), $message->getSender()->getProfilephoto(), $message->getSender()->getGender()); ?>" style="border-radius: 47px; margin: 0; padding: 0; width: 90%; float:left;" />
+                                                <div style="float:left; width:15%; text-align:center;">
+                                                	<?php if($message->getSenderID() == 1){ ?>
+                                                        <i class="fa fa-flag" style="font-size:48px; float:left; margin-left:5px;"></i>
+                                                    <?php } else { ?>
+                                                        <img src="<?php echo getImagePath($message->getSenderID(), $message->getSender()->getProfilephoto(), $message->getSender()->getGender()); ?>" style="border-radius: 47px; margin: 0; padding: 0; width: 90%; float:left;" />
+                                                    <?php } ?>
                                                 </div>
                                                 <div style="float:right; width:85%;">
                                                     <a href="<?php echo $reply_path; ?>" title="View detail" class="blocked maxwidth nodecoration" style="font-size:12px; text-decoration:none;"><?php echo snippet($message->getSubject(), 45, '...'); ?></a>
-                                                    <div class="divider20"></div>
-                                                    <span class="blocked bolded"> <?php echo $message->getSender()->getName(); ?></span>
-                                                    <label class="message_date pagedescription" style="font-size:10px;"><?php echo formatDateAndTime($message->getDateCreated()); ?></label>
+                                                    <div class="divider10"></div>
+                                                    <div class="message notbolded"><?php echo snippet($message->getContents(), 100, ' ...more'); ?></div>
+                                                    <div class="divider10"></div>
+                                                    <label class="message_date pagedescription" style="font-size:10px;"><?php echo formatDateAndTime($message->getDateCreated()); ?> by <b><?php echo $message->getSenderID() == 1 ? 'System' : $message->getSender()->getName(); ?></b></label>
                                                 </div>
                                             </div>
                                         </li>

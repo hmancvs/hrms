@@ -199,7 +199,7 @@ class LedgerController extends SecureController  {
 		$config = Zend_Registry::get("config");
 		$this->_translate = Zend_Registry::get("translate");
 			
-		$formvalues = $this->_getAllParams(); // debugMessage($formvalues);
+		$formvalues = $this->_getAllParams(); debugMessage($formvalues);
 		$id = decode($formvalues['id']);
 		$formvalues['id'] = $id;
 		$successmessage = "";
@@ -212,13 +212,13 @@ class LedgerController extends SecureController  {
 			$ledger = new Ledger();
 			$ledger->populate($id);
 			if(!isArrayKeyAnEmptyString('reason', $formvalues)){
-				$formvalues['remarks'] = $ledger->getRemarks()."<br/><br/> Rejected: ".$formvalues['reason'];
+				$ledger->setRemarks($ledger->getRemarks()."<br/> Rejected with remarks: ".$formvalues['reason']);
 			}
+			$ledger->setDateApproved(DEFAULT_DATETIME);
+			$ledger->setApprovedByID($session->getVar('userid'));
+			$ledger->setStatus($formvalues['status']);
+			// debugMessage($ledger->toArray()); exit();
 			
-			$ledger->processPost($formvalues);
-			/* debugMessage($ledger->toArray());
-			debugMessage('errors are '.$ledger->getErrorStackAsString());
-			exit(); */
 			try {
 				$ledger->save();
 				$msg = "Successfully Approved";
@@ -226,7 +226,9 @@ class LedgerController extends SecureController  {
 					$msg = "Successfully Rejected";
 				}
 				$session->setVar(SUCCESS_MESSAGE, $msg);
+				$ledger->afterApprove();
 			} catch (Exception $e) {
+				// debugMessage($e->getMessage());
 				$session->setVar(ERROR_MESSAGE, $e->getMessage());
 			}
 		}

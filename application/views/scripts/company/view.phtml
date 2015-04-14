@@ -24,14 +24,22 @@
 	$listurl = $this->baseUrl('company/list');
 	$viewurl = $viewbase = $this->baseUrl('company/view/id/'.encode($company->getID()));
 	$indexurl = $this->baseUrl('company/index/id/'.encode($company->getID()));
-	$title = "Companies";
+	$title = $company->getName();
+
 	$pagetitle = $company->getName();
 	$description = 'Profile Details';	
 	$icon = 'glyphicon glyphicon-list';
 	$isme = true;
 	if($company->getID() != $companyid){
 		$isme = false;
-		$description = 'My Company Profile';	
+		$description = 'Company Profile';	
+	}
+	$breadcrumb = $homedir.$listitems.' / '.$company->getName();
+	if(isCompanyAdmin()){
+		$breadcrumb = $homedir.' Profile';
+	}
+	if(isAdmin()){
+		$breadcrumb = 'Companies / '.$company->getName().' / Profile';
 	}
 	
 	if($tab == 'account'){
@@ -42,7 +50,9 @@
 	if($acl->checkPermission($resourcename, ACTION_EDIT)){
 		$allowedit = true;
 	}
-	
+	// date_default_timezone_set(getTimeZine());
+	// debugMessage('using zone '.date_default_timezone_get());
+	// debugMessage('current is '.DEFAULT_DATETIME);
 	$pageid = "company_view";
 	$this->headTitle($title.$browserappend);
 ?>
@@ -52,7 +62,7 @@
 <?php if(isEmptyString($request->pgc)){ ?>
 	<script>
     $(document).ready(function() {
-        $('.titlebreadcrumb').html('<?php echo $homedir.$listitems.' / '.$company->getName(); ?>');
+        $('.titlebreadcrumb').html('<?php echo $breadcrumb; ?>');
         $('.titlelabel').html('<?php echo $title; ?>');
         $('.desclabel').html('<?php echo $description; ?>');
         $('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
@@ -72,7 +82,6 @@
                     <?php if($allowedit) { ?>
                         <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i> Update</a>
                     <?php } ?>
-                    
                     <?php if ($acl->checkPermission($resourcename, ACTION_LIST)) { ?>
                         <a class="btn btn-primary" href="<?php echo $listurl; ?>" title="List <?php echo $listitems; ?>" rel="tooltip"><i class="fa fa-arrow-right"></i></a>
                     <?php } ?>
@@ -83,6 +92,18 @@
                     <ul class="tabs tabs-inline tabs-left">
                         <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>Profile</a></li>
                         <li class="<?php echo $tab == 'account' ? 'active' : ''; ?>"><a data-toggle="tab" href="#account"><i class="fa fa-cog"></i>Account</a></li>
+                        <li class="list-group-item padding0 centeralign noround" style="background:none; padding:1px; background-color:#fff;">
+                            <div class="divider1"></div>
+                            <?php if($allowedit){ ?>
+                                <a href="<?php echo $this->baseUrl('company/logo/id/'.encode($company->getID())); ?>" class="editpic imagecontainer centeralign blockanchor blocked" title="Update Profile Photo" style="border-radius:0; background-color:#fff;">
+                                	<img id="profileimage" class="imagecontainer retina-ready noround" src="<?php echo $company->getLargePicturePath(); ?>" style="min-width:80px; width:auto%; height:auto;" />
+									<!--<i class="fa fa-briefcase" style="font-size:120px;"></i>-->
+                                	<pre id="uploadlink" class=""><i class="icon-pencil"></i> Upload Logo</pre>
+                                </a>
+                            <?php } else { ?>
+                            	<img id="profileimage" class="imagecontainer retina-ready noround" src="<?php echo $company->getLargePicturePath(); ?>" style="min-width:80px; width:auto%; height:auto;" />
+                            <?php } ?>
+                        </li>
                     </ul>
                 </div>
                 <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0">
@@ -95,12 +116,12 @@
                                         <div class="row-fluid">
                                             <div class="col-sm-11">
                                                 <div class="form-group">
-                                                    <label class="col-sm-3 control-label">Company <?php echo $this->translate('global_name_label'); ?>:</label>
+                                                    <label class="col-sm-3 control-label">Company Name:</label>
                                                     <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getName(); ?></p></div>
                                                 </div>
                                                 <div class="form-group">
-                                                    <label class="col-sm-3 control-label">Slogan / Tagline:</label>
-                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getSlogan(); ?></p></div>
+                                                    <label class="col-sm-3 control-label">Application Name:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getDefaultName(); ?></p></div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label class="col-sm-3 control-label">Industry Category:</label>

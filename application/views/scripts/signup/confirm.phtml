@@ -1,16 +1,18 @@
 <?php
 	require_once APPLICATION_PATH.'/includes/header.php';
 	
+	$title = "Signup Confirmation"; 
+	
 	$user = new UserAccount();
 	$user->populate(decode($request->id));
 	
-	$title = "Activation Confirmation"; 
+	
 	$this->headTitle($title.$browserappend); 
 	
 ?>
 <script>
 $(document).ready(function() {			
-	$(".navonlogin, #sidebar, .breadcrumbs li").remove();
+	
 	
 });	
 </script>
@@ -18,27 +20,41 @@ $(document).ready(function() {
 .breadcrumbs li, .pageheader, #headercontainer #headermenu, #headercontainer #headerright {
 	display:none;
 }
-#contentcontainer {
-	margin-left:0;
-}
-.breadcrumbs {
-	padding:30px 0 4px 10px;	
-}
-.headerwrapper {
-	margin:0 auto;
-	margin-left:550px;
-}
 </style>
-<div id="publiccontainer" class="index">
-	<h3 class="centeralign"><?php echo $title; ?></h3>
-    <div class="divider15"></div>
-    <form class="form-horizontal" role="form">
-    	<?php if($sessionhaserror) { ?>
-            <div class="alert alert-error clear"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
-        <?php } ?>
-        <?php if(!isEmptyString($session->getVar(SUCCESS_MESSAGE)) ){ ?>
-            <div class="alert alert-success clear"><?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
-        <?php } ?>
+<div id="publiccontainer" class="col-sm-6 col-sm-offset-3 index">
+    <form id="indexform" class="form-horizontal" role="form">
+    	<fieldset class="fieldsetcontainer">
+            <legend><h4><?php echo $title; ?></h4></legend>
+            <div class="panel-body well-sm">
+            	<table class="table border0">
+                	<tr>
+                        <td colspan="2">
+                            <div class="alert alert-success fade in"><i class="icon-remove close" data-dismiss="alert"></i> Signup completed</div>
+							<?php if($user->isCompanyAdmin()){ ?>
+								<?php if($user->getCompany()->isPendingApproval()){ ?>
+                                    <blockquote class="basic">
+                                        <p>
+                                            Your company <b><?php echo $user->getCompany()->getName(); ?></b> has been successfully setup for a <b><?php echo getTrialDays(); ?></b> day free Trial. <br /><br />
+                                            However, before you can get started, approval from Admin is required. We shall get back to you shortly with a confirmation email so that you can activate your account.
+                                        </p>
+                                    </blockquote>
+                                <?php } ?>
+                                <?php if($user->getCompany()->isActive()){ ?>
+                                	<blockquote class="basic">
+                                        <p>
+                                            Your company <b><?php echo $user->getCompany()->getName(); ?></b> has been successfully setup for a <b><?php echo getTrialDays(); ?></b> day free Trial. <br /><br />
+    
+    										To activate your account, click on the activation link that has been sent to your email <b><?php echo $user->getEmail(); ?></b><br /><br />
+                                            If you do not find the email in your inbox, please check the spam or junk folder.
+                                        </p>
+                                    </blockquote>
+                                <?php } ?>
+                        	<?php } ?>
+                        </td>  
+                    </tr>
+                </table>
+          	</div>
+       	</fieldset>
     </form>
 </div>    
 <?php

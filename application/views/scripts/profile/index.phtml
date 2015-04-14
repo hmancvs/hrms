@@ -141,8 +141,7 @@ $(document).ready(function() {
 			phone: {
 				required: true,
 				validnumber: true,
-				validate_ug: true,				
-				minlength: "<?php echo $config->country->phoneminlength; ?>"
+				minlength: "<?php echo getMinPhoneLength(); ?>"
 			},
 			username: {
 				required: <?php echo $user->isUserActive() ? 'true' : 'false' ; ?>, 
@@ -214,7 +213,7 @@ $(document).ready(function() {
 			},
 			phone: {
 				required: "<?php echo $this->translate("profile_phonenumber_error"); ?>",
-				minlength: "<?php echo sprintf($this->translate("profile_phone_maxlength_error"), $config->country->phoneminlength); ?>"
+				minlength: "<?php echo sprintf($this->translate("profile_phone_maxlength_error"), getMinPhoneLength()); ?>"
 			},
 			oldpassword: {
 				required: "<?php echo $this->translate("profile_oldpassword_error"); ?>"

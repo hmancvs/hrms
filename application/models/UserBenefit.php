@@ -19,7 +19,7 @@ class UserBenefit extends BaseRecord  {
 		$this->hasColumn('taxabletype', 'integer', null, array('default' => NULL));
 		$this->hasColumn('taxvalue', 'string', 10);
 		
-		$this->hasColumn('timeofftypeid', 'integer', null, array('default' => NULL));
+		$this->hasColumn('leavetypeid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('accrualtype', 'integer', null, array('default' => NULL));
 		$this->hasColumn('accrualfrequency', 'integer', null, array('default' => NULL));
 		$this->hasColumn('accrualvalue', 'decimal', 10, array('scale' => '0','default' => '0'));
@@ -66,8 +66,8 @@ class UserBenefit extends BaseRecord  {
 		if(isArrayKeyAnEmptyString('benefitfrequency', $formvalues)){
 			unset($formvalues['benefitfrequency']);
 		}
-		if(isArrayKeyAnEmptyString('timeofftypeid', $formvalues)){
-			unset($formvalues['timeofftypeid']);
+		if(isArrayKeyAnEmptyString('leavetypeid', $formvalues)){
+			unset($formvalues['leavetypeid']);
 		}
 		if(isArrayKeyAnEmptyString('accrualtype', $formvalues)){
 			unset($formvalues['accrualtype']);

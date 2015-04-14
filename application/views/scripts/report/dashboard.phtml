@@ -40,10 +40,10 @@
 		$posquery = "select count(l.lookuptypeid) from lookuptypevalue l where l.lookuptypeid = 7 AND l.companyid = '".$companyid."' ";
 		$poscount_result = $conn->fetchOne($posquery);
 	} else {
-		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
-		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
-		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/$config->system->hoursinday);
-		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, $config->system->yearstart, $config->system->yearend);
+		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
+		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
+		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/getHoursInDay());
+		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
 	}
 	
 	$custom_query = "";
@@ -269,21 +269,21 @@ $(document).ready(function() {
                                             <ul class="stats">
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($totalhrs/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($totalhrs/getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($totalhrs).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Leave Time Accrued</small>
                                                 </li>
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($takenhrs/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($takenhrs/getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($takenhrs).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Total Time Taken</small>
                                                 </li>
                                                 <li class="col-sm-4 col-xs-12">
                                                     <strong>
-                                                        <span class="blocked"><?php echo formatNumber($hoursavailable/$config->system->hoursinday); ?> Days </span> 
+                                                        <span class="blocked"><?php echo formatNumber($hoursavailable/getHoursInDay()); ?> Days </span> 
                                                         <span class="blocked" style="font-size:12px;">(<?php echo formatNumber($hoursavailable).' Hours'; ?>)</span>
                                                     </strong>
                                                     <small>Total Time Available</small>
@@ -453,13 +453,13 @@ $(document).ready(function() {
                    	</div>
                	</div>
             <?php } ?> 
-            <?php if($acl->checkPermission('Timeoff Accruals Report', ACTION_VIEW)) { ?>
+            <?php if($acl->checkPermission('Leave Accruals Report', ACTION_VIEW)) { ?>
                 <div class="row">
                     <div class="col-sm-12">
                         <div class="box">	
-                    		<a href="<?php echo $this->baseUrl('report/timeoffstats'); ?>" class="nodecoration clearfix blockanchor">
+                    		<a href="<?php echo $this->baseUrl('report/leavestats'); ?>" class="nodecoration clearfix blockanchor">
                                 <div class="box-title">
-                                    <h3><i class="fa fa-bar-chart-o"></i>Timeoff Accruals</h3>
+                                    <h3><i class="fa fa-bar-chart-o"></i>Leave Accruals</h3>
                                 </div>	
                                 <div class="box-content">
                                     <span class="label label-primary padding10 pull-right">View Report</span>  

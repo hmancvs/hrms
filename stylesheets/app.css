@@ -38,7 +38,10 @@ ul ul, ol ul, ul ol, ol ol, resetlist {
 	padding-bottom:4px;
 }
 .box.box-bordered .table.table-bordered.border-cells th:last-child, .box.box-bordered .table.table-bordered.border-cells td:last-child {
-	border: 1px solid #ddd;
+	border-right: 1px solid #ddd;
+}
+blockquote.basic {
+	font-size:15px;
 }
 /* Header custom Override */
 #navigation #brand {
@@ -207,7 +210,7 @@ ul#datalist > li:nth-child(odd), ul.datalist > li:nth-child(odd) {
 ul#datalist > li, ul#datalist > li:nth-child(odd) {
   background-color:#f9fcfd;
 }
-ul#datalist > li.unread, ul#datalist > li:nth-child(2n+1).unread, ul#datalist > li:nth-child(odd).unread {
+ul#datalist > li.unread, ul#datalist > li:nth-child(2n+1).unread, ul#datalist > li:nth-child(odd).unread, .unread {
 	background-color:#e0eef8;
 }
 ul#datalist > li.unread, ul.datalist > li.unread, .unread {
@@ -236,10 +239,10 @@ ul#datalist > li.unread, ul.datalist > li.unread, .unread {
 	height:auto;
 }
 .message h3.sender {
-	color: #666666;
+	/*color: #666666;*/
 	text-decoration:none;
 	margin-top:5px;
-	font-size:16px;	
+	font-size:14px;	
 }
 .message .summary {
 	width:90%;
@@ -258,7 +261,7 @@ ul#datalist > li.unread, ul.datalist > li.unread, .unread {
 /* Global Search Styles */
 #divResult {
 	position:absolute;
-	width:300px;
+	width:320px;
 	display:none;
 	margin-top:0;
 	margin-left:0;
@@ -291,9 +294,9 @@ li.display_box.selected {
 }
 .separator {
 	padding:5px 10px 5px 10px; 
-	border:solid 1px #dedede; 
+	/*border:solid 1px #666; */
 	height:auto;
-	background-color:#5d7fb6;
+	background-color:#999;
 	color:#fff;
 }
 .separator .allresults {
@@ -325,17 +328,17 @@ li.display_box.selected {
 .stylewidget #style2 {
 	margin-left:-5px;
 }
-.listactions li {
+.listactions > li {
 	padding-left:6px;
 	padding-right:6px;
 	margin-bottom:2px;
 	margin-top:2px;
 	float:left;
 }
-.listactions li:first-child {
+.listactions > li:first-child {
 	padding-left:0;
 }
-.listactions li:last-child {
+.listactions > li:last-child {
 	padding-right:0;
 }
 .form-horizontal .control-label {
@@ -430,6 +433,7 @@ span.edit, .buttons {
 .labeldescription.noresults {
     font-size: 20px;
     margin: 75px auto 0;
+	margin-bottom:200px;
     text-align: center;
     width: 100%;
 }
@@ -501,4 +505,7 @@ body.print .hideonprint {
 }
 .bluelinks, .btn.bluelinks {
 	color: #368ee0;
+}
+.tabs > li .fa {
+	margin-right:12px;
 }

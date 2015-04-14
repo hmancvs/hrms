@@ -69,11 +69,11 @@ class ReportController extends SecureController   {
 			return "Benefits Detailed Report";
 		}
 		
-		if ($action == "timeoffstats") {
-			return "Timeoff Analysis Report";
+		if ($action == "leavestats") {
+			return "Leave Analysis Report";
 		}
-		if ($action == "timeoffdetails") {
-			return "Timeoff Accruals Report";
+		if ($action == "leavedetails") {
+			return "Leave Accruals Report";
 		}
 		
 	}
@@ -202,10 +202,10 @@ class ReportController extends SecureController   {
 	function benefitdetailsAction(){
 	
 	}
-	function timeoffstatsAction(){
+	function leavestatsAction(){
 	
 	}
-	function timeoffdetailsAction(){
+	function leavedetailsAction(){
 	
 	}
 	function attendancestatsAction(){

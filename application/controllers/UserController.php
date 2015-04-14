@@ -25,11 +25,7 @@ class UserController extends IndexController  {
 		# check which field user is using to login. default is username
 		$credcolumn = "username";
     	$login = (string)trim($this->_getParam("email"));
-    	
-    	# check if credcolumn is phone 
-    	if(is_numeric(substr($login, -6, 6))){
-    		$credcolumn = 'phone';
-    	}
+    	// $password = encode(sha1(trim($this->_getParam("password"))));
     	
     	# check if credcolumn is emai
     	$validator = new Zend_Validate_EmailAddress();
@@ -64,6 +60,7 @@ class UserController extends IndexController  {
 	
 			// new class to audit the type of Browser and OS that the visitor is using
 			if(!$authAdapter->authenticate()->isValid()) {
+				// debugMessage('invalid'); exit;
 				// add failed login to audit trail
 				$audit_values['module'] = 1;
 				$audit_values['usecase'] = '1.1';
@@ -90,35 +87,6 @@ class UserController extends IndexController  {
 			$useraccount->populate($user->id);
         }
 		
-        # if user is loggin with phone
-        if($credcolumn == 'phone'){
-        	$useracc = new UserAccount();
-        	$result = $useracc->validateUserUsingPhone($this->_getParam("password"), $this->_getParam("email"));
-        	// debugMessage($result); exit();
-        	if(!$result){
-        		$audit_values['module'] = 1;
-        		$audit_values['usecase'] = '1.1';
-        		$audit_values['transactiontype'] = USER_LOGIN;
-        		$audit_values['status'] = "N";
-        		$audit_values['transactiondetails'] = "Login for user with id '".$this->_getParam("email")."' failed. Invalid username or password";
-        		$this->notify(new sfEvent($this, USER_LOGIN, $audit_values));
-        
-        		$session->setVar(ERROR_MESSAGE, "Invalid Username or Email Address or Password. <br />Please Try Again.");
-        		$session->setVar(FORM_VALUES, $this->_getAllParams());
-        		// return to the home page
-        		if(!isArrayKeyAnEmptyString(URL_FAILURE, $formvalues)){
-        			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
-        		} else {
-        			$this->_helper->redirector->gotoSimple('login', "user");
-        		}
-        		 
-        		return false;
-        	} else {
-        		$useraccount = new UserAccount();
-        		$useraccount->populate($result['id']);
-        	}
-        }
-        
         // debugMessage($useraccount->toArray()); exit();
 		$session->setVar("userid", $useraccount->getID());
 		$session->setVar("username", $useraccount->getUserName());
@@ -126,6 +94,8 @@ class UserController extends IndexController  {
 		$session->setVar("companyid", $useraccount->getCompanyID());
 		$session->setVar("istimesheetuser", $useraccount->getIsTimesheetUser());
 		$session->setVar("browseraudit", $browser_session);
+		$session->setVar("user", json_encode($useraccount->toArray()));
+		$session->setVar("company", json_encode($useraccount->getCompany()->toArray()));
 		
 		// clear user specific cache, before it is used again
     	$this->clearUserCache();

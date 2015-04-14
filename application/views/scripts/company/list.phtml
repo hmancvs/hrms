@@ -1,19 +1,30 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$loggedinuser = new UserAccount();
-	$loggedinuser->populate($userid);
-	$customlabel = "";
+	$title = "Companies";
+	$pagetitle = "Manage Companies";
+	$listitems = "Companies";
+	$moduleitem = "Company";
+	$resource = 'Company';
+	$listurl = $this->baseUrl('profile/list');
+	$addurl = $this->baseUrl($controller);
+	$description = '';
+	$icon = 'fa fa-bars';
 	
-	$style = '1';
-	if(!isEmptyString($request->style)){
-		$style = $request->style;
-		$session->setVar('style', $request->style);
-	}
-	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
-		$style = $session->getVar('style');
-	}
+	$statuses =  getCompanyStatuses(); 
+	$companycategories = getDatavariables('INDUSTRY_CATEGORIES');
 	
+	$paginate = new Pagination();	
+	$paginate->setView($this);
+	# set the search columns to be used on this list
+	$paginate->setSearchColumns(array("c.name","c.email","c.phone","c.contactperson"));
+	$paginate->setFilterColumns(array());
+	$paginate->setItemCountPerPage("25");
+	
+	# define the letter to be clicked to ease navigation 
+	$where_query = " WHERE c.id <> '' ";
+	
+	# date filtering
 	$startdate = $request->startdate;
 	$enddate = $request->enddate;
 	if(!isEmptyString($startdate)){
@@ -25,33 +36,26 @@
 		$enddate = changeDateFromPageToMySQLFormat($enddate);
 		$allowclear = true;
 	}
-	
-	$paginate = new Pagination();	
-	$paginate->setView($this);
-	# set the search columns to be used on this list
-	$paginate->setSearchColumns(array("c.name","c.email","c.phone","c.contactperson"));
-	$paginate->setFilterColumns(array());
-	$paginate->setItemCountPerPage("25");
-	
-	# define the letter to be clicked to ease navigation 
-	$where_query = " WHERE c.id <> '' ";
-	$allowclear = false;
-	if(!isEmptyString($request->searchterm)){
-		$allowclear = true;
-	}
-	
-	$status = trim($request->status);
-	if(!isEmptyString($status)){
-		$where_query .= " AND c.`status` = '".$status."' ";
-		$allowclear = true;
-	}
 	if(!isEmptyString($startdate)){
 		$where_query .= " AND (TO_DAYS(c.datecreated) >= TO_DAYS('".$startdate."')) ";
-		$allowclear = true;
 	}
 	if(!isEmptyString($enddate)){
 		$where_query .= " AND (TO_DAYS(c.datecreated) <= TO_DAYS('".$enddate."')) ";
-		$allowclear = true;
+	}
+	
+	# status filtering
+	$status = trim($request->status);
+	if(!isEmptyString($status)){
+		$where_query .= " AND c.`status` = '".$status."' ";
+		if($status == 2){
+			$pagetitle = "Approval Required";
+		}
+		if($status == 0){
+			$pagetitle = "Inactive Companies";
+		}
+		if($status == 1){
+			$pagetitle = "Active Companies";
+		}
 	}
 		
 	$profilerid = $request->profilerid;
@@ -70,7 +74,7 @@
 	}
 	// f.orgname as fundername, concat(c.firstname,' ',c.lastname) as supervisorname
 	$paginate->processPost($request->getParams());
-	$all_results_query = "SELECT c.id as cid, c.name, c.email, c.phone, mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername) as addedby, c.industrycode, c.status, c.datecreated, c.contactperson, concat(cu.firstname, ' ', cu.lastname, ' ', cu.othername) as defaultuser
+	$all_results_query = "SELECT c.id as cid, c.name, c.email, c.phone, mc.displayname, concat(mc.firstname, ' ', mc.lastname, ' ', mc.othername) as addedby, c.industrycode, c.status, c.datecreated, c.contactperson, concat(cu.firstname, ' ', cu.lastname, ' ', cu.othername) as defaultuser, c.logo
 	 FROM company c
 	 left join useraccount mc on (c.createdby = mc.id)
 	 left join useraccount cu on (c.defaultuserid = cu.id)
@@ -83,23 +87,12 @@
 	$result = $conn->fetchAll($current_results_query);
 	$has_no_data = (count($result) == 0) ? true : false; 
 	
-	$listurl = $this->baseUrl('profile/list');
-	$addurl = $this->baseUrl($controller);
-	$title = "Companies";
-	$listitems = "Companies";
-	$moduleitem = "Company";
-	$description = '';
-	$icon = 'fa fa-bars';
-	$resource = 'Company';
-	$statuses =  getCompanyStatuses(); 
-	$companycategories = getDatavariables('INDUSTRY_CATEGORIES');
-	
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
 	$(document).ready(function() {
 		$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
-		$('.titlelabel').html('<?php echo $title.$customlabel; ?>');
+		$('.titlelabel').html('<?php echo $title; ?>');
 		$('.desclabel').html('<?php echo $description; ?>');
 		$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
 		
@@ -113,9 +106,9 @@
 			<div class="box-title noheader">
                 <h3></h3>
             </div>
-            <div class="box-content nopadding">
+            <div class="box-content">
                 <div class="row">
-                    <div class="col-sm-9">
+                    <div class="col-sm-9 padding0 nopadding">
                         <ul class="resetlist listactions">
                             <?php if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
                                 <li><a title="New <?php echo $moduleitem; ?>" class="btn btn-primary xbtn-sm blockanchor" href="<?php echo $addurl; ?>">New <?php echo $moduleitem; ?></a></li>
@@ -140,30 +133,22 @@
                         </ul>
                     </div>
                     <div class="col-sm-3">
-                        <div class="divider5"></div>
-                        <div class="col-sm-12 padding0">
-                            <div class="input-group">
-                                <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." />
-                                <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                            </div>
-                        </div>	
-                        <input type="hidden" name="letter" id="letter" value="<?php echo $request->getParam('letter'); ?>" />
-                        <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
-                        <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
+                        <div class="input-group">
+                            <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." /><span class="input-group-addon"><i class="fa fa-search"></i></span>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
-					<div class="col-sm-12">
+					<div class="col-sm-12 padding0 nopadding">
 						<div class="box box-color box-bordered">
 							<div class="box-title condensed">
-								<h3><i class="glyphicon-list"></i> Manage Companies</h3>
+								<h3><i class="glyphicon-list"></i> <?php echo $pagetitle; ?></h3>
                                 <div class="actions">
-                                	<a class="btn bluelinks" href="<?php echo $this->baseUrl('report/employeedetails'); ?>">View Detailed Employee Report</a> &nbsp;
                                 	<a href="<?php echo $listurl; ?>" title="Reset List and Clear all Filters" rel="tooltip"><i class="fa fa-refresh"></i></a> &nbsp;
                                 </div>
 							</div>
 							<div class="box-content nopadding">
-								<div class="row-fluid peoplelist clearfix <?php echo $style == '2' ? 'whitebg' : ''; ?>">
+								<div class="row-fluid peoplelist clearfix">
                                     <?php if($has_no_data){ ?>
                                         <div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div>
                                     <?php } else { ?>
@@ -181,6 +166,27 @@
                                                     if($acl->checkPermission($resource, ACTION_EDIT)){
                                                         $allowedit = true;
                                                     }
+													
+													$canapprove = false;
+													if(($line['status'] == '2' || $line['status'] == '3') && $acl->checkPermission($resource, ACTION_APPROVE)){
+                                                        $canapprove = true;
+                                                    }
+													$canreject = false;
+													if(($line['status'] == '2') && $acl->checkPermission($resource, ACTION_APPROVE)){
+                                                        $canreject = true;
+                                                    }
+													$candeactivate = false;
+													if($acl->checkPermission($resource, ACTION_DELETE) && $line['status'] == '1'){
+														$candeactivate = true;
+													}
+													$canactivate = false;
+													if($acl->checkPermission($resource, ACTION_DELETE) && $line['status'] == '0'){
+														$canactivate = true;
+													}
+													$candelete = true;
+													if($line['cid'] == DEFAULT_COMPANYID){
+														$candelete = false;
+													}
                                             ?>
                                                  <div class="col-xs-12 col-sm-6">
                                                     <div class="peoplewrapper makerelative">
@@ -188,15 +194,32 @@
                                                             <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
                                                             <ul class="dropdown-menu" role="menu" style="left:-102px;">
                                                                 <?php if ($acl->checkPermission($resource, ACTION_VIEW)) { ?>
-                                                                    <li><a class="blockanchor" href="<?php echo $viewurl; ?>">View Profile</a></li>
+                                                                    <li><a href="<?php echo $viewurl; ?>">View Profile</a></li>
                                                                 <?php } ?>
                                                                 <?php if ($allowedit) { ?>
-                                                                    <li><a class="blockanchor" href="<?php echo $indexurl; ?>">Update</a></li>
+                                                                    <li><a href="<?php echo $indexurl; ?>">Update</a></li>
+                                                                <?php } ?>
+                                                                <?php if($canapprove){ ?>
+                                                                    <li><a class="confirm-dialog gonowhere" action="<?php echo $this->baseUrl('company/updatestatus/id/'.encode($line['cid']).'/status/1/successurl/'.encode($this->viewurl)); ?>" message="Confirm Approval of <?php echo $line['name']; ?><br /><br />An email notification will be sent to the admin upon confirmation.">Approve</a></li>
+                                                                <?php } ?>    
+                                                                <?php if($canreject){ ?>
+                                                                    <li><a class="confirm-prompt gonowhere" action="<?php echo $this->baseUrl('company/updatestatus/id/'.encode($line['cid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Reject <?php echo $line['name']; ?>: <br/>Enter feedback remarks. An email will be sent back upon confirmation.">Reject</a></li>
+                                                                <?php } ?>
+                                                                <?php if($candeactivate){ ?>
+                                                                    <li><a class="confirm-dialog gonowhere" action="<?php echo $this->baseUrl('company/updatestatus/id/'.encode($line['cid']).'/status/0/successurl/'.encode($this->viewurl)); ?>" message="Confirm Deactivation of <?php echo $line['name']; ?><br /><br />Please note: All users under the company will not be able to login upon confirmation.">Deactivate</a></li>
+                                                                <?php } ?>
+                                                                <?php if($candelete){ ?>
+                                                                    <li><a class="deleteline gonowhere" action="<?php echo $this->baseUrl('company/delete/id/'.encode($line['cid'])."/entityname/Company/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>">Delete</a>
+                                                                    </li>
                                                                 <?php } ?>
                                                             </ul>
                                                         </div>
                                                         <div class="col-sm-2 padding0 centeralign">
-                                                            <i class="fa fa-briefcase" style="font-size:60px;"></i>
+                                                        	<?php if(hasLogo($line['cid'], $line['logo'])){ ?>
+                                                            	<img src="<?php echo getCompanyLogoPath($line['cid'], $line['logo']); ?>" style="height:auto; width:75px;" />
+                                                            <?php } else { ?>
+                                                            	<i class="fa fa-briefcase" style="font-size:60px;"></i>
+                                                            <?php } ?>
                                                         </div>
                                                         <div class="peopleinfo col-sm-10">
                                                             <h4><a href="<?php echo $viewurl; ?>" class="blockanchor"><?php echo $line['name']; ?></a></h4>

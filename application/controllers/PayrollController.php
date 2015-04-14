@@ -38,12 +38,23 @@ class PayrollController extends SecureController  {
 	function createAction(){
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
-		$session = SessionWrapper::getInstance();
-		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
+		$session = SessionWrapper::getInstance(); 
+		
+		/* debugMessage('pms: '.ini_get('post_max_size'));
+		debugMessage('ums: '.ini_get("upload_max_filesize"));
+		$size = (int) $_SERVER['CONTENT_LENGTH']; debugMessage('content length '.$size);
+		ini_set("memory_limit", "1024M");
+		$memory_limit = ini_get('memory_limit'); debugMessage('memory is '.$memory_limit); */
+		
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); 
+		$restoredata = objectToArray(json_decode(decode($session->getVar('restoredata'))));
+		$formvalues = array_merge_maintain_keys($formvalues, $restoredata);
+		// debugMessage($formvalues); 
+		// exit;
 		
 		// determine employees on the payroll
 		$employees = array();
-		$all_results_query = decode($this->_getParam('employeequery')); // debugMessage($all_results_query); exit;
+		$all_results_query = decode($formvalues['employeequery']); // debugMessage($all_results_query); exit;
 		$conn = Doctrine_Manager::connection();
 		$employees = $conn->fetchAll($all_results_query); // debugMessage($employees);
 		
@@ -96,19 +107,19 @@ class PayrollController extends SecureController  {
 		// debugMessage('url '.decode($this->_getParam(URL_SUCCESS))); // exit; 
 		
 		$payroll = new Payroll();
-		if(!isEmptyString($this->_getParam('reloadid'))){
-			$payroll->populate($this->_getParam('reloadid'));
+		if(!isArrayKeyAnEmptyString('reloadid', $formvalues)){
+			$payroll->populate($formvalues['reloadid']);
 		}
 		$payroll->processPost($dataarray); 
 		/* debugMessage($payroll->toArray());
 		debugMessage('errors are '.$payroll->getErrorStackAsString()); exit(); */
 		
 		if($payroll->hasError()){
-			$url = decode($this->_getParam(URL_FAILURE));
+			$url = decode($formvalues[URL_FAILURE]);
 			$session->setVar(ERROR_MESSAGE, $payroll->getErrorStackAsString());
 		} else {
 			try {
-				if($payroll->payrollExists() && isEmptyString($this->_getParam('reloadid'))){
+				if($payroll->payrollExists() && isArrayKeyAnEmptyString('reloadid', $formvalues)){
 					$id = $payroll->existingPayroll();
 					$proll = new Payroll();
 					$proll->populate($id);
@@ -122,10 +133,10 @@ class PayrollController extends SecureController  {
 				if($dataarray['status'] == 2){
 					$session->setVar(SUCCESS_MESSAGE, "Successfully marked as Completed and Locked");
 				}
-				$url = decode($this->_getParam(URL_SUCCESS)).encode($payroll->getID());
+				$url = decode($formvalues[URL_SUCCESS]).encode($payroll->getID());
 			} catch (Exception $e) {
 				$session->setVar(ERROR_MESSAGE, $e->getMessage()); // debugMessage($e->getMessage());
-				$url = decode($this->_getParam(URL_FAILURE));
+				$url = decode($formvalues[URL_FAILURE]);
 			}
 		}
 		// debugMessage($url);
@@ -146,7 +157,7 @@ class PayrollController extends SecureController  {
 		
 		$ledger_collection = new Doctrine_Collection(Doctrine_Core::getTable("Ledger"));
 		$timesheet_collection = new Doctrine_Collection(Doctrine_Core::getTable("Timesheet"));
-		$timeoff_collection = new Doctrine_Collection(Doctrine_Core::getTable("Ledger"));
+		$leave_collection = new Doctrine_Collection(Doctrine_Core::getTable("Ledger"));
 		
 		$employees = $payroll->getdetails(); // debugMessage($employees->toArray());
 		foreach ($employees as $employee){
@@ -200,20 +211,20 @@ class PayrollController extends SecureController  {
 				}
 			}
 			
-			// generate timeoff accruals for period
-			if($employee->getLeaveHrs() > '0.00'){
+			// generate leave accruals for period
+			if($employee->getLeaveHrs() > '0.00' && $employee->getUser()->getIsTimesheetuser() == 1){
 				// debugMessage('>'.$employee->getLeaveHrs());
-				$timeoff = new Ledger();
-				$timeoff_array = array(
+				$leave = new Ledger();
+				$leave_array = array(
 					"payrollid" => $payroll->getID(),
 					"userid" => $employee->getUserID(),
 					"ledgertype" => 2,
 					"trxntype" => 1,
-					"timeoffid" => 1,
+					"leaveid" => 1,
 					"trxndate" => $payroll->getEndDate(),
 					"startdate" => $payroll->getStartDate(),
 					"enddate" => $payroll->getEndDate(),
-					"timeofflength" => $employee->getLeaveHrs() * $config->system->hoursinday,
+					"leavelength" => $employee->getLeaveHrs() * getHoursInDay(),
 					"lengthtype" => 1,
 					"status" => 1,
 					"remarks" => "Auto Accrual from Payroll (".changeMySQLDateToPageFormat($payroll->getStartDate())." - ".changeMySQLDateToPageFormat($payroll->getEndDate()).") ",
@@ -222,26 +233,26 @@ class PayrollController extends SecureController  {
 					"dateapproved" => date('Y-m-d'),
 					"payrolltrigger" => 1
 				);
-				$timeoff->processPost($timeoff_array);
-				/* debugMessage($timeoff->toArray());
-				debugMessage('errors are '.$timeoff->getErrorStackAsString()); */
-				if(!$timeoff->hasError()){
-					$timeoff_collection->add($timeoff);
+				$leave->processPost($leave_array);
+				/* debugMessage($leave->toArray());
+				debugMessage('errors are '.$leave->getErrorStackAsString()); */
+				if(!$leave->hasError()){
+					$leave_collection->add($leave);
 				}
 			}
-			if($employee->getSickHrs() > '0.00'){
+			if($employee->getSickHrs() > '0.00' && $employee->getUser()->getIsTimesheetuser() == 1){
 				// debugMessage('>'.$employee->getLeaveHrs());
-				$timeoff = new Ledger();
-				$timeoff_array = array(
+				$leave = new Ledger();
+				$leave_array = array(
 						"payrollid" => $payroll->getID(),
 						"userid" => $employee->getUserID(),
 						"ledgertype" => 2,
 						"trxntype" => 1,
-						"timeoffid" => 2,
+						"leaveid" => 2,
 						"trxndate" => $payroll->getEndDate(),
 						"startdate" => $payroll->getStartDate(),
 						"enddate" => $payroll->getEndDate(),
-						"timeofflength" => $employee->getSickHrs() * $config->system->hoursinday,
+						"leavelength" => $employee->getSickHrs() * getHoursInDay(),
 						"lengthtype" => 1,
 						"status" => 1,
 						"remarks" => "Auto Accrued from Payroll (".changeMySQLDateToPageFormat($payroll->getStartDate())." - ".changeMySQLDateToPageFormat($payroll->getEndDate()).") ",
@@ -250,11 +261,11 @@ class PayrollController extends SecureController  {
 						"dateapproved" => date('Y-m-d'),
 						"payrolltrigger" => 1
 				);
-				$timeoff->processPost($timeoff_array);
-				/*debugMessage($timeoff->toArray());
-				debugMessage('errors are '.$timeoff->getErrorStackAsString()); */
-				if(!$timeoff->hasError()){
-					$timeoff_collection->add($timeoff);
+				$leave->processPost($leave_array);
+				/*debugMessage($leave->toArray());
+				debugMessage('errors are '.$leave->getErrorStackAsString()); */
+				if(!$leave->hasError()){
+					$leave_collection->add($leave);
 				}
 			}
 			
@@ -367,10 +378,10 @@ class PayrollController extends SecureController  {
 				// debugMessage($timesheet_collection->toArray());
 				$timesheet_collection->save();
 			}
-			// assign timeoff benefits 
-			if($timeoff_collection->count() > 0){
-				// debugMessage($timeoff_collection->toArray());
-				$timeoff_collection->save();
+			// assign leave benefits 
+			if($leave_collection->count() > 0){
+				// debugMessage($leave_collection->toArray());
+				$leave_collection->save();
 			}
 			
 			// set success message

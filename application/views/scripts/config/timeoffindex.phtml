@@ -1,35 +1,35 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$timeoff = new TimeoffType();
+	$leave = new LeaveType();
 	$id = decode($request->id);
 	
 	if(isEmptyString($request->id)){
 		$pagetitle = 'New Category';
 		$button_title = $this->translate('global_button_save'); 
 		$successmessage = $this->translate('global_save_success'); 
-		$posturl = $this->baseUrl("config/timeoffcreate");
-		$timeoff->setcompanyid($companyid);
+		$posturl = $this->baseUrl("config/leavecreate");
+		$leave->setcompanyid($companyid);
 	} else {
-		$timeoff->populate(decode($request->id)); 
+		$leave->populate(decode($request->id)); 
 		$pagetitle = "Update Category";
 		$button_title = $this->translate('global_button_save_changes'); 
 		$successmessage = $this->translate('global_update_success'); 
-		$posturl = $this->baseUrl("config/timeoffcreate");
+		$posturl = $this->baseUrl("config/leavecreate");
 	}
 	
-	$successurl = $this->baseUrl('config/timeoff');
-	$addnewsuccessurl = $this->baseUrl('config/timeoffindex');
+	$successurl = $this->baseUrl('config/leave');
+	$addnewsuccessurl = $this->baseUrl('config/leaveindex');
 	$failureurl = $this->viewurl;
 	
 	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
-		$timeoff->processPost($session->getVar(FORM_VALUES));	
+		$leave->processPost($session->getVar(FORM_VALUES));	
 	}
 	
 	$icon = "";
 	$description = "";
-	$pageid = "timeoff_index";
-	$title = "Timeoff Categories";
+	$pageid = "leave_index";
+	$title = "Leave Categories";
 	$this->headTitle($title.$browserappend);
 ?>
 <link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/colorpicker/colorpicker.css')); ?>">
@@ -68,9 +68,9 @@ $(document).ready(function() {
                 </div>
                 <div class="box-content nopadding">
                     <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
-                        <input name="entityname" id="entityname" type="hidden" value="TimeoffType" />
-                        <input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
-                        <input type="hidden" id="companyid" name="companyid" value="<?php echo $timeoff->getCompanyID(); ?>" />
+                        <input name="entityname" id="entityname" type="hidden" value="LeaveType" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($leave->getID()); ?>" />
+                        <input type="hidden" id="companyid" name="companyid" value="<?php echo $leave->getCompanyID(); ?>" />
                         <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
                         <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
                         <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
@@ -79,13 +79,13 @@ $(document).ready(function() {
                         <div class="form-group">
                             <label class="col-sm-3 control-label"><?php echo $this->translate("global_name_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $timeoff->getName(); ?>" /><div id="name_error"></div>
+                                <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $leave->getName(); ?>" /><div id="name_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label"><?php echo $this->translate('global_description_label'); ?>:</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control expanding" id="description" name="description"><?php echo $timeoff->getDescription(); ?></textarea>
+                                <textarea class="form-control expanding" id="description" name="description"><?php echo $leave->getDescription(); ?></textarea>
                                 <div id="description_error"></div>
                             </div>
                         </div>
@@ -93,46 +93,46 @@ $(document).ready(function() {
                             <label class="col-sm-3 control-label">Default Value:</label>
                             <div class="col-sm-9">
                                 <div class="xcol-sm-4 padding0" style="display:inline-block; margin-right:15px;">
-                                    <input type="text" name="defaultquantity" id="defaultquantity" class="form-control input-sm width75 centeralign isnumber" value="<?php echo $timeoff->getdefaultquantity(); ?>" />
+                                    <input type="text" name="defaultquantity" id="defaultquantity" class="form-control input-sm width75 centeralign isnumber" value="<?php echo $leave->getdefaultquantity(); ?>" />
                                 </div>
                                 <div class="xcol-sm-4 padding0" style="display:inline-block; margin-right:5px;">
-                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_1" class="<?php echo $timeoff->getquantitytype() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getquantitytype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
-                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_2" class="<?php echo $timeoff->getquantitytype() == '2' ? 1 : 0; ?>" value="2" <?php echo $timeoff->getquantitytype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_1" class="<?php echo $leave->getquantitytype() == '1' ? 1 : 0; ?>" value="1" <?php echo $leave->getquantitytype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                    <label class="radio radio-inline"><input type="radio" name="quantitytype" id="quantitytype_2" class="<?php echo $leave->getquantitytype() == '2' ? 1 : 0; ?>" value="2" <?php echo $leave->getquantitytype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
                                 </div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Bookable?:</label>
                             <div class="col-sm-9">
-                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_1" class="<?php echo $timeoff->getbookable() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getbookable() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_0" class="<?php echo $timeoff->getbookable() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getbookable() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_1" class="<?php echo $leave->getbookable() == '1' ? 1 : 0; ?>" value="1" <?php echo $leave->getbookable() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="bookable" id="bookable_0" class="<?php echo $leave->getbookable() == '0' ? 1 : 0; ?>" value="0" <?php echo $leave->getbookable() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Authorised?:</label>
                             <div class="col-sm-9">
-                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_1" class="<?php echo $timeoff->getauthorised() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getauthorised() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_0" class="<?php echo $timeoff->getauthorised() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getauthorised() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_1" class="<?php echo $leave->getauthorised() == '1' ? 1 : 0; ?>" value="1" <?php echo $leave->getauthorised() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="authorised" id="authorised_0" class="<?php echo $leave->getauthorised() == '0' ? 1 : 0; ?>" value="0" <?php echo $leave->getauthorised() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Paid?:</label>
                             <div class="col-sm-9">
-                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_1" class="<?php echo $timeoff->getpaid() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getpaid() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_0" class="<?php echo $timeoff->getpaid() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getpaid() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_1" class="<?php echo $leave->getpaid() == '1' ? 1 : 0; ?>" value="1" <?php echo $leave->getpaid() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="paid" id="paid_0" class="<?php echo $leave->getpaid() == '0' ? 1 : 0; ?>" value="0" <?php echo $leave->getpaid() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Deduct From Balance?:</label>
                             <div class="col-sm-9">
-                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_1" class="<?php echo $timeoff->getdeductfromallowance() == '1' ? 1 : 0; ?>" value="1" <?php echo $timeoff->getdeductfromallowance() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
-                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_0" class="<?php echo $timeoff->getdeductfromallowance() == '0' ? 1 : 0; ?>" value="0" <?php echo $timeoff->getdeductfromallowance() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
+                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_1" class="<?php echo $leave->getdeductfromallowance() == '1' ? 1 : 0; ?>" value="1" <?php echo $leave->getdeductfromallowance() == '1' ? 'checked="checked"' : ''; ?> /> Yes &nbsp;</label>
+                                <label class="radio radio-inline"><input type="radio" name="deductfromallowance" id="deductfromallowance_0" class="<?php echo $leave->getdeductfromallowance() == '0' ? 1 : 0; ?>" value="0" <?php echo $leave->getdeductfromallowance() == '0' ? 'checked="checked"' : ''; ?> /> No</label>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Calendar Color:</label>
                             <div class="col-sm-9">
-                                <input type="text" name="calendarcolor" id="calendarcolor" class="form-control colorpick input-sm width100" value="<?php echo $timeoff->getcalendarcolor(); ?>" />
+                                <input type="text" name="calendarcolor" id="calendarcolor" class="form-control colorpick input-sm width100" value="<?php echo $leave->getcalendarcolor(); ?>" />
                             </div>
                         </div>
                         <div class="form-actions">

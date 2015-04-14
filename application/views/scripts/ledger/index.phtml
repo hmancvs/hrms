@@ -13,14 +13,14 @@
 			$ledgercat = $request->ledgercat;
 		}
 		$ledger->setLedgerType($ledgercat);
-
+		
 		$type = 1;
 		if(!isEmptyString($request->type)){
 			$type = $request->type;
 		}
 		$ledger->setTrxnType($type);
 		$ledger->setAmount('');
-		$ledger->setTimeoffLength('');
+		$ledger->setLeaveLength('');
 		if(!isEmptyString($request->trxndate)){
 			$ledger->setTrxnDate($request->trxndate);
 		}
@@ -32,8 +32,8 @@
 	$benefittypes = getBenefitTypes();
 	$trxtypes = getTrxnTypes();
 	$benefits = getBenefits(); // debugMessage($benefits);
-	$timeoffs = getTimeoffTypes();
-	$timeoffoptions = getHoursDaysDropdown();
+	$leaves = getLeaveTypes();
+	$leaveoptions = getHoursDaysDropdown();
 ?>
 <?php require APPLICATION_PATH."/views/scripts/index/pgcjs.phtml"; ?>
 <!--<script type="text/javascript" src="<?php //echo $this->serverUrl($this->baseUrl('javascript/plugins/custom/jquery.form.min.js')); ?>"></script>-->
@@ -44,12 +44,12 @@ $(document).ready(function() {
 		rules: {
 			userid: "required",
 			benefitid: "required",
-			timeoffid: "required",
+			leaveid: "required",
 			trxndate: "required",
 			amount: {
 				required: true
 			},
-			timeofflength: {
+			leavelength: {
 				required: true
 			},
 			remarks: "required"
@@ -58,12 +58,12 @@ $(document).ready(function() {
 		messages: {				
 			userid: "Please select a User",
 			benefitid: "Please select Category",
-			timeoffid: "Please select Category",
+			leaveid: "Please select Category",
 			trxndate: "Please select a Date",
 			amount: {
-				required: "Please enter Amount in <?php echo $config->country->currencycode; ?>"
+				required: "Please enter Amount in <?php echo getCountryCurrencyCode(); ?>"
 			}, 
-			timeofflength: {
+			leavelength: {
 				required: "Please enter Value"
 			},
 			remarks: "Please enter Remarks"
@@ -291,21 +291,21 @@ $(document).ready(function() {
                                         echo $dropdown->render();
                                     ?>
                                 </span>
-                                <span id="benefit_timeoff" class="b_time">
+                                <span id="benefit_leave" class="b_time">
                                     <?php
-                                        $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                        $dropdown = new Zend_Form_Element_Select('leaveid',
                                                             array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffs),
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $leaves),
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
                                                                 'class' => array('form-control','input-sm','width200')
                                                             )
                                         );  
-                                        $dropdown->setValue($ledger->getTimeOffID()); 
+                                        $dropdown->setValue($ledger->getLeaveID()); 
                                         echo $dropdown->render();
                                     ?>
                                 </span>
-                                <div id="benefitid_error"></div><div id="timeoffid_error"></div>
+                                <div id="benefitid_error"></div><div id="leaveid_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -313,22 +313,24 @@ $(document).ready(function() {
                             <div class="col-sm-8">
                                 <span class="b_cash">
                                     <input type="text" name="amount" id="amount" class="form-control input-sm isnumber centeralign width100 inline" value="<?php echo $ledger->getAmount(); ?>" />
-                                    &nbsp; (<?php echo $config->country->currencycode; ?> Amount)
+                                    &nbsp; (<?php echo getCountryCurrencyCode(); ?> Amount)
                                 </span>
                                 <span class="b_time">
-                                    <input type="text" name="timeofflength" id="timeofflength" class="form-control input-sm centeralign isdecimal b_time width80 inline" value="<?php echo $ledger->getTimeoffLength(); ?>" />&nbsp; 
-                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_1" value="1" <?php echo $ledger->getlengthtype() == 1 ? 'checked="checked"' : ''; ?> /> <?php echo $timeoffoptions[1]; ?> &nbsp;</label>
-                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_2" value="2" <?php echo $ledger->getlengthtype() == 2 ? 'checked="checked"' : ''; ?> /> <?php echo $timeoffoptions[2]; ?> &nbsp;</label>
+                                    <input type="text" name="leavelength" id="leavelength" class="form-control input-sm centeralign isdecimal b_time width80 inline" value="<?php echo $ledger->getLeaveLength(); ?>" />&nbsp; 
+                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_1" value="1" <?php echo $ledger->getlengthtype() == 1 ? 'checked="checked"' : ''; ?> /> <?php echo $leaveoptions[1]; ?> &nbsp;</label>
+                                    <label class="radio radio-inline" style="padding-top:0;"><input type="radio" name="lengthtype" id="lengthtype_2" value="2" <?php echo $ledger->getlengthtype() == 2 ? 'checked="checked"' : ''; ?> /> <?php echo $leaveoptions[2]; ?> &nbsp;</label>
                                 </span>
-                                <div id="amount_error"></div><div id="timeofflength_error"></div>
+                                <div id="amount_error"></div><div id="leavelength_error"></div>
                             </div>
                         </div>
-                        <div class="form-group" id="taxable_row">
-                            <label class="col-sm-4 control-label"></label>
-                            <div class="col-sm-8">
-                                <label class="checkbox checkbox-inline"><input style="width: 19px; height: 25px; margin-top: -4px;" type="checkbox" id="istaxable" name="istaxable" <?php echo $ledger->getistaxable() == 1 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Click to enable or disable taxable Credit benefits" /> &nbsp; Is Taxable</label>
+                        <?php if($ledger->getLedgerType() == 1){ ?>
+                            <div class="form-group" id="taxable_row">
+                                <label class="col-sm-4 control-label"></label>
+                                <div class="col-sm-8">
+                                    <label class="checkbox checkbox-inline"><input style="width: 19px; height: 25px; margin-top: -4px;" type="checkbox" id="istaxable" name="istaxable" <?php echo $ledger->getistaxable() == 1 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Click to enable or disable taxable Credit benefits" /> &nbsp; Is Taxable</label>
+                                </div>
                             </div>
-                        </div>
+                        <?php } ?>
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Remarks: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
@@ -338,41 +340,66 @@ $(document).ready(function() {
 	                            <input type="hidden" name="attachment" id="attachment" value="" />
                             </div>
                         </div>
+                        <?php if($acl->checkPermission("Benefits", ACTION_APPROVE)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                	<?php
+										$allstatuses = getBenefitStatuses();
+										$dropdown = new Zend_Form_Element_Select('status',
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','width200')
+															)
+										);  
+										$dropdown->setValue($ledger->getStatus()); 
+										echo $dropdown->render();
+									?><div id="status_error"></div>
+                                </div>
+                          	</div>
+                        <?php } else { ?>
+                        	<input type="hidden" name="status" id="status" value="<?php echo $ledger->getStatus(); ?>" />
+                        <?php } ?>
+                        <input type="hidden" name="status_old" id="status_old" value="<?php echo $ledger->getStatus(); ?>" />
                     </form> 
-                    <form id="uploadform" class="form-horizontal profile" role="form" action="<?php echo $this->baseUrl('ledger/upload'); ?>" method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="userid" id="userid" value="<?php echo $ledger->getUserID(); ?>" />
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label">Attachment:</label>
-                            <div class="col-sm-8">
-                                <div id="profilephoto_error"></div>
-                                <input type="text" name="filename" id="filename" value="" style="border:1px solid #fff; height:1px; padding:0; background:none; border-style:none; box-shadow:none;" />
-                                <div id="uploadarea" style="margin-bottom:10px;">
-                                    <label class="blocked" style="font-size:10px;">Upload an a file (Max size <?php echo formatBytes($config->uploads->docmaximumfilesize); ?>)</label>
-                                    <div id="beforesave">
-                                        <div class="fileinput-holder input-group col-sm-8" style="padding-left:0;">
-                                            <div id="filenamedisplay" style="cursor: text; text-overflow: ellipsis; " class="fileinput-preview uneditable-input form-control">No file selected...</div>
-                                            <div class="input-group-btn">
-                                                <span style="overflow: hidden; position: relative; cursor: pointer; margin:0;" class="fileinput-btn btn btn-default">Browse...
-                                                    <input type="file" name="FileInput" id="FileInput" class="form-control inline" data-style="fileinput" style="position: absolute; top: 0px; right: 0px; margin: 0px; cursor: pointer; font-size: 99px; opacity: 0;" />
-                                                </span>
+                    <?php if($ledger->getLedgerType() == 1){ ?>
+                        <form id="uploadform" class="form-horizontal profile" role="form" action="<?php echo $this->baseUrl('ledger/upload'); ?>" method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="userid" id="userid" value="<?php echo $ledger->getUserID(); ?>" />
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Attachment:</label>
+                                <div class="col-sm-8">
+                                    <div id="profilephoto_error"></div>
+                                    <input type="text" name="filename" id="filename" value="" style="border:1px solid #fff; height:1px; padding:0; background:none; border-style:none; box-shadow:none;" />
+                                    <div id="uploadarea" style="margin-bottom:10px;">
+                                        <label class="blocked" style="font-size:10px;">Upload an a file (Max size <?php echo formatBytes($config->uploads->docmaximumfilesize); ?>)</label>
+                                        <div id="beforesave">
+                                            <div class="fileinput-holder input-group col-sm-8" style="padding-left:0;">
+                                                <div id="filenamedisplay" style="cursor: text; text-overflow: ellipsis; " class="fileinput-preview uneditable-input form-control">No file selected...</div>
+                                                <div class="input-group-btn">
+                                                    <span style="overflow: hidden; position: relative; cursor: pointer; margin:0;" class="fileinput-btn btn btn-default">Browse...
+                                                        <input type="file" name="FileInput" id="FileInput" class="form-control inline" data-style="fileinput" style="position: absolute; top: 0px; right: 0px; margin: 0px; cursor: pointer; font-size: 99px; opacity: 0;" />
+                                                    </span>
+                                                </div>
                                             </div>
+                                            <div class="col-sm-2 padding0">
+                                                <img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" id="loading-img" style="display:none;" />
+                                            </div>                                                    	
                                         </div>
-                                        <div class="col-sm-2 padding0">
-                                            <img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" id="loading-img" style="display:none;" />
-                                        </div>                                                    	
+                                        <div id="aftersave" class="hidden">
+                                            <div class="col-sm-12" style="padding-left:0;"><span id="attachment_display"></span></div>
+                                            <button type="button" id="re-upload" class="btn btn-default btn-xs">Re-upload</button>
+                                        </div>
+                                        <div class="divider5"></div>
+                                        <div id="progressbox"><div id="progressbar"></div><div id="statustxt">0%</div></div>
+                                        <div id="output"></div><div id="uploadresult" class="hidden"></div>
+                                        <div id="filename_error"></div><div id="FileInput_error"></div>
                                     </div>
-                                    <div id="aftersave" class="hidden">
-                                        <div class="col-sm-12" style="padding-left:0;"><span id="attachment_display"></span></div>
-                                        <button type="button" id="re-upload" class="btn btn-default btn-xs">Re-upload</button>
-                                    </div>
-                                    <div class="divider5"></div>
-                                    <div id="progressbox"><div id="progressbar"></div><div id="statustxt">0%</div></div>
-                                    <div id="output"></div><div id="uploadresult" class="hidden"></div>
-                                    <div id="filename_error"></div><div id="FileInput_error"></div>
                                 </div>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    <?php } ?>
                 </div>
             </div>
         </div>

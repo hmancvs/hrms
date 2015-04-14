@@ -18,18 +18,18 @@
 							$ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
 							$payrolltypes = getPayrollTypes();
 							$benefits = getBenefits(2);
-							$timeoffs = getTimeoffTypes();
+							$leaves = getLeaveTypes();
 							$otherbenefits = getAllBenefitsDetails(" and id <> 1 ");
-							$timeoffoptions = getAllTimeoffDetails();
+							$leaveoptions = getAllLeaveDetails();
 							$usercashbenefits = getEmployeeBenefits($user->getID(), 1); $cashbenefits_data = array();
-							$usertimebenefits = getEmployeeBenefits($user->getID(), 2); $timeoffbenefits_data = array();
+							$usertimebenefits = getEmployeeBenefits($user->getID(), 2); $leavebenefits_data = array();
 							$allterms = getAllBenefitTerms();
 							$yearmonthvalues = getYearMonthDropdown();
 							foreach($usercashbenefits as $key => $value){ 
 								$cashbenefits_data[$value['benefitid']] = $value;
 							}
 							foreach($usertimebenefits as $key => $value){ 
-								$timeoffbenefits_data[$value['timeofftypeid']] = $value;
+								$leavebenefits_data[$value['leavetypeid']] = $value;
 							} 
 						?>
                         <tr style="font-weight:bold;">
@@ -346,12 +346,12 @@
 <div class="row">
     <div class="col-sm-12">
         <fieldset class="fieldsetcontainer minheight200" style="margin-bottom:0;">
-            <legend>Recurring Timeoff Benefits</legend>
+            <legend>Recurring Leave Benefits</legend>
             <div class="panel-body well-sm">
             	<div class="divider10"></div>
                 <table class="table list table-bordered table-striped data-table" style="width:98%; margin-left:15px;">
                     <thead class="paginationheader">
-                        <th>Timeoff Type</th>
+                        <th>Leave Type</th>
                         <th style="width:20%;">Accrue As</th>
                         <th style="width:45%;">Hours / Days Assigned</th>
                         <th style="width:30px;"></th>
@@ -359,20 +359,20 @@
                     <tbody>
                         <?php
 							$x = $i;
-							foreach($timeoffoptions as $key => $abenefit){ 
-								// debugMessage($timeoffbenefits_data);
+							foreach($leaveoptions as $key => $abenefit){ 
+								// debugMessage($leavebenefits_data);
 								$editid = '';
 								$id = $abenefit['id'];
 								$accrualtype = '2';
 								$accrualfrequency = $abenefit['quantitytype'];
 								$accrualvalue = '';
 								
-								if(!isArrayKeyAnEmptyString($id, $timeoffbenefits_data)){
-									$editid = $timeoffbenefits_data[$id]['id'];
-									$id = $timeoffbenefits_data[$id]['timeofftypeid'];
-									$accrualtype = $timeoffbenefits_data[$id]['accrualtype'];
-									$accrualfrequency = $timeoffbenefits_data[$id]['accrualfrequency'];
-									$accrualvalue = formatNumber($timeoffbenefits_data[$id]['accrualvalue'],0);
+								if(!isArrayKeyAnEmptyString($id, $leavebenefits_data)){
+									$editid = $leavebenefits_data[$id]['id'];
+									$id = $leavebenefits_data[$id]['leavetypeid'];
+									$accrualtype = $leavebenefits_data[$id]['accrualtype'];
+									$accrualfrequency = $leavebenefits_data[$id]['accrualfrequency'];
+									$accrualvalue = formatNumber($leavebenefits_data[$id]['accrualvalue'],0);
 								}
 						?>
                         	<script>
@@ -402,9 +402,9 @@
                         	<tr>
                             	<td>
                                 	<?php
-										$dropdown = new Zend_Form_Element_Select('_timeofftypeid_'.$x,
+										$dropdown = new Zend_Form_Element_Select('_leavetypeid_'.$x,
 															array(
-																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffs),
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $leaves),
 																'view' => new Zend_View(),
 																'decorators' => array('ViewHelper'),
 																'class' => array('form-control','input-sm','readonlyfield','disabledfield')
@@ -413,7 +413,7 @@
 										$dropdown->setValue($id); 
 										echo $dropdown->render();
 									?>
-                                    <input type="hidden" id="timeofftypeid_<?php echo $x; ?>" name="timeofftypeid_<?php echo $x; ?>" value="<?php echo $id; ?>" />
+                                    <input type="hidden" id="leavetypeid_<?php echo $x; ?>" name="leavetypeid_<?php echo $x; ?>" value="<?php echo $id; ?>" />
                                     <input type="hidden" id="id_<?php echo $x; ?>" name="id_<?php echo $x; ?>" value="<?php echo $editid; ?>" />
                                 </td>
                                 <td style="font-size:12px;">
@@ -423,7 +423,7 @@
                                 </td>
                                 <td>
                                 	<div class="form-group ashours" id="ashours_<?php echo $x; ?>" style="margin:0; padding:0;">
-                                		<span class="notbolded" style="font-size:12px;">Assign 1 Day or <?php echo $config->system->hoursinday; ?> Hours for every </span> &nbsp;<input type="text" name="accrualvalue_<?php echo $x; ?>" id="accrualvalue_<?php echo $x; ?>" class="form-control width80 isdecimal centeralign input-sm" value="<?php echo $accrualvalue; ?>" style="display:inline;" /> <span class="notbolded" style="font-size:12px;">Hours</span>
+                                		<span class="notbolded" style="font-size:12px;">Assign 1 Day or <?php echo getHoursInDay(); ?> Hours for every </span> &nbsp;<input type="text" name="accrualvalue_<?php echo $x; ?>" id="accrualvalue_<?php echo $x; ?>" class="form-control width80 isdecimal centeralign input-sm" value="<?php echo $accrualvalue; ?>" style="display:inline;" /> <span class="notbolded" style="font-size:12px;">Hours</span>
                                     </div>
                                     <div class="form-group asdays" id="asdays_<?php echo $x; ?>"  style="margin:0; padding:0;">
                                     	<input type="text" name="accrualvalue_<?php echo $x; ?>" id="accrualvalue_<?php echo $x; ?>" class="form-control width80 input-sm isdecimal centeralign" value="<?php echo $accrualvalue; ?>" style="display:inline;" />

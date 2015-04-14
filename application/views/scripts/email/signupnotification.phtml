@@ -1,11 +1,16 @@
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailheader.phtml'); ?>
-Dear <?php echo $this->firstname; ?>,<br /><br />
+<h3 style="font-weight:normal; margin: 20px 0;"><?php echo $this->subject; ?></h3>
 
-You recently created an account on <?php echo $this->appname; ?>. To activate your account, click on the activation link below:<br />
-<?php echo $this->activationurl; ?><br /><br />
+<p>Dear <?php echo $this->firstname; ?>,</p>
 
-If the page fails to open, copy the activation link and paste it in the address window of the browser.<br />
+<?php if($this->type == 3){ ?>
+	<?php echo $this->contents; ?>
+    <?php if($this->requiresapproval == 0 || ($this->requiresapproval == 1 && $this->isapproved == 1)){ ?>
+        <p>To activate your account, <a href="<?php echo $this->activationurl; ?>" style="display:inline;">click here</a> or alternatively copy the activation link below and paste it in the address window of the browser.<br />
+        <?php echo $this->activationurl; ?></p>
 
-After activation, you can login using the your email address or username and the password you provided.<br /><br />
+        <p>After activation, you will be able to login using the your email/username and the password you provided during registration.</p>
+    <?php } ?>
+<?php } ?>
 
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailfooter.phtml'); ?>

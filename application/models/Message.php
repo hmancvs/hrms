@@ -11,14 +11,11 @@ class Message extends BaseRecord  {
 		$this->hasColumn('senderemail', 'string', 255);
 		$this->hasColumn('contents', 'string', 65535, array("notblank" => true, "notnull" => true));
 		$this->hasColumn('subject', 'string', 255);
-		$this->hasColumn('html', 'string', 1000);
+		$this->hasColumn('html', 'string', 65535);
 		$this->hasColumn('datecreated', 'timestamp');
-		$this->hasColumn('type', 'integer', null, array('default'=> '1'));
-		$this->hasColumn('membertotal', 'string', 50);
-		$this->hasColumn('usertotal', 'string', 50);
-		$this->hasColumn('smsid', 'string', 50);
-		$this->hasColumn('resultcode', 'string', 50);
-		$this->hasColumn('status', 'string', 50);
+		$this->hasColumn('type', 'string', 50);
+		$this->hasColumn('subtype', 'string', 50);
+		$this->hasColumn('refid', 'string', 50);
 	}
 	
 	public function setUp() {
@@ -74,6 +71,9 @@ class Message extends BaseRecord  {
 		}
 		if(isArrayKeyAnEmptyString('type', $formvalues)){
 			unset($formvalues['type']); 
+		}
+		if(isArrayKeyAnEmptyString('refid', $formvalues)){
+			unset($formvalues['refid']);
 		}
 		parent::processPost($formvalues);
 	}

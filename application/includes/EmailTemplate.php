@@ -21,6 +21,17 @@ class EmailTemplate extends Zend_View {
 		$this->signoffname = getDefaultAdminName();
 		$this->signoffemail = getDefaultAdminEmail(); 
 		$this->logourl = $this->serverUrl($this->baseUrl('images/logo.jpg'));
+		$this->loginurl = $this->serverUrl($this->baseUrl('user/login'));
+		$this->baseurl = $this->serverUrl($this->baseUrl());
+		$this->settingsurl = $this->serverUrl($this->baseUrl('profile/view/tab/account'));
+		
+		$allcolors = getAllThemeColors(); //debugMessage($allcolors);
+		$colortxt = getThemeColor();
+		$themecolor = "blue";
+		if(!isEmptyString($colortxt)){
+			$themecolor = $colortxt;
+		}
+		$this->themecolor = $allcolors[$themecolor]; // debugMessage('color is '.$allcolors[$themecolor]);
 	}
 }
 

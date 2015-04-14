@@ -19,13 +19,13 @@
                         <div class="form-group">
                             <label class="col-sm-5 control-label">NSSF Employee <br />Default Percentage Contribution:</label>
                             <div class="col-sm-7">
-                                <input type="text" name="nssfemployeerate" id="nssfemployeerate" class="form-control input-sm isdecimal width100" value="<?php echo $company->getnssfemployeerate(); ?>" />
+                                <input type="text" name="nssfemployeerate" id="nssfemployeerate" class="form-control input-sm isdecimal centeralign width200" value="<?php echo $company->getnssfemployeerate(); ?>" />
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-5 control-label">NSSF Employer <br />Default Percentage Contribution:</label>
                             <div class="col-sm-7">
-                                <input type="text" name="nssfcompanyrate" id="nssfcompanyrate" class="form-control input-sm width100" value="<?php echo $company->getnssfcompanyrate(); ?>" />
+                                <input type="text" name="nssfcompanyrate" id="nssfcompanyrate" class="form-control input-sm centeralign width200" value="<?php echo $company->getnssfcompanyrate(); ?>" />
                             </div>
                         </div>
                         <div class="form-group">
@@ -73,14 +73,14 @@
                     	<div class="form-group">
                             <label class="col-sm-3 control-label">Default Work Opening Time:</label>
                             <div class="col-sm-9">
-                                <input type="text" name="openinghour" id="openinghour" class="form-control timepickr centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getopeninghour()); ?>" />
+                                <input type="text" name="openinghour" id="openinghour" class="form-control timepicker readonly centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getopeninghour()); ?>" />
                                 <div id="openinghour_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Default Work Closing Time:</label>
                             <div class="col-sm-9">
-                                <input type="text" name="closinghour" id="closinghour" class="form-control timepickr centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getclosinghour()); ?>" />
+                                <input type="text" name="closinghour" id="closinghour" class="form-control timepicker readonly centeralign input-sm width100" value="<?php echo formatTimeCustom($company->getclosinghour()); ?>" />
                                 <div id="closinghour_error"></div>
                             </div>
                         </div>
@@ -106,10 +106,10 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Allowed Check-In/Check-Out <br />IP Addresses / Subnets:</label>
-                            <div class="col-sm-9">
+                            <label class="col-sm-12 control-label">Allowed Check-In/Check-Out IP Addresses / Subnets:</label>
+                            <div class="col-sm-12">
                                 <input type="text" name="ipsubnets" id="ipsubnets" class="form-control input-width-large" placeholder="e.g 192.168.0.1, 41.250.157.*" value="<?php echo $company->getipsubnets(); ?>" /><div id="ipsubnets_error"></div>
-                                <p class="pagedescription">Specify comma separated list of ip addresses or subnets</p>
+                                <p class="pagedescription">Specify comma separated list of IP addresses or Subnets. All attempts to Check-In/Out by employees will be validated against the list. Leave empty if you dont intent to enforce this.</p>
                             </div>
                         </div>
                     </div>
@@ -126,42 +126,141 @@
                 <div class="row-fluid">
                     <div class="col-sm-12">
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Current Accounting Period <br/>Start Date:</label>
-                            <div class="col-sm-9">
-                                <input type="text" name="yearstart" id="yearstart" class="form-control input-sm datefield readonly datepick width100 ordinary" value="<?php echo  isEmptyString($company->getyearstart()) ? '' : date('m/d/Y', strtotime($company->getyearstart())); ?>" />
+                            <label class="col-sm-6 control-label">Current Accounting Period Start Date:</label>
+                            <div class="col-sm-6">
+                                <input type="text" name="yearstart" id="yearstart" class="form-control input-sm datefield readonly datepick width200 ordinary" value="<?php echo  isEmptyString($company->getyearstart()) ? '' : date('m/d/Y', strtotime($company->getyearstart())); ?>" />
                                 <div id="yearstart_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-3 control-label">Current Accounting Period <br/>End Date:</label>
-                            <div class="col-sm-9">
-                                <input type="text" name="yearend" id="yearend" class="form-control input-sm datefield readonly datepick width100 ordinary" value="<?php echo  isEmptyString($company->getyearend()) ? '' : date('m/d/Y', strtotime($company->getyearend())); ?>" />
+                            <label class="col-sm-6 control-label">Current Accounting Period End Date:</label>
+                            <div class="col-sm-6">
+                                <input type="text" name="yearend" id="yearend" class="form-control input-sm datefield readonly datepick width200 ordinary" value="<?php echo  isEmptyString($company->getyearend()) ? '' : date('m/d/Y', strtotime($company->getyearend())); ?>" />
                                 <div id="yearend_error"></div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="col-sm-3 control-label">Account Status:</label>
-                            <div class="col-sm-9">
-                               	<?php if(isAdmin()){ ?>
-                                	<?php
-										$allstatuses = getCompanyStatuses();
-										$dropdown = new Zend_Form_Element_Select('status',
-															array(
-																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
-																'view' => new Zend_View(),
-																'decorators' => array('ViewHelper'),
-																'class' => array('form-control','input-sm','width200')
-															)
-										);  
-										$dropdown->setValue($company->getStatus()); 
-										echo $dropdown->render();
-									?><div id="status_error"></div>
-                                <?php } else { ?>
-                                	<input type="hidden" name="status" id="status" value="<?php echo $company->getStatus(); ?>" />
-                                <?php } ?>
-                                <div id="status_error"></div>
+						<?php if(isAdmin()){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-6 control-label">Account Status:</label>
+                                <div class="col-sm-6">
+                                    <?php
+                                        $dropdown = new Zend_Form_Element_Select('status',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width200')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($company->getStatus()); 
+                                        echo $dropdown->render();
+                                    ?><div id="status_error"></div>
+                                    <div id="status_error"></div>
+                                </div>
                             </div>
-                        </div>
+                        <?php } else { ?>
+                            <input type="hidden" name="status" id="status" value="<?php echo $company->getStatus(); ?>" /><?php // echo $allstatuses[$company->getStatus()]; ?>
+                        <?php } ?>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Default Country:</label>
+                            <div class="col-sm-6">
+                            	 <?php
+                                    $countries = getCountries();
+                                    $countrydropdown = new Zend_Form_Element_Select('countryisocode',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>"), $countries),
+                                                            'view' => new Zend_View(), 
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','width200')                                            	)
+                                                    );
+                                    $countrydropdown->setValue($company->getcountryisocode()); 
+                                    echo $countrydropdown->render(); 
+                                ?>
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Country Timezone:</label>
+                            <div class="col-sm-6">
+                            	 <?php
+                                    $zones = getAllTimezones();
+                                    $dropdown = new Zend_Form_Element_Select('timezone',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>"), $zones),
+                                                            'view' => new Zend_View(), 
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','input-sm','chosen-select')                                            	)
+                                                    );
+                                    $dropdown->setValue($company->gettimezone()); 
+                                    echo $dropdown->render(); 
+                                ?>
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Currency Code:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="currencycode" id="currencycode" class="form-control width200" value="<?php echo $company->getcurrencycode(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Currency Symbol:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="currencysymbol" id="currencysymbol" class="form-control width200" value="<?php echo $company->getcurrencysymbol(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Decimal places for Currency:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="currencydecimalplaces" id="currencydecimalplaces" class="form-control width200" value="<?php echo $company->getcurrencydecimalplaces(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Decimal places for Hours and other Numbers:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="numberdecimalplaces" id="numberdecimalplaces" class="form-control width200" value="<?php echo $company->getnumberdecimalplaces(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Phone Number Country Prefix:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="countryphonecode" id="countryphonecode" class="form-control width200" value="<?php echo $company->getcountryphonecode(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Phone Number Maximum Length:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="phonemaxlength" id="phonemaxlength" class="form-control width200" value="<?php echo $company->getphonemaxlength(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Phone Number Minimum Length:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="phoneminlength" id="phoneminlength" class="form-control width200" value="<?php echo $company->getphoneminlength(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">National ID Maximum Length:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="nationalidmaxlength" id="nationalidmaxlength" class="form-control width200" value="<?php echo $company->getnationalidmaxlength(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">National ID Minimum Length:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="nationalidminlength" id="nationalidminlength" class="form-control width200" value="<?php echo $company->getnationalidminlength(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Default Email for Sending System Notifications:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="defaultadminemail" id="defaultadminemail" class="form-control col-sm-4" value="<?php echo $company->getDefaultAdminEmail(); ?>" />
+                            </div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-6 control-label">Sender Name for System Notifications:</label>
+                            <div class="col-sm-6">
+                            	<input type="text" name="defaultadminname" id="defaultadminname" class="form-control col-sm-4" value="<?php echo $company->getDefaultAdminName(); ?>" />
+                            </div>
+                       	</div>
                     </div>
                 </div>
             </div>

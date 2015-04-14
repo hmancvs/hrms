@@ -4,9 +4,9 @@
 	$user = new UserAccount();	
 	$user->populate($userid);
 	$currentuserid = '';
-	if(isTimesheetEmployee()){
+	/*if(isTimesheetEmployee()){
 		$currentuserid = $user->getID();
-	}
+	}*/
 	$title = 'Calendar';
 	$description = '';
 	$pageid = "calendar_index";
@@ -19,8 +19,8 @@
 <script type="text/javascript" src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/fullcalendar/fullcalendar.min.js')); ?>"></script>
 <script>
 $(document).ready(function() {
-	$('.titlebreadcrumb').html('<?php echo 'System / Calender'; ?>');
-	$('.titlelabel').html('<?php echo 'Calendar'; ?>');
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
 	$('.desclabel').html('<?php echo $description; ?>');
 	$('.pageicon').html('<span class="glyphicon glyphicon-time"></span>');
 	
@@ -47,7 +47,7 @@ $(document).ready(function() {
         <div class="col-sm-12">
             <div class="box box-color">
                 <div class="box-title">
-                    <h3><i class="fa fa-calendar"></i>Company Calendar</h3>
+                    <h3><i class="fa fa-calendar"></i><?php echo getCompanyName(); ?> Calendar</h3>
                 </div>
                 <div class="box-content nopadding">
                     <div class="calendar"></div>

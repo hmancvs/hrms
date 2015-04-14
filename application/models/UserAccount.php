@@ -1,5 +1,7 @@
 <?php
 
+// include 'UserNotifications.php';
+
 class UserAccount extends BaseEntity {
 	
 	public function setTableDefinition() {
@@ -15,7 +17,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('othername', 'string', 255);
 		$this->hasColumn('displayname', 'string', 255);
 		
-		$this->hasColumn('country', 'string', 2, array('default' => 'UG'));
+		$this->hasColumn('country', 'string', 2, array('default' => getCountryCode()));
 		$this->hasColumn('town', 'string', 255);
 		$this->hasColumn('address1', 'string', 255);
 		$this->hasColumn('address2', 'string', 255);
@@ -28,8 +30,8 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('phone_isactivated', 'integer', null, array('default' => '0'));
 		$this->hasColumn('phone_actkey', 'string', 15);
 		$this->hasColumn('username', 'string', 15); // only required during activation
-		$this->hasColumn('password', 'string', 50); // only required during activation
-		$this->hasColumn('trx', 'string', 50);
+		$this->hasColumn('password', 'string', 255); // only required during activation
+		$this->hasColumn('trx', 'string', 255);
 		$this->hasColumn('status', 'integer', null, array('default' => '0')); # 0=Pending, 1=Active, 2=Deactivated
 		$this->hasColumn('activationkey', 'string', 15);
 		$this->hasColumn('activationdate', 'date');
@@ -42,7 +44,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('dateinvited','date');
 		
 		$this->hasColumn('bio', 'string', 65535);
-		$this->hasColumn('gender', 'integer', null); # 1=Male, 2=Female, 3=Unknown
+		$this->hasColumn('gender', 'integer', null, array('default' => 1)); # 1=Male, 2=Female, 3=Unknown
 		$this->hasColumn('dateofbirth','date');
 		$this->hasColumn('profilephoto', 'string', 50);
 		$this->hasColumn('contactname', 'string', 255);
@@ -55,6 +57,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('enddate','date', null, array('default' => NULL));
 		$this->hasColumn('probationend','date', null, array('default' => NULL));
 		$this->hasColumn('idno', 'string', 50);
+		$this->hasColumn('nationalid', 'string', 50);
 		$this->hasColumn('nssfid', 'string', 15);
 		$this->hasColumn('uratin', 'string', 15);
 		$this->hasColumn('contributiontype', 'string', 25);
@@ -86,6 +89,16 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('istimesheetuser', 'integer', null, array('default' => 0));
 		$this->hasColumn('payrolltype', 'integer', null, array('default' => 4));
 		$this->hasColumn('employmentstatus', 'string', 15, array('default' => 1));
+		$this->hasColumn('selfregistered', 'integer', null, array('default' => 0));
+		
+		$this->hasColumn('emailon_tsheet_approvalcompleted', 'integer', null, array('default' => 1));
+		$this->hasColumn('emailon_tsheeton_approvalrequired', 'integer', null, array('default' => 0));
+		$this->hasColumn('emailon_benefit_approvalcompleted', 'integer', null, array('default' => 1));
+		$this->hasColumn('emailon_benefit_approvalrequired', 'integer', null, array('default' => 0));
+		$this->hasColumn('emailon_leave_approvalcompleted', 'integer', null, array('default' => 1));
+		$this->hasColumn('emailon_leave_approvalrequired', 'integer', null, array('default' => 0));
+		$this->hasColumn('emailon_payslip_completed', 'integer', null, array('default' => 1));
+		$this->hasColumn('emailon_directmessage_recieved', 'integer', null, array('default' => 1));
 		
 		# override the not null and not blank properties for the createdby column in the BaseEntity
 		$this->hasColumn('createdby', 'integer', 11);
@@ -242,7 +255,7 @@ class UserAccount extends BaseEntity {
 		}
 		# validate that email is unique
 		if($this->emailExists()){
-			$this->getErrorStack()->add("email.unique", sprintf($this->translate->_("profile_phone_unique_error"), $this->getEmail()));
+			$this->getErrorStack()->add("email.unique", sprintf($this->translate->_("profile_email_unique_error"), $this->getEmail()));
 		}
 		
 		# check that at least one group has been specified
@@ -292,7 +305,7 @@ class UserAccount extends BaseEntity {
 		if(isEmptyString($email)){
 			$email = $this->getEmail();
 		}
-		$query = "SELECT id FROM useraccount WHERE email = '".$email."' AND email <> '' ".$id_check;
+		$query = "SELECT id FROM useraccount WHERE email = '".$email."' AND email <> '' AND companyid = '".$this->getCompanyID()."' ".$id_check;
 		// debugMessage($ref_query);
 		$result = $conn->fetchOne($query);
 		// debugMessage($ref_result);
@@ -348,9 +361,7 @@ class UserAccount extends BaseEntity {
 		// debugMessage($result);
 		return $result;
 	}
-	/**
-	 * Preprocess model data
-	 */
+	# Preprocess model data
 	function processPost($formvalues){
 		$session = SessionWrapper::getInstance(); //debugMessage($formvalues); 
 		if(!isArrayKeyAnEmptyString('firstname', $formvalues)){
@@ -369,7 +380,9 @@ class UserAccount extends BaseEntity {
 		if(isArrayKeyAnEmptyString('password', $formvalues)){
 			unset($formvalues['password']); 
 		} else {
-			$formvalues['password'] = sha1($formvalues['password']); 
+			$formvalues['password'] = sha1($formvalues['password']);
+			// $formvalues['password'] = encode(sha1($formvalues['password']));
+			$formvalues['trx'] = sha1('password');
 		}
 		if(!isArrayKeyAnEmptyString('oldpassword', $formvalues)){
 			$this->setoldpassword($formvalues['oldpassword']);
@@ -377,12 +390,9 @@ class UserAccount extends BaseEntity {
 		if(!isArrayKeyAnEmptyString('confirmpassword', $formvalues)){
 			$this->setconfirmpassword($formvalues['confirmpassword']);
 		}
-		if(!isArrayKeyAnEmptyString('trx', $formvalues)){
-			$this->settrx($formvalues['trx']);
-		}
 		if(!isArrayKeyAnEmptyString('newpassword', $formvalues)){
 			$this->setNewPassword($formvalues['newpassword']);
-			$formvalues['password'] = sha1($formvalues['newpassword']); 
+			$formvalues['password'] = sha1($formvalues['newpassword']);
 		}
 		/*if(!isArrayKeyAnEmptyString('phone', $formvalues)){
 			$formvalues['phone'] = str_pad(ltrim($formvalues['phone'], '0'), 12, getCountryCode(), STR_PAD_LEFT); 
@@ -547,55 +557,59 @@ class UserAccount extends BaseEntity {
 		
 		if(!isArrayKeyAnEmptyString('hasbenefits', $formvalues)){
 			$benefitsarray = array();
-			$totcash = countCashBenefits();
-			$tottime = countTimeBenefits(); 
+			$totcash = countCashBenefits(); // debugMessage($totcash.' <<');
+			$tottime = countTimeBenefits();  // debugMessage($tottime.' <<');
 			
-			$benefitsarray[md5(1)]['benefitid'] = $formvalues['benefitid_1'];
-			$benefitsarray[md5(1)]['amount'] = $formvalues['rate'];
-			$benefitsarray[md5(1)]['accrualfrequency'] = $formvalues['ratetype'];
+			$benefitsarray[1]['benefitid'] = $formvalues['benefitid_1'];
+			$benefitsarray[1]['amount'] = $formvalues['rate'];
+			$benefitsarray[1]['accrualfrequency'] = $formvalues['ratetype'];
 			if(!isArrayKeyAnEmptyString('id_1', $formvalues)){
-				$benefitsarray[md5(1)]['id'] = $formvalues['id_1'];
+				$benefitsarray[1]['id'] = $formvalues['id_1'];
 			}
 			
-			for($i = 2; $i <= $totcash+4; $i++){
+			$counter = 0;
+			for($i = 2; $i <= $totcash; $i++){
 				if(!isArrayKeyAnEmptyString('amount_'.$i, $formvalues)){
 					if($formvalues['amount_'.$i] > 0){
 						if(!isArrayKeyAnEmptyString('id_'.$i, $formvalues)){
-							$benefitsarray[md5($i)]['id'] = $formvalues['id_'.$i];
+							$benefitsarray[$i]['id'] = $formvalues['id_'.$i];
 						}
-						$benefitsarray[md5($i)]['type'] = 1;
-						$benefitsarray[md5($i)]['benefitid'] = $formvalues['benefitid_'.$i];
-						$benefitsarray[md5($i)]['amount'] = $formvalues['amount_'.$i];
-						$benefitsarray[md5($i)]['benefitfrequency'] = $formvalues['benefitfrequency_'.$i];
-						$benefitsarray[md5($i)]['benefitterms'] = $formvalues['benefitterms_'.$i];
-						$benefitsarray[md5($i)]['accrualtype'] = NULL;
-						$benefitsarray[md5($i)]['accrualfrequency'] = NULL;
-						$benefitsarray[md5($i)]['accrualvalue'] = NULL;
+						$benefitsarray[$i]['type'] = 1;
+						$benefitsarray[$i]['benefitid'] = $formvalues['benefitid_'.$i];
+						$benefitsarray[$i]['amount'] = $formvalues['amount_'.$i];
+						$benefitsarray[$i]['benefitfrequency'] = $formvalues['benefitfrequency_'.$i];
+						$benefitsarray[$i]['benefitterms'] = $formvalues['benefitterms_'.$i];
+						$benefitsarray[$i]['accrualtype'] = NULL;
+						$benefitsarray[$i]['accrualfrequency'] = NULL;
+						$benefitsarray[$i]['accrualvalue'] = NULL;
 						if(!isArrayKeyAnEmptyString('istaxable_'.$i, $formvalues)){
-							$benefitsarray[md5($i)]['istaxable'] = $formvalues['istaxable_'.$i];
+							$benefitsarray[$i]['istaxable'] = $formvalues['istaxable_'.$i];
 						} else {
-							$benefitsarray[md5($i)]['istaxable'] = 0;
+							$benefitsarray[$i]['istaxable'] = 0;
 						}
+						$counter++;
 					}
 				}
 			}
 			
-			for($x = $totcash; $x <= $totcash+$tottime; $x++){
+			for($x = 0; $x <= ($tottime+$totcash+4); $x++){
 				if(!isArrayKeyAnEmptyString('accrualvalue_'.$x, $formvalues)){
+					// debugMessage($formvalues['accrualvalue_'.$x]);
 					if($formvalues['accrualvalue_'.$x] > 0){
 						if(!isArrayKeyAnEmptyString('id_'.$x, $formvalues)){
-							$benefitsarray[md5($x)]['id'] = $formvalues['id_'.$x];
+							$benefitsarray[$x]['id'] = $formvalues['id_'.$x];
 						}
 						if(!isArrayKeyAnEmptyString('accrualfrequency_'.$x, $formvalues)){
-							$benefitsarray[md5($x)]['accrualfrequency'] = $formvalues['accrualfrequency_'.$x];
+							$benefitsarray[$x]['accrualfrequency'] = $formvalues['accrualfrequency_'.$x];
 						}
-						$benefitsarray[md5($x)]['type'] = 2;
-						$benefitsarray[md5($x)]['timeofftypeid'] = $formvalues['timeofftypeid_'.$x];
-						$benefitsarray[md5($x)]['accrualtype'] = $formvalues['accrualtype_'.$x];
-						$benefitsarray[md5($x)]['accrualvalue'] = $formvalues['accrualvalue_'.$x];
-						$benefitsarray[md5($x)]['amount'] = NULL;
-						$benefitsarray[md5($x)]['benefitfrequency'] = NULL;
-						$benefitsarray[md5($x)]['benefitterms'] = NULL;
+						$benefitsarray[$x]['type'] = 2;
+						$benefitsarray[$x]['leavetypeid'] = $formvalues['leavetypeid_'.$x];
+						$benefitsarray[$x]['accrualtype'] = $formvalues['accrualtype_'.$x];
+						$benefitsarray[$x]['accrualvalue'] = $formvalues['accrualvalue_'.$x];
+						$benefitsarray[$x]['amount'] = NULL;
+						$benefitsarray[$x]['benefitfrequency'] = NULL;
+						$benefitsarray[$x]['benefitterms'] = NULL;
+						$counter++;
 					}
 				}
 			}
@@ -604,30 +618,112 @@ class UserAccount extends BaseEntity {
 			}
 		}
 		
+		if(!isArrayKeyAnEmptyString("type", $formvalues) && !isArrayKeyAnEmptyString('selfregistered', $formvalues)){
+			if($formvalues['type'] == 3 && $formvalues['selfregistered'] == '1'){
+				$formvalues["company"]["name"] = $formvalues["companyname"];
+				$formvalues["company"]["status"] = 1;
+				if(companiesRequireApproval()){
+					$formvalues["company"]["status"] = 2;
+				}
+				$formvalues["company"]["contactperson"] = $formvalues["firstname"]." ".$formvalues["lastname"];
+				$formvalues["company"]["industrycode"] = $formvalues["industrycode"];
+				$formvalues["company"]["createdby"] = NULL;
+				$formvalues["company"]["datecreated"] = DEFAULT_DATETIME;
+				$formvalues["company"]["email"] = $formvalues["email"];
+			}
+		}
+		
+		if(isArrayKeyAnEmptyString("emailon_tsheet_approvalcompleted", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_tsheet_approvalcompleted_old", $formvalues)){
+				$formvalues["emailon_tsheet_approvalcompleted"] = 0;
+			} else {
+				unset($formvalues["emailon_tsheet_approvalcompleted"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_tsheeton_approvalrequired", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_tsheeton_approvalrequired_old", $formvalues)){
+				$formvalues["emailon_tsheeton_approvalrequired"] = 0;
+			} else {
+				unset($formvalues["emailon_tsheeton_approvalrequired"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_benefit_approvalcompleted", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_benefit_approvalcompleted_old", $formvalues)){
+				$formvalues["emailon_benefit_approvalcompleted"] = 0;
+			} else {
+				unset($formvalues["emailon_benefit_approvalcompleted"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_benefit_approvalrequired", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_benefit_approvalrequired_old", $formvalues)){
+				$formvalues["emailon_benefit_approvalrequired"] = 0;
+			} else {
+				unset($formvalues["emailon_benefit_approvalrequired"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_leave_approvalcompleted", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_leave_approvalcompleted_old", $formvalues)){
+				$formvalues["emailon_leave_approvalcompleted"] = 0;
+			} else {
+				unset($formvalues["emailon_leave_approvalcompleted"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_leave_approvalrequired", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_leave_approvalrequired_old", $formvalues)){
+				$formvalues["emailon_leave_approvalrequired"] = 0;
+			} else {
+				unset($formvalues["emailon_leave_approvalrequired"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_payslip_completed", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_payslip_completed_old", $formvalues)){
+				$formvalues["emailon_payslip_completed"] = 0;
+			} else {
+				unset($formvalues["emailon_payslip_completed"]);
+			}
+		}
+		if(isArrayKeyAnEmptyString("emailon_directmessage_recieved", $formvalues)){
+			if(!isArrayKeyAnEmptyString("emailon_directmessage_recieved_old", $formvalues)){
+				$formvalues["emailon_directmessage_recieved"] = 0;
+			} else {
+				unset($formvalues["emailon_directmessage_recieved"]);
+			}
+		}
 		/* debugMessage($formvalues); // debugMessage($benefitsarray);
 		exit(); */
 		parent::processPost($formvalues);
 	}
-	/*
-	 * Custom save logic
-	 */
+	# Custom save logic
 	function transactionSave(){
 		$conn = Doctrine_Manager::connection();
 		$session = SessionWrapper::getInstance();
-		
-		// invite via email
-		if($this->getIsInvited() == 1){
-			$this->inviteViaEmail();
-		}
 		
 		# begin transaction to save
 		try {
 			$conn->beginTransaction();
 			# initial save
 			$this->save();
-				
+			
 			# commit changes
 			$conn->commit();
+			
+			# update default userid on the companyid 
+			if($this->isSelfRegistered() && !isEmptyString($this->getCompanyID()) && isEmptyString($this->getCompany()->getDefaultUserID())){
+				$this->getCompany()->setDefaultUserID($this->getID());
+				$this->setCreatedBy($this->getID());
+				$this->save();
+				// $this->getCompany()->save();
+			}
+			
+			# send signup notification to email for public registration
+			if($this->isSelfRegistered() && $this->isCompanyAdmin()){
+				$this->sendSignupNotification();
+			}
+			
+			# invite via email
+			if($this->getIsInvited() == 1){
+				$this->inviteViaEmail();
+			}
 			
 			# add log to audit trail
 			$view = new Zend_View();
@@ -739,6 +835,464 @@ class UserAccount extends BaseEntity {
 		$result = $q->execute();
 		return $result;
 	}
+	# Send notification to invite person to create an account
+	function sendProfileInvitationNotification() {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+	
+		// assign values
+		$template->assign('inviter', $this->getName());
+		$template->assign('type', $this->getType());
+		$template->assign('company', $this->getCompany()->getName());
+		$template->assign('firstname', isEmptyString($this->getFirstName()) ? 'Friend' : $this->getFirstName());
+		$template->assign('inviter', $this->getInvitedBy()->getName());
+		// the actual url will be built in the view
+		$viewurl = $template->serverUrl($template->baseUrl('signup/index/id/'.encode($this->getID())."/"));
+		$template->assign('invitelink', $viewurl);
+		$contents = "";
+		if($this->isCompanyAdmin()){
+			$contents = '<p>Your company <b>'.$this->getCompany()->getName().'</b> has been successfully setup on <b>'.getAppName().'</b> and you have been invited by <b>'.$this->getInvitedBy()->getName().'</b> to activate your <b>'.getTrialDays().' day</b> free trial account.</p>
+	
+			<p><b>'.getAppName().'</b> is an online state of the art Human Resource application that automates almost ALL your company HR needs. All the way from Employee management, benefits, attendance and timesheets, leave time, payroll and many other HR functions.</p>';
+		} else {
+			$contents = '<p>You have been invited by <b>'.$this->getCompany()->getName().'</b> to activate your Employee HR account.</p>';
+		}
+		$template->assign('contents', $contents);
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+	
+		// configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+		$subject = $this->translate->_('profile_email_subject_invite_user');
+		$template->assign('subject', $subject);
+		$mail->setSubject($subject);
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('invitenotification.phtml'));
+		// debugMessage($template->render('invitenotification.phtml')); exit();
+	
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar("warningmessage", 'Email notification not sent! '.$e->getMessage());
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		return true;
+	}
+	# Send a notification to agent that their account will be approved shortly
+	function sendSignupNotification($prevstatus = 3) {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+	
+		# assign values
+		$message_contents = "";
+		$template->assign('type', 3);
+		$template->assign('firstname', $this->getFirstName());
+		$template->assign('requiresapproval', 0);
+		$template->assign('isapproved', 1);
+		$subject = "Account Activation";
+		$save_toinbox = false;
+		$type = "";
+		$subtype = "";
+		if($this->isCompanyAdmin()){
+			$type = "company";
+			$subject = "Account Activation";
+			$template->assign('type', 3);
+			$template->assign('company', $this->getCompany()->getName());
+			$template->assign('trialdays', getTrialDays());
+			if(companiesRequireApproval()){
+				$template->assign('requiresapproval', 1);
+				if($this->getCompany()->isPendingApproval()){
+					$template->assign('isapproved', 0);
+					$message_contents = "<p>Your company <b>".$this->getCompany()->getName()."</b> has been setup on <b>".getAppName()."</b> for a <b>".getTrialDays()."</b> day free Trial. </p> 
+					<p>However, before you can get started, approval from Admin is required. We shall get back to you shortly with a confirmation email so that you can activate your account.</p>";
+					$subtype = "signup_approvalrequired";
+					$save_toinbox = true;
+				} else {
+					if($this->getCompany()->isActive() && $prevstatus == 3){
+						$subject = $this->getCompany()->getName()." Account Approved";
+						$message_contents = "<p>Your company <b>".$this->getCompany()->getName()."</b> has been successfully approved for a <b>".getTrialDays()."</b> day free Trial of <b>".getAppName()."</b>.</p>";
+						$subtype = "approval_completed";
+						$save_toinbox = true;
+					}
+					if($this->getCompany()->isActive() && $prevstatus == 0){
+						$subject = $this->getCompany()->getName()." Account Activated";
+						$message_contents = "<p>Your company <b>".$this->getCompany()->getName()."</b> has been activated on <b>".getAppName()."</b>.</p>";
+						$subtype = "account_reactivated";
+						$save_toinbox = true;
+					}
+					if($this->getCompany()->isRejected()){
+						$template->assign('isapproved', 0);
+						$subject = "Approval for ".$this->getCompany()->getName()." Failed";
+						$message_contents = "<p>We regret to inform you that your company <b>".$this->getCompany()->getName()."</b> has been denied access to <b>".getAppName()."</b>. <br>
+						<b>Reason:</b> <br>".$this->getCompany()->getRemarks()."
+						</p>";
+						$subtype = "approval_failed";
+						$save_toinbox = true;
+					}
+					/* if($this->getCompany()->isInActive()){
+						$template->assign('isapproved', 0);
+						$subject = $this->getCompany()->getName()." Account Deactivated";
+						$message_contents = "<p>This is to inform you that  <b>".$this->getCompany()->getName()."</b> has been deactivated from <b>".getAppName()."</b>. <br>
+						Feel free to contact us if you have any concerns.
+						</p>";
+						$subtype = "account_deactivated";
+						$save_toinbox = true;
+					} */
+				}
+			} else {
+				$message_contents = "<p>Thank you for showing interest in <b>".getAppName()."</b></p>";
+			}
+		}
+		$template->assign('contents', $message_contents);
+
+		$viewurl = $template->serverUrl($template->baseUrl('signup/activate/id/'.encode($this->getID())."/actkey/".$this->getActivationKey()."/"));
+		$template->assign('activationurl', $viewurl);
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+
+		# configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		$mail->setFrom(getDefaultAdminEmail(true), getDefaultAdminName(true));
+		$mail->setSubject($subject);
+		# render the view as the body of the email
+		$html = $template->render('signupnotification.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); // exit();
+
+		try {
+			$mail->send();
+			$session->setVar("invitesuccess", 'Email sent to '.$this->getEmail());
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+					"senderid" => DEFAULT_ID,
+					"subject" => $subject,
+					"contents" => $message_contents,
+					"html" => $html,
+					"type" => $type,
+					"subtype" => $subtype,
+					"refid" => $this->getCompanyID(),
+					"recipients" => array(
+							md5(1) => array("recipientid" => $this->getID())
+					)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+
+		return true;
+	}
+	# Send notification to inform user that profile has been activated
+	function sendActivationConfirmationNotification() {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		$session = SessionWrapper::getInstance();
+	
+		// assign values
+		$template->assign('firstname', $this->getFirstName());
+		$subject = "Account Activation";
+		$save_toinbox = true;
+		$type = "useraccount";
+		$subtype = "profile_activated";
+		$message_contents = "<p>This is to confirm that your Account has been successfully activated. </p>
+		<p>You can login anytime at ".$view->serverUrl($view->baseUrl('user/login'))." using any of your identities(email or username) and the password you provided during registration. </p>
+		<p>If you happen to forget your login credentials, go to ".$view->serverUrl($view->baseUrl('user/recoverpassword')).". For any other issues, questions or feedback, please feel free to contact us.</p>";
+		$template->assign('contents', $message_contents);
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+	
+		// configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+	
+		$subject = sprintf($this->translate->_('profile_email_subject_invite_confirmation'), getAppName());
+		$mail->setSubject($subject);
+		// render the view as the body of the email
+	
+		$html = $template->render('default.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); // exit();
+			
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+					"senderid" => DEFAULT_ID,
+					"subject" => $subject,
+					"contents" => $message_contents,
+					"html" => $html,
+					"type" => $type,
+					"subtype" => $subtype,
+					"refid" => $this->getID(),
+					"recipients" => array(
+							md5(1) => array("recipientid" => $this->getID())
+					)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+	
+		return true;
+	}
+	# set activation code to change user's email
+	function triggerEmailChange($newemail) {
+		$this->setActivationKey($this->generateActivationKey());
+		$this->setTempEmail($newemail);
+		$this->save();
+		$this->sendNewEmailActivation();
+		return true;
+	}
+	# send new email change confirmation
+	function sendNewEmailActivation() {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		
+		// assign values
+		$template->assign('firstname', $this->getFirstName());
+		$template->assign('newemail', $this->getTempEmail());
+		$viewurl = $template->serverUrl($template->baseUrl('profile/newemail/id/'.encode($this->getID()).'/actkey/'.$this->getActivationKey()));
+		$template->assign('activationurl', $viewurl);
+		
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		
+		// configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+		
+		$mail->setSubject($this->translate->_('profile_email_subject_changeemail'));
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('emailchangenotification.phtml'));
+		// debugMessage($template->render('emailchangenotification.phtml')); exit();
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		return true;
+	}
+	# Send a notification to agent that their account will be approved shortly
+	function sendDeactivateNotification() {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		
+		// assign values
+		$template->assign('firstname', $this->getFirstName());
+		// $template->assign('activationurl', array("action"=> "activate", "actkey" => $this->getActivationKey(), "id" => encode($this->getID())));
+		
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		
+		// configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+		
+		$mail->setSubject("Account Deactivation");
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('accountdeactivationconfirmation.phtml'));
+		// debugMessage($template->render('accountdeactivationconfirmation.phtml')); // exit();
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+		
+		return true;
+	}
+	# change email notification to new address
+	function sendNewEmailNotification($newemail) {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+
+		// assign values
+		$template->assign('firstname', $this->getFirstName());
+		$template->assign('fromemail', $this->getEmail());
+		$template->assign('toemail', $newemail);
+		$template->assign('code', $this->getActivationKey());
+		$viewurl = $template->serverUrl($template->baseUrl('profile/changeemail/id/'.encode($this->getID())."/actkey/".$this->getActivationKey()."/ref/".encode($newemail)."/"));
+				$template->assign('activationurl', $viewurl);
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+
+		// configure base stuff
+		$mail->addTo($newemail, $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+
+		$mail->setSubject("Email Change Request");
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('changeemail_newnotification.phtml'));
+		// debugMessage($template->render('changeemail_newnotification.phtml')); exit();
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+
+		return true;
+	}
+	# change email notification to old address
+	function sendOldEmailNotification($newemail) {
+		$session = SessionWrapper::getInstance();
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+
+		// assign values
+		$template->assign('firstname', $this->getFirstName());
+		$template->assign('fromemail', $this->getEmail());
+		$template->assign('toemail', $newemail);
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+
+		// configure base stuff
+		$mail->addTo($this->getEmail(), $this->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+
+		$mail->setSubject("Email Change Request");
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('changeemail_oldnotification.phtml'));
+		// debugMessage($template->render('changeemail_oldnotification.phtml')); //exit();
+		
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+
+		return true;
+	}
+	# invite one user to join. already existing persons
+	function inviteOne() {
+		$this->setDateInvited(date('Y-m-d'));
+		$this->setIsInvited('1');
+		$this->setHasAcceptedInvite('0');
+
+		// debugMessage($this->toArray()); exit();
+		$this->save();
+
+		// send email
+		$this->sendProfileInvitationNotification();
+
+		return true;
+	}
+	# Send contact us notification
+	function sendContactNotification($dataarray) {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+
+		// debugMessage($first);
+		// assign values
+		$template->assign('name', $dataarray['name']);
+		$template->assign('email', $dataarray['email']);
+		$template->assign('subject', $dataarray['subject']);
+		$template->assign('message', nl2br($dataarray['message']));
+
+		$mail->setSubject("New Contact Us Message: ".$dataarray['subject']);
+		// set the send of the email address
+		$mail->setFrom($dataarray['email'], $dataarray['name']);
+
+		// configure base stuff
+		$mail->addTo($this->config->notification->supportemailaddress);
+		// render the view as the body of the email
+		$mail->setBodyHtml($template->render('contactconfirmation.phtml'));
+		// debugMessage($template->render('contactconfirmation.phtml')); exit();
+		$mail->send();
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		return true;
+	}
 	# invite user to activate via email
 	function inviteViaEmail(){
 		$session = SessionWrapper::getInstance();
@@ -755,7 +1309,7 @@ class UserAccount extends BaseEntity {
 	 *
 	 * @return Boolean TRUE if the password is changed, FALSE if it fails to change the user's password.
 	 */
-	 function resetPassword($newpassword = "") {
+	function resetPassword($newpassword = "") {
 	 	# check if the password is empty 
 	 	if (isEmptyString($newpassword)) {
 	 		# generate a new random password
@@ -866,7 +1420,7 @@ class UserAccount extends BaseEntity {
 		// configure base stuff
 		$mail->addTo($this->getEmail());
 		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
 		
 		$mail->setSubject($this->translate->_('profile_email_subject_recoverpassword'));
 		// render the view as the body of the email
@@ -892,11 +1446,9 @@ class UserAccount extends BaseEntity {
     * 
     * @return bool TRUE if the signup process completes successfully, false if activation key is invalid or save fails
     */
-   function activateAccount($actkey, $acttype = false) {
-   		# save to the audit trail
-		$isphoneactivation = $acttype;
+   function activateAccount($actkey, $checkkey = true) {
 		# validate the activation key 
-		if($this->getActivationKey() != $actkey){
+		if($this->getActivationKey() != $actkey && $checkkey){
 			// debugMessage('failed');
 			# Log to audit trail when an invalid activation key is used to activate account
 			$audit_values = array("executedby" => $this->getID(), "transactiontype" => USER_SIGNUP, "success" => "N");
@@ -909,20 +1461,19 @@ class UserAccount extends BaseEntity {
 		# set active to true and blank out activation key
 		$this->setStatus(1);		
 		$this->setActivationKey("");
-		$startdate = date("Y-m-d H:i:s");
+		$startdate = DEFAULT_DATETIME;
 		$this->setActivationDate($startdate);
-		
+		if($this->isCompanyAdmin()){
+			$expirydate = date("Y-m-d", strtotime(date("Y-m-d", strtotime($startdate)). " +".getTrialDays()." days "));
+			
+			$this->getCompany()->setStartDate($startdate);
+			$this->getCompany()->setEndDate($expirydate);
+			$this->getCompany()->setStatus(1);
+		}
+	
 		# save
 		try {
 			$this->save();
-			
-			# if user activated via phone. automatically set thier phone as validated.
-			if($isphoneactivation){
-				# activate account
-				$this->activatePhone(1);
-				# send confirmation to mobile
-				$this->sendSignupConfirmationToMobile();
-			}
 			
 			# Add to audittrail that a new user has been activated.
 			$audit_values = array("executedby" => $this->getID(), "transactiontype" => USER_SIGNUP, "success" => "Y");
@@ -966,268 +1517,6 @@ class UserAccount extends BaseEntity {
 		
 		return true;
    }
-	/**
-	 * Send a notification to agent that their account will be approved shortly
-	 * 
-	 * @return bool whether or not the signup notification email has been sent
-	 *
-	 */
-	function sendSignupNotification() {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance(); 
-
-		# assign values
-		$template->assign('firstname', $this->getFirstName());
-		$viewurl = $template->serverUrl($template->baseUrl('signup/activate/id/'.encode($this->getID())."/actkey/".$this->getActivationKey()."/")); 
-		$template->assign('activationurl', $viewurl);
-		$template->assign('usertype', 2);
-				
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		# configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		# set the send of the email address
-		$subject = sprintf($this->translate->_('profile_email_subject_signup'), getAppName());
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject($subject);
-		# render the view as the body of the email
-		$mail->setBodyHtml($template->render('signupnotification.phtml'));
-		// debugMessage($template->render('signupnotification.phtml')); // exit();
-		
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	# set activation code to change user's email
-	function triggerEmailChange($newemail) {
-		$this->setActivationKey($this->generateActivationKey());
-		$this->setTempEmail($newemail);
-		$this->save();
-		$this->sendNewEmailActivation();
-		return true;
-	}
-	
-	# send new email change confirmation
-	function sendNewEmailActivation() {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance();
-		$view = new Zend_View();
-		
-		// assign values
-		$template->assign('firstname', $this->getFirstName());
-		$template->assign('newemail', $this->getTempEmail());
-		$viewurl = $template->serverUrl($template->baseUrl('profile/newemail/id/'.encode($this->getID()).'/actkey/'.$this->getActivationKey())); 
-		$template->assign('activationurl', $viewurl);
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject($this->translate->_('profile_email_subject_changeemail'));
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('emailchangenotification.phtml'));
-		// debugMessage($template->render('emailchangenotification.phtml')); exit();
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	/**
-	 * Send a notification to agent that their account will be approved shortly
-	 * 
-	 * @return bool whether or not the signup notification email has been sent
-	 *
-	 */
-	function sendDeactivateNotification() {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance(); 
-
-		// assign values
-		$template->assign('firstname', $this->getFirstName());
-		// $template->assign('activationurl', array("action"=> "activate", "actkey" => $this->getActivationKey(), "id" => encode($this->getID())));
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject("Account Deactivation");
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('accountdeactivationconfirmation.phtml'));
-		// debugMessage($template->render('accountdeactivationconfirmation.phtml')); // exit();
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	# change email notification to new address
-	function sendNewEmailNotification($newemail) {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance(); 
-		
-		// assign values
-		$template->assign('firstname', $this->getFirstName());
-		$template->assign('fromemail', $this->getEmail());
-		$template->assign('toemail', $newemail);
-		$template->assign('code', $this->getActivationKey());
-		$viewurl = $template->serverUrl($template->baseUrl('profile/changeemail/id/'.encode($this->getID())."/actkey/".$this->getActivationKey()."/ref/".encode($newemail)."/"));
-		$template->assign('activationurl', $viewurl);
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($newemail, $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject("Email Change Request");
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('changeemail_newnotification.phtml'));
-		// debugMessage($template->render('changeemail_newnotification.phtml')); exit();
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	
-	# change email notification to old address
-	function sendOldEmailNotification($newemail) {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance(); 
-		
-		// assign values
-		$template->assign('firstname', $this->getFirstName());
-		$template->assign('fromemail', $this->getEmail());
-		$template->assign('toemail', $newemail);
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject("Email Change Request");
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('changeemail_oldnotification.phtml'));
-		// debugMessage($template->render('changeemail_oldnotification.phtml')); //exit();
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	
-	# Send notification to invite person to create an account
-	function sendProfileInvitationNotification() {
-		$session = SessionWrapper::getInstance(); 
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance();
-		$view = new Zend_View(); 
-
-		// assign values
-		$template->assign('type', $this->getType());
-		$template->assign('company', $this->getCompany()->getName());
-		$template->assign('firstname', isEmptyString($this->getFirstName()) ? 'Friend' : $this->getFirstName());
-		$template->assign('inviter', $this->getInvitedBy()->getName());
-		// the actual url will be built in the view
-		$viewurl = $template->serverUrl($template->baseUrl('signup/index/id/'.encode($this->getID())."/")); 
-		$template->assign('invitelink', $viewurl);
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$mail->setSubject(sprintf($this->translate->_('profile_email_subject_invite_user'), getAppName()));
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('invitenotification.phtml'));
-		// debugMessage($template->render('invitenotification.phtml')); exit();
-		
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar("warningmessage", 'Email notification not sent! '.$e->getMessage());
-		}
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
 	/**
 	 * Generate a new password incase a user wants a new password
 	 * 
@@ -1402,7 +1691,6 @@ class UserAccount extends BaseEntity {
     function isFemale(){
     	return $this->getGender() == '2' ? true : false; 
     }
-    
 	# Determine gender text depending on the gender
 	function getGenderText(){
 		if($this->isMale()){
@@ -1491,10 +1779,7 @@ class UserAccount extends BaseEntity {
     function hasPendingActivation() {
    		return $this->isUserInActive() && $this->hasBeenInvited() && !isEmptyString($this->getInvitedByID()) ? true : false;
     }
-	/**
-	 * Return the date of birth 
-	 * @return string dateofbirth 
-	 */
+	# Return the date of birth 
 	function getBirthDateFormatted() {
 		$birth = "--";
 		if(!isEmptyString($this->getDateOfBirth())){
@@ -1502,7 +1787,6 @@ class UserAccount extends BaseEntity {
 		} 
 		return $birth;
 	}
-	
 	# relative path to profile image
 	function hasProfileImage(){
 		$real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."users".DIRECTORY_SEPARATOR."user_";
@@ -1526,7 +1810,6 @@ class UserAccount extends BaseEntity {
 		}
 		return $real_path;
 	}
-	
 	# determine path to small profile picture
 	function getSmallPicturePath() {
 		$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
@@ -1578,11 +1861,7 @@ class UserAccount extends BaseEntity {
 		# debugMessage($path);
 		return $path;
 	}
-	/**
-	 * Get the full name of the country from the two digit code
-	 * 
-	 * @return String The full name of the state 
-	 */
+	# Get the full name of the country from the two digit code
 	function getCountryName() {
 		if(isEmptyString($this->getCountry())){
 			return "--";
@@ -1603,93 +1882,6 @@ class UserAccount extends BaseEntity {
 			$str .= '<br>'.nl2br($this->getAddress2());
 		}
 		return $str;
-	}
-	# invite one user to join. already existing persons
-	function inviteOne() {
-		$this->setDateInvited(date('Y-m-d'));
-		$this->setIsInvited('1');
-		$this->setHasAcceptedInvite('0');
-
-		// debugMessage($this->toArray()); exit();
-		$this->save();
-		
-		// send email
-		$this->sendProfileInvitationNotification();
-		
-		return true;
-	}
-	/**
-	 * Send notification to inform user that profile has been activated
-	 * @return bool whether or not the notification email has been sent
-	 */
-	function sendInviteConfirmationNotification() {
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance();
-		$view = new Zend_View(); 
-
-		// assign values
-		$template->assign('firstname', $this->getFirstName());
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// configure base stuff
-		$mail->addTo($this->getEmail(), $this->getName());
-		// set the send of the email address
-		$mail->setFrom($this->config->notification->emailmessagesender, $this->config->notification->notificationsendername);
-		
-		$subject = sprintf($this->translate->_('profile_email_subject_invite_confirmation'), getAppName());
-		$mail->setSubject($subject);
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('inviteconfirmation.phtml'));
-		$message_contents = $template->render('signupnotification.phtml');
-		// debugMessage($template->render('inviteconfirmation.phtml')); exit();
-		$mail->send();
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
-	}
-	# Send contact us notification
-	function sendContactNotification($dataarray) {
-		$template = new EmailTemplate(); 
-		# create mail object
-		$mail = getMailInstance();
-		$view = new Zend_View(); 
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		
-		// debugMessage($first);
-		// assign values
-		$template->assign('name', $dataarray['name']);
-		$template->assign('email', $dataarray['email']);
-		$template->assign('subject', $dataarray['subject']);
-		$template->assign('message', nl2br($dataarray['message']));
-		
-		$mail->setSubject("New Contact Us Message: ".$dataarray['subject']);
-		// set the send of the email address
-		$mail->setFrom($dataarray['email'], $dataarray['name']);
-		
-		// configure base stuff
-		$mail->addTo($this->config->notification->supportemailaddress);
-		// render the view as the body of the email
-		$mail->setBodyHtml($template->render('contactconfirmation.phtml'));
-		// debugMessage($template->render('contactconfirmation.phtml')); exit();
-		$mail->send();
-		
-		$mail->clearRecipients();
-		$mail->clearSubject();
-		$mail->setBodyHtml('');
-		$mail->clearFrom();
-		
-		return true;
 	}
 	# determine the days of week for attendance as array
 	function getDaysOfWeekArray() {
@@ -1723,11 +1915,10 @@ class UserAccount extends BaseEntity {
 		}
 		return $str;
 	}
-	
-	# determine the timeoff events for user
-	function getTimeoffRequests($userid = '', $start, $end){
+	# determine the leave events for user
+	function getLeaveRequests($userid = '', $start, $end){
 		return true;
-		$q = Doctrine_Query::create()->from('Timeoff t')->where("t.userid = '".$this->getID()."' ")->orderby('t.datecreated desc');
+		$q = Doctrine_Query::create()->from('Leave t')->where("t.userid = '".$this->getID()."' ")->orderby('t.datecreated desc');
 		$result = $q->execute();
 		return $result;
 	}
@@ -1736,6 +1927,20 @@ class UserAccount extends BaseEntity {
 		# query active user details using email
 		$q = Doctrine_Query::create()->from('Timesheet t')->where("t.userid = '".$this->getID()."' AND  TO_DAYS(t.timesheetdate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') AND t.status = '".$status."' ");
 		return $q->execute();;
+	}
+	# determine if the farmer registered themselves
+	function isSelfRegistered(){
+		return $this->getselfregistered() == '1' ? true : false;
+	}
+	# determine if user has allowed to receive email notifications
+	function allowEmailForTimesheetApproval(){
+		return $this->getemailon_tsheet_approvalcompleted() == '1' ? true : false;
+	}
+	function allowEmailForBenefitApproval(){
+		return $this->getemailon_benefit_approvalcompleted() == '1' ? true : false;
+	}
+	function allowEmailForLeaveApproval(){
+		return $this->getemailon_leave_approvalcompleted() == '1' ? true : false;
 	}
 }
 ?>

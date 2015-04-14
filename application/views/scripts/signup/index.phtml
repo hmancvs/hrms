@@ -3,14 +3,15 @@
 
 	$user = new UserAccount(); 
 	
-	$button_title = $this->translate("profile_button_signup");
+	$title = $this->translate("profile_pagetitle_signup"); 
+	$pagetitle = "Sign up for a 30 Day Risk Free Trial of ".getAppName();
+	$button_title = "SIGN UP NOW";
 	$posturl = $this->baseUrl("signup/create"); 
 	$failureurl = $this->baseUrl('signup'); 
 	$successurl = $this->baseUrl('signup/confirm'); 
 	
 	// set all fields to empty string as default
-	$user->setType(DEFAULT_USER_GROUP);
-	$id = decode($request->id);	
+	$id = decode($request->id);	 // $id = 74;
 	$useractivate = false;
 	if(!isEmptyString($id)){
 		$user->populate($id);
@@ -18,14 +19,22 @@
 		$posturl = $this->baseUrl("signup/processinvite");
 		$failureurl = $this->baseUrl('signup/index/id/'.$request->id); 
 		$successurl = $this->baseUrl('signup/inviteconfirmation/id/'.$request->id);
+		$title = "Account Activation";
+		$pagetitle = $title;
+		$user->setselfregistered(0);
+	} else {
+		$user->setType(DEFAULT_USER_GROUP);
+		$user->setselfregistered(1);
 	}
+	
+	// $user->sendProfileInvitationNotification();
+	// exit;
 	
 	// any errors occured in processing
 	if ($sessionhaserror) {
 	    $user->processPost($session->getVar(FORM_VALUES)); 
 	}
 	
-	$title = $this->translate("profile_pagetitle_signup"); 
 	$this->headTitle($title.$browserappend); 
 ?>
 <script>
@@ -35,15 +44,10 @@ $(document).ready(function() {
 	// define the validation rules
 	$("#signupform").validate({		
 		rules: {
-			gender: {
-				required: true
-			},
-			firstname: {
-				required: true
-			},
-			lastname: {
-				required: true
-			},
+			companyname: "required",
+			gender: "required",
+			firstname: "required",
+			lastname: "required",
 			username: {
 				required: true, 
 				minlength: <?php echo $config->profile->usernameminlength; ?>,
@@ -69,16 +73,11 @@ $(document).ready(function() {
 			}
 		}, 
 		// the messages for each of the fields being validated
-		messages: {	
-			gender: {
-				"required": "<?php echo $this->translate("profile_gender_error"); ?>"
-			}, 
-			firstname: {
-				"required": "<?php echo $this->translate("profile_firstname_error"); ?>"
-			},
-			lastname: {
-				"required": "<?php echo $this->translate("profile_lastname_error"); ?>"
-			},
+		messages: {
+			companyname: "Please enter Company Name",
+			gender: "<?php echo $this->translate("profile_gender_error"); ?>", 
+			firstname: "<?php echo $this->translate("profile_firstname_error"); ?>",
+			lastname: "<?php echo $this->translate("profile_lastname_error"); ?>",
 			username: {
 				required: "<?php echo $this->translate("profile_username_error"); ?>",
 				minlength: "<?php echo sprintf($this->translate("profile_username_error_minlength"), $config->profile->usernameminlength); ?>",
@@ -203,45 +202,83 @@ $(document).ready(function() {
 	display:none;
 }
 </style>
-<div id="publiccontainer" class="col-sm-6 col-sm-offset-3 index">
+<div id="publiccontainer" class="col-sm-7 col-sm-offset-3 index">
 	<!--<h3 class="centeralign">Account Activation</h3>-->
 	<?php if($sessionhaserror) { ?>
-    	<div class="alert alert-error clear"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
+    	<div class="alert alert-danger clear"><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
     <?php } ?>
     <?php if(!isEmptyString($session->getVar(SUCCESS_MESSAGE)) ){ ?>
     	<div class="alert alert-success clear"><?php echo $session->getVar(SUCCESS_MESSAGE); ?></div>
     <?php } ?>
     <form id="signupform" class="form-horizontal" role="form" action="<?php echo $posturl; ?>" method="post">
         <fieldset class="fieldsetcontainer">
-            <legend><h4>Account Activation</h4></legend>
+            <legend><h4><?php echo $pagetitle; ?></h4></legend>
             <div class="panel-body well-sm">
                 <div class="col-sm-12">
-                    <div class="form-group">
-                        <label class="col-sm-4 control-label"><?php echo $this->translate("profile_firstname_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control input-sm" id="firstname" name="firstname" value="<?php echo $user->getFirstName(); ?>" /><div id="firstname_error"></div>
+                	<?php if($user->isCompanyAdmin() && $user->getCompany()->isInActive()){ ?>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Company Name: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control width300" id="companyname" name="companyname" value="<?php echo $user->getCompany()->getName(); ?>" /><div id="companyname_error"></div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-4 control-label"><?php echo $this->translate("profile_lastname_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                        <div class="col-sm-8">
-                            <input type="text" class="form-control input-sm" id="lastname" name="lastname" value="<?php echo $user->getLastName(); ?>" /><div id="lastname_error"></div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Industry Sector:</label>
+                            <div class="col-sm-6">
+                               <?php 
+							   		$codes = getDatavariables('INDUSTRY_CATEGORIES');
+                                    $dropdown = new Zend_Form_Element_Select('industrycode',
+                                                        array(
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $codes),
+                                                            'view' => new Zend_View(),
+                                                            'decorators' => array('ViewHelper'),
+                                                            'class' => array('form-control','width300')
+                                                        )
+                                    );  
+                                    $dropdown->setValue($user->getCompany()->getindustrycode()); 
+                                    echo $dropdown->render();
+							   ?>
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-4 control-label"><?php echo $this->translate("profile_gender_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
-                        <div class="col-sm-8">
-                            <label class="radio-inline"><input type="radio" name="gender" id="male" value="1" class="xform-control <?php echo $user->isMale() ? 1 : 0; ?>"> Male</label>
-                            <label class="radio-inline"><input type="radio" name="gender" id="female" value="2" class="xform-control <?php echo $user->isFemale() ? 1 : 0; ?>"> Female</label>
-                            <div id="gender_error"></div>
+                    	<div class="form-group">
+                            <label class="col-sm-4 control-label">Contact Person: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                            	<div class="col-sm-6 paddingleft0">
+                                	<input type="text" class="form-control" id="firstname" name="firstname" placeholder="First Name" value="<?php echo $user->getFirstName(); ?>" />
+                                </div>
+                                <div class="col-sm-6 paddingleft0">
+                                	<input type="text" class="form-control" id="lastname" name="lastname" placeholder="Last Name" value="<?php echo $user->getLastName(); ?>" />
+                                </div>
+                                <div id="firstname_error"></div><div id="lastname_error"></div>
+                            </div>
                         </div>
-                    </div>
+                    <?php } else { ?>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate("profile_firstname_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="firstname" name="firstname" value="<?php echo $user->getFirstName(); ?>" /><div id="firstname_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate("profile_lastname_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <input type="text" class="form-control" id="lastname" name="lastname" value="<?php echo $user->getLastName() == '.' ? '' : $user->getLastName(); ?>" /><div id="lastname_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate("profile_gender_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <div class="col-sm-8">
+                                <label class="radio-inline"><input type="radio" name="gender" id="male" value="1" class="xform-control <?php echo $user->isMale() ? 1 : 0; ?>"> Male</label>
+                                <label class="radio-inline"><input type="radio" name="gender" id="female" value="2" class="xform-control <?php echo $user->isFemale() ? 1 : 0; ?>"> Female</label>
+                                <div id="gender_error"></div>
+                            </div>
+                        </div>
+                    <?php } ?>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label"><?php echo $this->translate("profile_email_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                        <label class="col-sm-4 control-label"><?php echo $this->translate("global_email_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                         <div class="col-sm-8">
-                            <input type="hidden" name="oldemail" id="oldemail" value="<?php echo $user->getEmail(); ?>" />
-                            <input type="text" class="form-control input-sm blocked" id="email" name="email" value="<?php echo $user->getEmail(); ?>" />
-                            <a class="btn btn-xs btn-default gonowhere" id='check_email_availability' style="margin-top:2px;" title="Check Availability">Check</a>
+                            <input type="text" class="form-control inline width225" id="email" name="email" value="<?php echo $user->getEmail(); ?>" />
+                            <a class="btn btn-xs btn-default gonowhere inline" id='check_email_availability' style="margin-top:2px;" title="Check Availability">Check</a>
                             <div id="email_availability_result" style="margin-top:4px"></div>
                             <div id="email_error"></div>
                         </div>
@@ -249,7 +286,7 @@ $(document).ready(function() {
                     <div class="form-group">
                         <label class="col-sm-4 control-label"><?php echo $this->translate("profile_username_label"); ?>: <?php echo isEmptyString($user->getID()) ? '' : $this->translate("global_required_field_marker"); ?></label>
                         <div class="col-sm-8">
-                            <input type="text" class="form-control input-sm blocked" id="username" name="username" value="<?php echo $user->getUserName(); ?>" /> <a class="btn btn-xs btn-default gonowhere" id='check_username_availability' style="margin-top:2px;" title="Check Availability">Check</a>
+                            <input type="text" class="form-control width225 inline" id="username" name="username" value="<?php echo $user->getUserName(); ?>" /> <a class="btn btn-default gonowhere inline" id='check_username_availability' style="margin-top:2px;" title="Check Availability">Check</a>
                             
                             <div id="username_availability_result" style="margin-top:4px"></div>
                             <div id="username_error"></div>
@@ -258,7 +295,7 @@ $(document).ready(function() {
                     <div class="form-group">
                         <label class="col-sm-4 control-label"><?php echo $this->translate("profile_password_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
                         <div class="col-sm-8 paddingright0">
-                             <input type="password" name="password" id="password" class="form-control password input-sm xwidth200" autocomplete="off" onkeyup="passwordStrength(this.value)" />
+                             <input type="password" name="password" id="password" class="form-control password width225" autocomplete="off" onkeyup="passwordStrength(this.value)" />
                             <p style="display:inline-block; float:right;">
                                 <label for="passwordStrength" class="hidden">Password strength</label>
                                 <div id="passwordDescription" style="width:100px;">strength</div>
@@ -270,18 +307,23 @@ $(document).ready(function() {
                     <div class="form-group">
                         <label class="col-sm-4 control-label blocked"><?php echo $this->translate("profile_password_confirm_label"); ?>: <?php echo $this->translate("required_field_marker"); ?></label>
                         <div class="col-sm-8 paddingright0">
-                            <input type="password" name="confirmpassword" id="confirmpassword" class="form-control password input-sm xwidth200" /><div id="confirmpassword_error"></div>
+                            <input type="password" name="confirmpassword" id="confirmpassword" class="form-control password width225" /><div id="confirmpassword_error"></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-sm-12">
-                <button type="submit" class="btn btn-primary floatright">Activate</button>
+                <button type="submit" class="btn btn-primary btn-large floatright"><?php echo $button_title; ?></button>
                 <input type="hidden" name="usecustomsave" id="usecustomsave" value="true" />
                 <input type="hidden" name="id" id="id" value="<?php echo encode($user->getID()); ?>" />
                 <input type="hidden" name="createdby" id="createdby" value="<?php echo $user->getCreatedBy(); ?>" />
                 <input type="hidden" name="type" id="type" value="<?php echo $user->getType(); ?>" />
-                <input type="hidden" name="companyid" id="companyid" value="<?php echo $user->getCompanyID(); ?>" />
+                <input type="hidden" id="selfregistered" name="selfregistered" value="<?php echo $user->getselfregistered(); ?>" />
+                <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" />
+                <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                <?php if(!isEmptyString($user->getCompanyID())){ ?>
+                	<input type="hidden" name="companyid" id="companyid" value="<?php echo $user->getCompanyID(); ?>" />
+               	<?php } ?>
         	</div>
             <div class="divider15"></div>
         </fieldset> 

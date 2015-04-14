@@ -17,7 +17,7 @@ class ErrorController extends Zend_Controller_Action
         $exception = $errors->exception; // debugMessage($exception);
         $vars = get_object_vars($exception );
         $error_list = createHTMLCommaListFromArray($vars); // debugMessage('errors are '.$error_list);
-       	//  debugMessage(get_class($errors->exception));  debugMessage($errors->type);
+       	debugMessage(get_class($errors->exception));  debugMessage($errors->type);
        
         // exit();
         switch ($errors->type) {

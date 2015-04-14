@@ -52,6 +52,17 @@
 	if(!isAdmin() && !isCompanyAdmin()){
 		$where_query .= " AND t.`userid` = '".$loggedinuser->getID()."' ";
 	}
+	if($istimesheetuser && !isAdmin() && !isCompanyAdmin()){
+		$where_query .= " AND t.`userid` = '".$loggedinuser->getID()."' ";
+	}
+	$userid = $request->userid;
+	if(!isEmptyString($userid)){
+		$where_query .= " AND t.`userid` = '".$userid."' ";
+		$allowclear = true;
+		if($istimesheetuser){
+			$allowclear = false;
+		}
+	}
 	
 	$status = trim($request->status);
 	if(!isEmptyString($status)){
@@ -71,11 +82,11 @@
 	}
 	
 	if(!isEmptyString($startdate)){
-		$where_query .= " AND (TO_DAYS(t.datein) >= TO_DAYS('".$startdate."')) ";
+		$where_query .= " AND (TO_DAYS(t.timesheetdate) >= TO_DAYS('".$startdate."')) ";
 		$allowclear = true;
 	}
 	if(!isEmptyString($enddate)){
-		$where_query .= " AND (TO_DAYS(t.datein) <= TO_DAYS('".$enddate."')) ";
+		$where_query .= " AND (TO_DAYS(t.timesheetdate) <= TO_DAYS('".$enddate."')) ";
 		$allowclear = true;
 	}
 		
@@ -173,7 +184,7 @@ $(document).ready(function() {
                         <ul class="resetlist listactions">
                         	<?php if ($acl->checkPermission("Attendance", ACTION_CREATE)) { ?>
                                 <li><a class="btn btn-primary btn-sm <?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now">Check In</a></li>
-                                <li><a class="btn btn-primary btn-sm addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Add Timesheet Request" rel="Add Timesheet Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('timesheets/attendance'); ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a>
+                                <li><a class="btn btn-primary btn-sm addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($loggedinuser->getID()).'/pgc/true'); ?>"  title="Add Timesheet Request" rel="Add Timesheet Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a>
                                 </li>
                             <?php } ?>
                             <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
@@ -187,7 +198,7 @@ $(document).ready(function() {
                                                                 'multiOptions' => array_merge_maintain_keys(array('' => 'All Users'), $values),
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
-                                                                'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                                'class' => array("xautofilter", "form-control",'width150', 'input-sm','chosen-select')
                                                             )
                                         );  
                                         $dropdown->setValue($request->getParam('userid')); 
@@ -265,9 +276,9 @@ $(document).ready(function() {
                                                 <?php if($acl->checkPermission("Attendance", ACTION_APPROVE)){ ?>
                                                     <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('',  'Employeee'); ?></th>
                                                 <?php } ?>    
-                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Date In'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Time In'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
-                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Date Out'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Timesheet Date'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Time In'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
+                                                <!--<th class="nowrapping valigntop"><?php //echo $paginate->getSortLinkForColumn('', 'Date Out'); ?> <img style="width:40px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>-->
                                                 <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Time Out'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
                                                 <th class="nowrapping valigntop"><?php echo $paginate->getSortLinkForColumn('', 'Hours'); ?> <img style="width:30px; height:2px;" src="<?php echo $this->baseUrl('images/spacer.gif'); ?>" /></th>
                                                 <th class="nowrapping valigntop" style="width:120px;"><?php echo $paginate->getSortLinkForColumn('', 'Remarks'); ?></th>
@@ -331,25 +342,32 @@ $(document).ready(function() {
                                                     if(!isEmptyString($line['comments'])){
                                                         $viewnotes = '<b>Remarks:</b> '.nl2br($line['comments']);
                                                     }
-                                                    
+													$isrequest = false;
+													if($line['isrequest'] == 1){
+														$isrequest = true;
+													}
+													
                                                     $cancheckout = false; $cansubmit = false; $canupdate = false; $candelete = false; $canapprove = false; $canreject = false;  $canselect = false;
                                                     $isonpayroll = false;
                                                     if(!isEmptyString($line['payrollid'])){
                                                         $isonpayroll = true;
                                                     }
-                                                    if(!isEmptyString($line['timein']) && isEmptyString($line['timeout']) &&  !$isoverdue && ($acl->checkPermission("Attendance", ACTION_APPROVE))){
+                                                    if(!isEmptyString($line['timein']) && isEmptyString($line['timeout']) &&  !$isoverdue && ($acl->checkPermission("Attendance", ACTION_APPROVE) || $line['userid'] == $loggedinuser->getID())){
                                                         $cancheckout = true;
                                                     }
-                                                    if(!isEmptyString($line['timein']) && $line['userid'] != $loggedinuser->getID() && !$isonpayroll && $acl->checkPermission("Attendance", ACTION_APPROVE)){
+                                                    if(!$isonpayroll && $acl->checkPermission("Attendance", ACTION_APPROVE)){
                                                         $canupdate = true;
                                                     }
                                                     if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) &&  $line['userid'] == $loggedinuser->getID() && $line['status'] == '1'){
                                                         $cansubmit = true;
                                                     }
-                                                    if(($line['status'] == '2' || $line['status'] == '4') && $acl->checkPermission("Timesheets", ACTION_APPROVE) && !$isonpayroll){
+													if(($line['status'] == '4' && $acl->checkPermission($resource, ACTION_DELETE) && !$isonpayroll)){
+														$candelete = true;
+													}
+                                                    if(($line['status'] == '2') && $acl->checkPermission($resource, ACTION_APPROVE) && !$isonpayroll){
                                                         $canapprove = true;
                                                     }
-                                                    if(($line['status'] == '2' || $line['status'] == '3') && $acl->checkPermission("Timesheets", ACTION_APPROVE) && !$isonpayroll){
+                                                    if(($line['status'] == '2') && $acl->checkPermission($resource, ACTION_APPROVE) && !$isonpayroll){
                                                         $canreject = true; 
                                                     }
                                                     if(!isEmptyString($line['timein']) && !isEmptyString($line['timeout']) && !$isonpayroll){
@@ -362,9 +380,9 @@ $(document).ready(function() {
                                                         <?php } ?>     
                                                         <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?></td>
                                                         <td class="nullifempty"><?php echo isEmptyString($line['timein']) ? '' : formatTimeCustom($line['timein']); ?></td>
-                                                        <td class="nullifempty"><?php echo isEmptyString($line['dateout']) ? '' : changeMySQLDateToPageFormat($line['dateout']); ?></td>
+                                                        <!--<td class="nullifempty"><?php //echo isEmptyString($line['dateout']) ? '' : changeMySQLDateToPageFormat($line['dateout']); ?></td>-->
                                                         <td class="nullifempty"><?php echo isEmptyString($line['timeout']) ? '' : formatTimeCustom($line['timeout']); ?></td>
-                                                        <td class="nullifempty"><?php echo $hours == 0 || isEmptyString($hours) ? '' : $hours; ?></td>
+                                                        <td class="nullifempty"><?php echo ($hours == 0 && $line['timein'] != $line['timeout']) || isEmptyString($hours) ? '' : $hours; ?></td>
                                                         <td><?php if(!isEmptyString($viewnotes)){ ?>
                                                                 <span class="floatleft"><a title="Click to view Details" class="alert-dialog gonowhere" containerstyle="text-align:left;"message="<?php echo $viewnotes; ?>" style="margin-left:10px;">View</a></span>
                                                             <?php } ?>
@@ -375,16 +393,19 @@ $(document).ready(function() {
                                                                 <a class="btn btn-sm btn-primary inline <?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/2/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout  overdue and has been disabled. Contact Admin or a Supervisor.">Check out</a>
                                                             <?php } ?>
                                                             <?php if($canupdate){ ?>
-                                                                <a class="btn btn-primary addpopup inline" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/3/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Update Attendance" rel="Update Attendance" id="update" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Save Changes"><i class="fa fa-pencil"></i></a>
+                                                                <a class="btn btn-primary addpopup inline" href="<?php echo $isrequest == true ? $this->baseUrl('timesheets/request/id/'.encode($line['aid']).'/pgc/true') : $this->baseUrl('timesheets/checkin/id/'.encode($line['aid']).'/type/3/userid/'.encode($line['userid']).'/pgc/true'); ?>"  title="Update Timesheet" rel="Update Timesheet" id="update" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Save Changes"><i class="fa fa-pencil"></i></a>
                                                             <?php } ?>
                                                             <?php if($cansubmit){ ?>
                                                                 <a class="btn btn-success btn-xs confirm-dialog" title="Submit for Approval" action="<?php echo $this->baseUrl('timesheets/submit/id/'.encode($line['aid']).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Submit <?php echo $hours; ?> Hours for <?php echo changeMySQLDateToPageFormat($line['datein']); ?> for Approval">Submit for Approval</a>
                                                             <?php } ?>
                                                             <?php if($canapprove){ ?>
-                                                                <a class="btn btn-success btn-xs confirm-dialog" title="Approve" rel="tooltip" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]"><i class="fa fa-check"></i></a> 
+                                                                <a class="btn btn-success btn-xs confirm-dialog" title="Approve" rel="tooltip" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/3/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['timesheetdate']); ?>]"><i class="fa fa-check"></i></a> 
                                                             <?php } ?>    
                                                             <?php if($canreject){ ?>
-                                                                <a class="btn btn-default confirm-dialog" title="Reject" rel="tooltip" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Reject <?php echo $hours; ?> Hours for <?php echo $line['Name']; ?> [<?php echo changeMySQLDateToPageFormat($line['datein']); ?>]"><i class="fa fa-times"></i></a>
+                                                                 <a class="confirm-prompt btn gonowhere" title="Reject" action="<?php echo $this->baseUrl('timesheets/approve/id/'.encode($line['aid']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Reject Entry: Specify remarks to continue."><i class="fa fa-remove"></i></a>
+                                                            <?php } ?>
+                                                            <?php if($candelete) { ?>
+                                                                <a class="deleteline btn gonowhere inline" action="<?php echo $this->baseUrl('timesheets/delete/id/'.encode($line['aid'])."/entityname/timesheet/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" rel="tooltip" title="Delete Entry"><i class="fa fa-trash"></i></a>
                                                             <?php } ?>
                                                             <?php if($canselect){ ?>
                                                                 <input type="checkbox" class="isclicked linechecker floatright" id="record_<?php echo $line['aid']; ?>" name="selector" value="<?php echo $line['aid']; ?>" />

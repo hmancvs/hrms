@@ -1,13 +1,13 @@
 <?php
 /**
- * Model for timeoff types
+ * Model for leave types
  */
-class TimeoffType extends BaseEntity  {
+class LeaveType extends BaseEntity  {
 	
 	public function setTableDefinition() {
 		parent::setTableDefinition();
 		
-		$this->setTableName('timeofftype');
+		$this->setTableName('leavetype');
 		$this->hasColumn('name', 'string', 255, array('notblank' => true));
 		$this->hasColumn('description', 'string', 1000);
 		$this->hasColumn('companyid', 'integer', null, array('default' => getCompanyID()));

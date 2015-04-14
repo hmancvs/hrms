@@ -25,16 +25,6 @@
 	}
 	
 ?>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/chosen/chosen.jquery.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/momentjs/jquery.moment.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/momentjs/moment-range.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/jquery.dataTables.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.tableTools.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.colReorder.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.colVis.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.scroller.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.fixedColumns.min.js')); ?>"></script>
-<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/datatables/extensions/dataTables.fixedHeader.min.js')); ?>"></script>
 
 <script type="text/javascript">
 var datepickerOpts = {
@@ -52,10 +42,6 @@ var datepickerOpts = {
 }; 	
 var uiblockcontent = '<h4><img src="<?php echo $this->baseUrl('images/loader.gif'); ?>" /> Please wait...</h4>';
 $(document).ready(function() {
-	$('.ordinary').datepicker({
-		format: 'M dd, yyyy'
-	});
-
 	// global styles independent of any jquery plugins come at the top followed by plugin styles 
 	$(".readonly").each(function(){
 		$(this).attr('readonly','readonly');
@@ -327,9 +313,9 @@ $(document).ready(function() {
 	
 	/* Plugin specific initializations */
 	$('#dialog').modal({
-		//keyboard: false,
-		//backdrop: 'static',
-		//autoResize:true
+		/*keyboard: false,
+		backdrop: 'static',
+		autoResize:true*/
 	});
 	$('#dialog').modal('hide');
 	
@@ -428,18 +414,12 @@ $(document).ready(function() {
 		// cancel model
 		$(".modelcancel").on('click', function(e){
 			$("#dialog").modal('hide');
-			//$(".dialog, body").css("overflow", "auto");
 			$("#dialogcontent").html('');
-			//location.reload(true);
 		});		
 		$('#dialog').on('hidden', function () {
-			// location.reload(true);
-			// $(".dialog, body").css("overflow", "auto");
 			$("#dialogcontent").html('');
 		});
 		
-		// $(".dialog, body").css("overflow", "hidden");
-		 
 		return true;
 	});
 	
@@ -475,6 +455,8 @@ $(document).ready(function() {
 				$(".modelcancel").hide();
 				$(this).hide();
 				// post form
+				// alert(posturl);
+				// alert($("#"+formid).serialize());
 				$.post(  
 					posturl,  
 					$("#"+formid).serialize(),  
@@ -612,13 +594,13 @@ $(document).ready(function() {
 						}
 					});
 				}
+				/*if(inputSearch.length > 0 && inputSearch.length <= 2){
+					$("#divResult").html("<a class='xhidden' style='text-align:center; display:block;'>Atleast 3 characters required</a>").css({'display':'block','padding':'10px 0'});
+				}*/
 				var imageurl = '<?php echo $this->baseUrl('images/loader.gif'); ?>';
 				if(!isEmptyString(inputSearch)){
 					$("#divResult").html("<a id='loading' class='xhidden' style='text-align:center; display:block;'><img style='width:22px;' src='<?php echo $this->baseUrl('images/loader.gif'); ?>' /></a>").css({'display':'block','padding':'10px 0'});
-				} else {
-					$("#divResult").html("");
 				}
-				
 			} else {
 				// if( $('li.display_box').length > 0) {
 				var li = $('li.display_box');
@@ -979,10 +961,25 @@ $(document).ready(function() {
 		});
 	});
 	
+	// date picker
+	$('.ordinary, .datepicker').datepicker({
+		format: 'M dd, yyyy',
+		autoclose: true
+	});
+	// time picker
+	$('.timepicker, .timefield').timepicker({
+		minuteStep: 5
+	});
+
 	$(".chosen-select").chosen();
 	// default search text on chosen dropdown
 	$(".chosen-container .chosen-search input").attr('placeholder', 'Type to search');
 	$(".datepicker.datepicker-dropdown.dropdown-menu").css({'z-index':'15000'});
+	
+	$(".expanding").elastic();
+	$(".expanding").trigger('update');
+	
+	$.validator.setDefaults({ ignore: ":hidden:not(select)" });
 });
 
 //Use window.load and not document.ready for effective equal heights

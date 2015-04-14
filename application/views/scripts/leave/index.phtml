@@ -1,43 +1,43 @@
 <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
-	$timeoff = new Timeoff();
+	$leave = new Leave();
 	$id = decode($request->id);
-	$resource = "Time off";
+	$resource = "Leave";
 	$description = '';
 	$icon = "fa fa-clock";
 	
 	if(isEmptyString($request->id)){
-		$pagetitle = 'Request Timeoff';
+		$pagetitle = 'Request Leave';
 		$button_title = "Submit for Approval"; 
 		$successmessage = "Successfully submitted for approval";
-		$posturl = $this->baseUrl("timeoff/create");
-		$timeoff->setStatus('0');
-		$timeoff->setDuration('');
-		$timeoff->setDurationType('2');
-		$timeoff->setUserID($loggedinuser->getID());
+		$posturl = $this->baseUrl("leave/create");
+		$leave->setStatus('0');
+		$leave->setDuration('');
+		$leave->setDurationType('2');
+		$leave->setUserID($loggedinuser->getID());
 		if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){
-			$timeoff->setUserID('');
+			$leave->setUserID('');
 			$button_title = "Save"; 
 		}
 		if(!isEmptyString($request->userid)){
-			$timeoff->setUserID($request->userid);
+			$leave->setUserID($request->userid);
 		}
-		$timeoff->setTypeID('1');
+		$leave->setTypeID('1');
 		if(!isEmptyString($request->typeid)){
-			$timeoff->setTypeID($request->typeid);
+			$leave->setTypeID($request->typeid);
 		}
-		$timeoff->setStartTime('08:00');
-		$timeoff->setEndTime('17:00');
-		$timeoff->setReturnTime('08:00');
+		$leave->setStartTime('08:00');
+		$leave->setEndTime('17:00');
+		$leave->setReturnTime('08:00');
 	} else {
-		$timeoff->populate(decode($request->id));
+		$leave->populate(decode($request->id));
 		$pagetitle = 'Update Request';
 		$button_title = "Update and Request Approval";
 		$successmessage = "Successfully updated";
-		$posturl = $this->baseUrl("timeoff/create");
-		if($timeoff->getUserID() == $loggedinuser->getID()){
-			$timeoff->setStatus('0');
+		$posturl = $this->baseUrl("leave/create");
+		if($leave->getUserID() == $loggedinuser->getID()){
+			$leave->setStatus('0');
 			$successmessage = "Successfully updated and pending approval";
 		}
 		if(isAdmin() || $acl->checkPermission($resource, ACTION_APPROVE)){
@@ -45,22 +45,22 @@
 		}
 	}
 	
-	$successurl = $this->baseUrl('timeoff/view');
-	$addnewsuccessurl = $this->baseUrl('timeoff/index');
+	$successurl = $this->baseUrl('leave/view');
+	$addnewsuccessurl = $this->baseUrl('leave/index');
 	$failureurl = $this->viewurl;
 	
 	// $hoursavailable = '16';
-	$hoursavailable = getHoursAvailable($timeoff->getUserID(), $timeoff->getTypeID(), $config->system->yearstart, $config->system->yearend); //debugMessage($hoursavailable);
-	$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/$config->system->hoursinday); // debugMessage($daysavailable);
+	$hoursavailable = getHoursAvailable($leave->getUserID(), $leave->getTypeID(), getYearStart(), getYearEnd()); //debugMessage($hoursavailable);
+	$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/getHoursInDay()); // debugMessage($daysavailable);
 		
 	#in case of errors in session, populate the fields from session
 	if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
-		$timeoff->processPost($session->getVar(FORM_VALUES));	
+		$leave->processPost($session->getVar(FORM_VALUES));	
 	}
 	
-	$pageid = "timeoff_index";
-	$timeoffs = getTimeoffTypes();
-	$title = 'Timeoff Requests';
+	$pageid = "leave_index";
+	$leaves = getLeaveTypes();
+	$title = 'Leave Requests';
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
@@ -148,7 +148,7 @@ $(document).ready(function() {
 			return false;
 		}
 		return true;        
-	}, "Minimum allowed is <?php echo $config->system->hoursinday; ?> Hours (1 Day) ");
+	}, "Minimum allowed is <?php echo getHoursInDay(); ?> Hours (1 Day) ");
 	
 	// validate that user can not request more than is available
 	$.validator.addMethod("duration_validation", function(value, element) {            
@@ -171,16 +171,16 @@ $(document).ready(function() {
 		var durationtype = $('[name=durationtype]:checked').val();  // alert(durationtype);
 		var availablehrs = '<?php echo $hoursavailable; ?>';  
 		var availabledays = '<?php echo $daysavailable; ?>';  
-		var hoursinday = '<?php echo $config->system->hoursinday; ?>'; // alert(parseInt(duration) % parseInt(hoursinday))
+		var hoursinday = '<?php echo getHoursInDay(); ?>'; // alert(parseInt(duration) % parseInt(hoursinday))
 		if(durationtype == 1 && parseInt(duration) % parseInt(hoursinday) != 0){
 			return false;
 		}
 		return true;        
-	}, "Should be multiple of <?php echo $config->system->hoursinday; ?> Hours or 1 Day");
+	}, "Should be multiple of <?php echo getHoursInDay(); ?> Hours or 1 Day");
 	
 	$("#typeid").change(function(){
 		var url = '<?php echo stripURL($this->viewurl); ?>'; //alert(url);
-		var currenttypeid = '<?php echo $timeoff->getTypeID(); ?>';
+		var currenttypeid = '<?php echo $leave->getTypeID(); ?>';
 		
 		var typeid = $(this).val();
 		var newurl = '<?php echo stripURL($this->viewurl).'/typeid/'; ?>'+typeid; //alert(newurl);
@@ -194,7 +194,7 @@ $(document).ready(function() {
 	
 	$("#userid").change(function(){
 		var url = '<?php echo stripURL($this->viewurl); ?>'; //alert(url);
-		var currentuserid = '<?php echo $timeoff->getUserID(); ?>';
+		var currentuserid = '<?php echo $leave->getUserID(); ?>';
 		
 		var userid = $(this).val();
 		var newurl = '<?php echo stripURL($this->viewurl).'/userid/'; ?>'+userid; //alert(newurl);
@@ -210,11 +210,11 @@ $(document).ready(function() {
 		}
 	});
 	
-	<?php if($timeoff->getdurationtype() == 2){ ?>
+	<?php if($leave->getdurationtype() == 2){ ?>
 		$("#durationtype_2").attr('checked', true);
 		$("#durationtype_1").attr('checked', false);
 	<?php } ?>
-	<?php if($timeoff->getdurationtype() == 1){ ?>
+	<?php if($leave->getdurationtype() == 1){ ?>
 		$("#durationtype_1").attr('checked', true);
 		$("#durationtype_2").attr('checked', false);
 	<?php } ?>
@@ -230,9 +230,9 @@ $(document).ready(function() {
                 </div>
                 <div class="box-content nopadding">
                     <form class="form-horizontal form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
-                        <input name="entityname" id="entityname" type="hidden" value="Timeoff" />
-                        <input type="hidden" id="id" name="id" value="<?php echo encode($timeoff->getID()); ?>" />
-                        <input type="hidden" id="status_old" name="status_old" value="<?php echo $timeoff->getStatus(); ?>" />
+                        <input name="entityname" id="entityname" type="hidden" value="Leave" />
+                        <input type="hidden" id="id" name="id" value="<?php echo encode($leave->getID()); ?>" />
+                        <input type="hidden" id="status_old" name="status_old" value="<?php echo $leave->getStatus(); ?>" />
                         <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
                         <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
                         <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
@@ -241,7 +241,7 @@ $(document).ready(function() {
                             <div class="form-group">
                                 <label class="col-sm-3 control-label"><?php echo $this->translate('leave_user_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                                 <div class="col-sm-9">
-                                    <?php if(isEmptyString($timeoff->getID())){ ?>
+                                    <?php if(isEmptyString($leave->getID())){ ?>
                                         <?php
                                             $allvalues = getUsers();
                                             $dropdown = new Zend_Form_Element_Select('userid',
@@ -252,38 +252,38 @@ $(document).ready(function() {
                                                                     'class' => array('form-control','input-sm','width200')
                                                                 )
                                             );  
-                                            $dropdown->setValue($timeoff->getUserID()); 
+                                            $dropdown->setValue($leave->getUserID()); 
                                             echo $dropdown->render();
                                         ?>
                                     <?php } else { ?>
-                                        <?php echo $timeoff->getUser()->getName(); ?>
-                                        <input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
+                                        <?php echo $leave->getUser()->getName(); ?>
+                                        <input type="hidden" id="userid" name="userid" value="<?php echo $leave->getUserID(); ?>" />
                                     <?php } ?>
                                     <div id="userid_error"></div>
                                 </div>
                             </div>
                         <?php } else { ?>
-                            <input type="hidden" id="userid" name="userid" value="<?php echo $timeoff->getUserID(); ?>" />
+                            <input type="hidden" id="userid" name="userid" value="<?php echo $leave->getUserID(); ?>" />
                         <?php } ?>
                         <div class="form-group">
                             <label class="col-sm-3 control-label"><?php echo $this->translate('leave_typeid_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <?php if(isEmptyString($timeoff->getID())){ ?>
+                                <?php if(isEmptyString($leave->getID())){ ?>
                                     <?php
                                         $dropdown = new Zend_Form_Element_Select('typeid',
                                                             array(
-                                                                'multiOptions' => $timeoffs,
+                                                                'multiOptions' => $leaves,
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
                                                                 'class' => array('form-control','input-sm','width200')
                                                             )
                                         );  
-                                        $dropdown->setValue($timeoff->getTypeID()); 
+                                        $dropdown->setValue($leave->getTypeID()); 
                                         echo $dropdown->render();
                                     ?>
                                 <?php } else { ?>
-                                    <?php echo $timeoff->getType()->getName(); ?>
-                                    <input type="hidden" id="typeid" name="typeid" value="<?php echo $timeoff->getTypeID(); ?>" />
+                                    <?php echo $leave->getType()->getName(); ?>
+                                    <input type="hidden" id="typeid" name="typeid" value="<?php echo $leave->getTypeID(); ?>" />
                                 <?php } ?>
                                 </span>
                                 <div id="typeid_error"></div>
@@ -292,7 +292,7 @@ $(document).ready(function() {
                         <div class="form-group">
                             <label class="col-sm-3 control-label"><?php echo $this->translate('leave_description_label'); ?>:</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control expanding" id="remarks" name="remarks"><?php echo $timeoff->getRemarks(); ?></textarea>
+                                <textarea class="form-control expanding" id="remarks" name="remarks"><?php echo $leave->getRemarks(); ?></textarea>
                                 <div id="remarks_error"></div>
                             </div>
                         </div>
@@ -303,7 +303,7 @@ $(document).ready(function() {
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Start Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getstartdate()); ?>" />
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="startdate" id="startdate" value="<?php echo changeMySQLDateToPageFormat($leave->getstartdate()); ?>" />
                                 <div id="startdate_error"></div>
                             </div>
                         </div>
@@ -314,18 +314,18 @@ $(document).ready(function() {
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Time Requested: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <input type="text" name="duration" id="duration" class="form-control input-sm centeralign isnumber bolded width100 inline floatleft" value="<?php echo $timeoff->getDuration(); ?>" /> &nbsp;
-                                <label class="radio radio-inline"><input type="radio" name="durationtype" id="durationtype_2" class="" value="2" <?php echo $timeoff->getdurationtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
-                                <label class="radio radio-inline" style="margin-left:20px;"><input type="radio" name="durationtype" id="durationtype_1" checked="checked" class="" value="1" <?php echo $timeoff->getdurationtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
+                                <input type="text" name="duration" id="duration" class="form-control input-sm centeralign isdecimal bolded width100 inline floatleft" value="<?php echo $leave->getDuration(); ?>" /> &nbsp;
+                                <label class="radio radio-inline"><input type="radio" name="durationtype" id="durationtype_2" class="" value="2" <?php echo $leave->getdurationtype() == '2' ? 'checked="checked"' : ''; ?> /> Days</label>
+                                <label class="radio radio-inline" style="margin-left:20px;"><input type="radio" name="durationtype" id="durationtype_1" checked="checked" class="" value="1" <?php echo $leave->getdurationtype() == '1' ? 'checked="checked"' : ''; ?> /> Hours &nbsp;</label>
                                 <div class="divider5"></div>
-                                <span class="pagedescription bolded">Enter time in multiples of 1 day (<?php echo $config->system->hoursinday; ?> Hours)</span>
+                                <span class="pagedescription bolded">Enter time in multiples of 1 day (<?php echo getHoursInDay(); ?> Hours)</span>
                                 <div id="duration_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-3 control-label">End Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getenddate()); ?>" />
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="enddate" id="enddate" value="<?php echo changeMySQLDateToPageFormat($leave->getenddate()); ?>" />
                                 <span style="font-size:11px;color:#999;"></span>
                                 <div class="divider5"></div>
                                 <div id="enddate_error"></div><div id="endtime_error"></div>
@@ -334,7 +334,7 @@ $(document).ready(function() {
                         <div class="form-group">
                             <label class="col-sm-3 control-label">Return Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="returndate" id="returndate" value="<?php echo changeMySQLDateToPageFormat($timeoff->getreturndate()); ?>" />
+                                <input type="text" class="form-control input-sm datefield readonly width100 ordinary" name="returndate" id="returndate" value="<?php echo changeMySQLDateToPageFormat($leave->getreturndate()); ?>" />
                                 <div id="returndate_error"></div>
                             </div>
                         </div>
@@ -343,16 +343,16 @@ $(document).ready(function() {
                                 <label class="col-sm-3 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
                                 <div class="col-sm-9">
                                     <?php
-										$timeoffstatuses = getTimeoffStatuses();
+										$leavestatuses = getLeaveStatuses();
 										$dropdown = new Zend_Form_Element_Select('status',
 															array(
-																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $timeoffstatuses),
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $leavestatuses),
 																'view' => new Zend_View(),
 																'decorators' => array('ViewHelper'),
 																'class' => array('form-control','input-sm','width200')
 															)
 										);  
-										$dropdown->setValue($timeoff->getStatus()); 
+										$dropdown->setValue($leave->getStatus()); 
 										echo $dropdown->render();
 									?><div id="status_error"></div>
                                 </div>
@@ -360,11 +360,11 @@ $(document).ready(function() {
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">Leave Taken</label>
                                 <div class="col-sm-9">
-                                    <label class="checkbox checkbox-inline"><input type="checkbox" id="istaken" name="istaken" <?php echo $timeoff->getStatus() == 5 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Mark as Taken" /> &nbsp; Mark Timeoff as Taken</label>
+                                    <label class="checkbox check-inline" for="istaken"><input type="checkbox" id="istaken" name="istaken" <?php echo $leave->getStatus() == 5 ? 'checked="checked"' : ''; ?> class="form-control inline" value="1" title="Mark as Taken" style="width:auto; margin:0; margin-right:15px; height:18px;" /> &nbsp;&nbsp; &nbsp; Mark Leave as Taken</label>
                                 </div>
                             </div>
                        	<?php } else { ?>
-                        	<input type="hidden" id="status" name="status" value="<?php echo $timeoff->getStatus(); ?>" />
+                        	<input type="hidden" id="status" name="status" value="<?php echo $leave->getStatus(); ?>" />
                         <?php } ?>
                         <div class="form-actions">
                             <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>

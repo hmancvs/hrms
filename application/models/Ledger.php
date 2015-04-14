@@ -23,8 +23,8 @@ class Ledger extends BaseEntity  {
 		$this->hasColumn('taxabletype', 'integer', null, array('default' => NULL));
 		$this->hasColumn('filename', 'string', 255);
 		
-		$this->hasColumn('timeoffid', 'integer', null, array('default' => NULL));
-		$this->hasColumn('timeofflength', 'decimal', 10, array('scale' => '1','default' => '0'));
+		$this->hasColumn('leaveid', 'integer', null, array('default' => NULL));
+		$this->hasColumn('leavelength', 'decimal', 10, array('scale' => '1','default' => '0'));
 		$this->hasColumn('lengthtype', 'integer', null, array('default' => 1)); // 1=>hours, 2=>days
 		$this->hasColumn('payrollid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('payrolltrigger', 'integer', null, array('default' => NULL));
@@ -72,9 +72,9 @@ class Ledger extends BaseEntity  {
 						'foreign' => 'id'
 				)
 		);
-		$this->hasOne('TimeoffType as timeofftype',
+		$this->hasOne('LeaveType as leavetype',
 				array(
-						'local' => 'timeoffid',
+						'local' => 'leaveid',
 						'foreign' => 'id'
 				)
 		);
@@ -84,7 +84,12 @@ class Ledger extends BaseEntity  {
 						'foreign' => 'id'
 				)
 		);
-		
+		$this->hasOne('UserAccount as approver',
+				array(
+						'local' => 'approvedbyid',
+						'foreign' => 'id'
+				)
+		);
 	}
 	/**
 	 * Custom model validation
@@ -131,8 +136,8 @@ class Ledger extends BaseEntity  {
 			unset($formvalues['ledgertype']);
 		} else {
 			if($formvalues['ledgertype'] == 1){
-				$formvalues['timeoffid'] = NULL;
-				$formvalues['timeofflength'] = NULL;
+				$formvalues['leaveid'] = NULL;
+				$formvalues['leavelength'] = NULL;
 				$formvalues['lengthtype'] = NULL;
 				$formvalues['debitpayroll'] = NULL;
 			}
@@ -150,8 +155,8 @@ class Ledger extends BaseEntity  {
 		if(isArrayKeyAnEmptyString('benefitid', $formvalues)){
 			unset($formvalues['benefitid']);
 		} 
-		if(isArrayKeyAnEmptyString('timeoffid', $formvalues)){
-			unset($formvalues['timeoffid']);
+		if(isArrayKeyAnEmptyString('leaveid', $formvalues)){
+			unset($formvalues['leaveid']);
 		}
 		if(isArrayKeyAnEmptyString('trxndate', $formvalues)){
 			unset($formvalues['trxndate']);
@@ -162,14 +167,14 @@ class Ledger extends BaseEntity  {
 		if(isArrayKeyAnEmptyString('enddate', $formvalues)){
 			unset($formvalues['enddate']);
 		}
-		if(isArrayKeyAnEmptyString('timeofflength', $formvalues)){
-			unset($formvalues['timeofflength']);
+		if(isArrayKeyAnEmptyString('leavelength', $formvalues)){
+			unset($formvalues['leavelength']);
 		}
 		if(isArrayKeyAnEmptyString('lengthtype', $formvalues)){
 			unset($formvalues['lengthtype']);
 		} else {
 			if($formvalues['lengthtype'] == 2){
-				$formvalues['timeofflength'] = $formvalues['timeofflength'] * $config->system->hoursinday;
+				$formvalues['leavelength'] = $formvalues['leavelength'] * getHoursInDay();
 				$formvalues['lengthtype'] = 1;
 			}
 		}
@@ -222,6 +227,102 @@ class Ledger extends BaseEntity  {
 			$path = $baseUrl.'/uploads/users/user_'.$this->getUserID().'/benefits/'.$this->getFilename();
 		}
 		return $path;
+	}
+	# check if timesheet is approved
+	function isApproved(){
+		return $this->getStatus() == 1 ? true: false;
+	}
+	# check if timesheet is rejected
+	function isRejected(){
+		return $this->getStatus() == 4 ? true: false;
+	}
+	# save approval alert to application inbox and send email if specified on profile
+	function afterApprove(){
+		$this->sendApprovalConfirmationNotification();
+		return true;
+	}
+	# Send notification to inform user
+	function sendApprovalConfirmationNotification() {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		$session = SessionWrapper::getInstance();
+		
+		// assign values
+		$template->assign('firstname', $this->getUser()->getFirstName());
+		
+		$statuslabel = $this->isApproved() ? "Approved" : "Rejected";
+		$subject = "Benefits Requisition ".$statuslabel;
+		
+		$save_toinbox = true;
+		$type = "benefit";
+		$subtype = "benefit_".strtolower($statuslabel);
+		$viewurl = $template->serverUrl($template->baseUrl('ledger/list/ledgertype/1'));
+		
+		$rejectreason = "";
+		if($this->isRejected()){
+			$rejectreason = "<br><b>Synopsis:</b> ".$this->getRemarks()."";
+		}
+		$message_contents = "<p>This is to confirm that your requisition for <b>".changeMySQLDateToPageFormat($this->getTrxnDate())." (".getCountryCurrencyCode(). " ".formatMoneyOnly($this->getAmount()).")</b> has been successfully ".$statuslabel.$rejectreason.".</p>
+		<p>To view status online <a href='".$viewurl."'>click here<a></p>
+		<br />
+		<p>".$this->getApprover()->getName()."<br />
+		".getAppName()."</p>
+		";
+		$template->assign('contents', $message_contents);
+
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+
+		// configure base stuff
+		$mail->addTo($this->getUser()->getEmail(), $this->getUser()->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+		
+		$mail->setSubject($subject);
+		// render the view as the body of the email
+		
+		$html = $template->render('default.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); exit();
+		
+		if($this->getUser()->allowEmailForBenefitApproval() && !isEmptyString($this->getUser()->getEmail())){
+			try {
+				$mail->send();
+				$session->setVar("custommessage1", "Email sent to ".$this->getUser()->getEmail());
+			} catch (Exception $e) {
+				$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			}
+		}
+		
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+		
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+				"senderid" => DEFAULT_ID,
+				"subject" => $subject,
+				"contents" => $message_contents,
+				"html" => $html,
+				"type" => $type,
+				"subtype" => $subtype,
+				"refid" => $this->getID(),
+				"recipients" => array(
+					md5(1) => array("recipientid" => $this->getUserID())
+				)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+	
+		return true;
 	}
 }
 

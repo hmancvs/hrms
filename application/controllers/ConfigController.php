@@ -18,10 +18,10 @@ class ConfigController extends SecureController   {
 	 */
 	function getActionforACL() {
 		$action = strtolower($this->getRequest()->getActionName()); 
-		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add" || $action = "timeoff" || $action = "timeoffcreate" || $action = "timeoffindex" || $action = "shifts" || $action = "shiftscreate" || $action = "shiftsindex"){
+		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add" || $action = "leave" || $action = "leavecreate" || $action = "leaveindex" || $action = "shifts" || $action = "shiftscreate" || $action = "shiftsindex"){
 			return ACTION_EDIT;
 		}
-		if($action == "variables" || $action == "globalconfig" || $action = "timeofflistsearch") {
+		if($action == "variables" || $action == "globalconfig" || $action = "leavelistsearch") {
 			return ACTION_LIST; 
 			// return ACTION_VIEW;
 		}
@@ -35,7 +35,7 @@ class ConfigController extends SecureController   {
 	function variablesAction(){
     	// parent::listAction();
 		if($this->_getParam('type') == 10){
-			$this->_helper->redirector->gotoUrl($this->view->baseUrl('config/timeoff'));
+			$this->_helper->redirector->gotoUrl($this->view->baseUrl('config/leave'));
 		}
 		if($this->_getParam('type') == 11){
     		$this->_helper->redirector->gotoUrl($this->view->baseUrl('department/list'));
@@ -56,7 +56,7 @@ class ConfigController extends SecureController   {
      	$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		
-		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit;
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); // exit;
 		if(isArrayKeyAnEmptyString('noreload', $formvalues)){
 			$hasnoreload = false; 	
 		} else {
@@ -189,7 +189,7 @@ class ConfigController extends SecureController   {
 									'createdby' => $session->getVar('userid'),
 									'companyid' => getCompanyID()
 							);
-				debugMessage($dataarray);
+				// debugMessage($dataarray);
 				if(!isArrayKeyAnEmptyString('id', $formvalues)){
 					$lookupvalue->populate($formvalues['id']);
 					$beforesave = $lookupvalue->toArray(); // debugMessage($beforesave);
@@ -326,10 +326,10 @@ class ConfigController extends SecureController   {
 		// exit();
 	}
 	
-	function timeoffAction(){
+	function leaveAction(){
 		
 	}
-	function timeoffcreateAction(){
+	function leavecreateAction(){
 		$session = SessionWrapper::getInstance();
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
@@ -338,24 +338,24 @@ class ConfigController extends SecureController   {
 		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit();
 		$formvalues['id'] = $id = decode($formvalues['id']);
 			
-		$timeoff = new TimeoffType();
+		$leave = new LeaveType();
 		if(!isArrayKeyAnEmptyString('id', $formvalues)){
-			$timeoff->populate($id);
+			$leave->populate($id);
 			$formvalues['lastupdatedby'] = $session->getVar('userid');
 		} else {
 			$formvalues['createdby'] = $session->getVar('userid');
 		}
 			
-		$timeoff->processPost($formvalues);
-		if($timeoff->hasError()){
-			/* debugMessage($timeoff->toArray());
-			 debugMessage('errors are '.$timeoff->getErrorStackAsString());
+		$leave->processPost($formvalues);
+		if($leave->hasError()){
+			/* debugMessage($leave->toArray());
+			 debugMessage('errors are '.$leave->getErrorStackAsString());
 			exit(); */
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 		
 		try {
-			$timeoff->save(); //debugMessage($timeoff->toArray());
+			$leave->save(); //debugMessage($leave->toArray());
 			$session->setVar(SUCCESS_MESSAGE, $this->_getParam('successmessage'));
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
 		} catch (Exception $e) {
@@ -364,11 +364,11 @@ class ConfigController extends SecureController   {
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 	}
-	function timeoffindexAction(){
+	function leaveindexAction(){
 		
 	}
-	function timeofflistsearchAction(){
-		$this->_helper->redirector->gotoSimple("timeoff", "config",
+	function leavelistsearchAction(){
+		$this->_helper->redirector->gotoSimple("leave", "config",
 				$this->getRequest()->getModuleName(),
 				array_remove_empty(array_merge_maintain_keys($this->_getAllParams(), $this->getRequest()->getQuery())));
 	}
@@ -400,7 +400,7 @@ class ConfigController extends SecureController   {
 		}
 		// exit;
 		try {
-			$shift->save(); //debugMessage($timeoff->toArray());
+			$shift->save(); //debugMessage($leave->toArray());
 			$session->setVar(SUCCESS_MESSAGE, $this->_getParam('successmessage'));
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
 		} catch (Exception $e) {

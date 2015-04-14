@@ -72,36 +72,5 @@ class AppConfig extends BaseEntity {
 	function isEditable(){
 		return $this->getEditable() == 1 ? true : false;
 	}
-	function getLogo(){
-		return $this->getDescription();
-	}
-	# determine if person has profile image
-	function hasLogo(){
-		$real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."logo".DIRECTORY_SEPARATOR.$this->getLogo();
-		$real_path2 = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."system".DIRECTORY_SEPARATOR."logo".DIRECTORY_SEPARATOR."large_".$this->getLogo();
-		if((file_exists($real_path) || file_exists($real_path2)) && !isEmptyString($this->getLogo())){
-			return true;
-		}
-		return false;
-	}
-	# determine path to medium profile picture
-	function getLogoPath() {
-		$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
-		$path = $baseUrl.'/uploads/system/default_logo.png';
-		if($this->hasLogo()){
-			$path = $baseUrl.'/uploads/system/logo/'.$this->getLogo();
-		}
-		return $path;
-	}
-	# determine path to large profile picture
-	function getLargeLogoPath() {
-		$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
-		$path = $baseUrl.'/uploads/system/default_logo.png';
-		if($this->hasLogo()){
-			$path = $baseUrl.'/uploads/system/logo/large_'.$this->getLogo();
-		}
-		// debugMessage($path);
-		return $path;
-	}
 }
 ?>

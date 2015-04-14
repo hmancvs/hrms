@@ -6,10 +6,22 @@
             	<a class="btn btn-default confirm-dialog" message="Resend activation instructions to User's Email?" action="<?php echo $this->baseUrl('profile/inviteuser/id/'.$user->getID().'/successurl/'.encode($this->viewurl)); ?>">&nbsp; Resend Activation</a>
             <?php } ?>
         <?php } ?>
+        <?php if($allowedit){ ?>
+            <a class="btn btn-grey blockanchor" href="<?php echo $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>">Upload Photo</a>
+        <?php } ?>
+        <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isDeactivated() && !$isme){ ?>
+            <a class="btn btn-success confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/1/successmessage/profile_reactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_reactivate_confirmation'); ?>"> Re-Activate Account</a>
+        <?php } ?>
+        <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isUserActive() && !$user->isDeactivated() && !$isme){ ?>
+           <a class="btn btn-orange confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/2/successmessage/profile_deactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_deactivate_confirmation'); ?>">De-Activate Account</a>
+        <?php } ?>
+        <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme && false){ ?>
+            <a class="btn btn-danger confirm-dialog" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" action="<?php echo $this->baseUrl($controller.'/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>">Delete Account</a>
+        <?php } ?>
     </div>
     <div class="col-sm-12 paddingleft0">
         <fieldset class="fieldsetcontainer">
-            <legend>Account Settings and Preferences</legend>
+            <legend>Account Settings</legend>
             <div class="panel-body well-sm">
                 <div class="row-fluid">
                     <div class="col-sm-12">
@@ -72,22 +84,56 @@
                 </div>
             </div>
         </fieldset>
-        <div class="form-group">
-            <div class="col-sm-12">
-                <div class="divider5"></div>
-                <?php if($allowedit){ ?>
-                    <a class="btn btn-grey blockanchor" href="<?php echo $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>">Upload Photo</a>
-                <?php } ?>
-                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isDeactivated() && !$isme){ ?>
-                    <a class="btn btn-success confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/1/successmessage/profile_reactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_reactivate_confirmation'); ?>"> Re-Activate Account</a>
-                <?php } ?>
-                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isUserActive() && !$user->isDeactivated() && !$isme){ ?>
-                   <a class="btn btn-orange confirm-dialog" action="<?php echo $this->baseUrl("profile/updatestatus/id/".encode($user->getID())."/status/2/successmessage/profile_deactivate_success/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('profile_deactivate_confirmation'); ?>">De-Activate Account</a>
-                <?php } ?>
-                <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme && false){ ?>
-                    <a class="btn btn-danger confirm-dialog" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" action="<?php echo $this->baseUrl($controller.'/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>">Delete Account</a>
-                <?php } ?>
-            </div>
-        </div>
+        <link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/icheck/all.css')); ?>">
+		<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/icheck/jquery.icheck.min.js')); ?>"></script>
+        <style>
+            .check-line  {
+                display:block;
+            }
+            .check-line .inline {	
+                width:100%; left:25px; top:-2px;
+            }
+            .fa.checker {
+                background-color:#333;
+                color:#fff;
+                font-size:12px;
+                padding:5px;
+                margin-right:15px;
+            }
+            .fa.checker.unchecked {
+                padding:5px 6px;
+            }
+        </style>
+        <div class="col-sm-12 paddingleft0">
+            <fieldset class="fieldsetcontainer">
+                <legend>Preferences</legend>
+            	<div class="panel-body well-sm">
+                    <div class="row-fluid">
+                        <div class="col-sm-12">
+                            <div class="form-group">
+                                <div class="col-sm-12">
+                                	<?php 
+										$preferrances = getUserPreferrenceOptions();
+									?>
+                                	<?php foreach($preferrances as $key => $preferrance){ 
+										$currentvalue = $user->get($key, true); // debugMessage($currentvalue);
+									?>
+                                    	<div class="check-line">
+                                            <label class='blocked' for="<?php echo $key; ?>">
+                                                <i class="fa <?php echo $user->get($key, true) == 1 ? 'fa-check checked' : 'fa-remove unchecked'; ?> checker"></i> 
+                                                <p class="form-control-static nullifempty view lineblocked bolded"><?php echo $preferrance; ?></p>
+                                            </label>
+                                        </div>
+                                        <?php if($key == 'emailon_leave_approvalcompleted' || $key == 'emailon_leave_approvalrequired'){ ?>
+                                        	<div class="divider30"></div>
+                                        <?php } ?>
+                                    <?php } ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+       	</div>
 	</div>
 </div>            

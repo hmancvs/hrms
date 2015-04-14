@@ -1,0 +1,102 @@
+<div class="row">
+	<div class="makeabsolute" style="right:35px; top:11px; z-index:1000;">
+		<?php if(!$showfullscreen && $section == 'view' && $acl->checkPermission('Document', ACTION_CREATE)) { ?>
+            <a class="btn btn-primary btn-xs blockanchor hideonprint" href="<?php echo $viewurl.'/tab/documents/section/upload'; ?>">&nbsp; Upload New</a>
+        <?php } ?>
+    </div>
+    <div class="divider5"></div>
+    <div class="col-sm-12 paddingleft0">
+		<?php 
+        	$documenttypes = getDatavariables("DOCUMENT_TYPES");
+        ?>
+    	<?php if($section == 'view'){ ?>
+            <fieldset class="fieldsetcontainer minheight200">
+                <legend><?php echo $isme ? 'My ' : trim($user->getName())."'s "; ?>Documents</legend>
+                <div class="panel-body well-sm">
+                    <div class="row-fluid">
+                        <div class="col-sm-12">
+                            <?php
+                                $all_results_query = "SELECT d.* FROM document d inner join useraccount as u on d.userid = u.id where d.userid = '".$user->getID()."' ORDER BY d.dateuploaded DESC, d.id desc ";
+                                // debugMessage($all_results_query); // exit;
+                                
+                                $conn = Doctrine_Manager::connection(); 
+                                $result = $conn->fetchAll($all_results_query); // debugMessage($result);
+                                $hasdata = count($result) > 0 ? true : false;
+                                $countlabel = count($result) == 1 ? " Document" : " Documents";
+                            ?>
+                            <?php if($hasdata){ ?>
+                                <div class="paginatecustom padding10" style="padding-bottom: 4px; padding-left:0; font-style:italic;"><?php echo "Viewing <b>".count($result)."</b> ".$countlabel." "; ?></div>
+                            <?php } ?>
+                            <table class="table list table-bordered xborder-cells data-table" id="datatable">
+                                <thead>
+                                    <tr style="font-size:12px;">
+                                        <th class="nowrapping" style="width:200px;">Document Type</th>
+                                        <th>Title / Description</th>
+                                        <th style="width:175px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if(!$hasdata){ ?>
+                                        <tr>
+                                            <td colspan="5"><div style="clear:both;" class="alert alert-warning margin5">There are currently no documents</div></td>
+                                        </tr>
+                                    <?php } else { ?>
+                                        <?php foreach ($result as $line){
+                                            $baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
+                                            $abspath = 'uploads/users/user_'.$user->getID().'/documents';
+                                            $real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."users".DIRECTORY_SEPARATOR."user_".$user->getID().DIRECTORY_SEPARATOR."documents".DIRECTORY_SEPARATOR.$line['filename'];
+                                            $filepath = encode($real_path);
+                                        ?>
+                                            <tr style="font-size:12px; font-weight:normal;">
+                                                <td class="nowrapping"><?php echo isArrayKeyAnEmptyString($line['type'], $documenttypes) ? '' : $documenttypes[$line['type']]; ?></td>
+                                                <td><?php echo $line['title']; ?></td>
+                                                <td>
+                                                	<?php if($userid == $line['uploadedbyid']){ ?>
+                                                		<a href="<?php echo $this->serverUrl($this->baseUrl($abspath.'/'.$line['filename'])); ?>" class="btn" title="View" rel="tooltip" target="_blank"><i class="fa fa-list"></i></a> &nbsp;
+                                                    <?php } ?>
+                                                    <?php if($userid == $line['uploadedbyid'] && $acl->checkPermission('Document', ACTION_EDIT)){ ?>
+                                                    	<a href="<?php echo $viewurl.'/tab/documents/section/upload/docid/'.encode($line['id']); ?>" class="btn" title="Edit" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
+                                                    <?php } ?>
+                                                    <a href="<?php echo $this->baseUrl('download/index/path/'.encode($real_path).'/filename/'.encode($line['filename'])); ?>" class="btn" title="Download" rel="tooltip" target="_blank"><i class="fa fa-arrow-down"></i></a> &nbsp;
+                                                    <?php if($userid == $line['uploadedbyid']){ ?>
+                                                    	<a action="<?php echo $this->baseUrl('document/delete/id/'.encode($line['id'])."/entityname/Document/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" class="btn deleteline gonowhere" title="Delete" rel="tooltip"><i class="fa fa-trash"></i></a>
+                                                    <?php } ?>
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                    <?php } ?>
+                                </tbody>
+                            </table>
+                            
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        <?php } ?>
+        <?php if($section == 'upload'){ 
+			$document = new Document();
+	
+			if(isEmptyString($request->docid)){
+				$pagetitle = 'Upload Document';
+				$button_title = $this->translate('global_button_save'); 
+				$successmessage = 'global_upload_success';
+				$document->setUserID($user->getID());
+			} else {
+				$document->populate(decode($request->docid)); 
+				$pagetitle = 'Update Document';
+				$button_title = $this->translate('global_button_save_changes'); 
+				$successmessage = 'global_update_success'; 
+			}
+			
+			$successurl = $viewurl.'/tab/documents/';
+			$addnewsuccessurl = $viewurl.'/tab/documents/section/upload';
+			$failureurl = $this->viewurl;
+			
+			if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+				$document->processPost($session->getVar(FORM_VALUES));	
+			}
+		?>
+        	<?php require_once APPLICATION_PATH.'/views/scripts/document/add.phtml'; ?>
+       	<?php } ?>
+    </div>
+</div>

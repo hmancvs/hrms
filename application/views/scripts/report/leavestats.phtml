@@ -8,7 +8,7 @@
 	}
 	
 	// $session->setVar('toggled', "1");
-	$title = $reporttitle = "Timeoff Analysis";
+	$title = $reporttitle = "Leave Analysis";
 	$subtitle = 'Analysis'; 
 	$description = ''; 
 	
@@ -40,8 +40,8 @@
 	
 	$users = getUsers();
 	$trxtypes = getTrxnTypes();
-	$timeoffs = getTimeoffTypes();
-	$timeoffoptions = getHoursDaysDropdown();
+	$leaves = getLeaveTypes();
+	$leaveoptions = getHoursDaysDropdown();
 	$allstatuses = getBenefitStatuses();
 	$conn = Doctrine_Manager::connection();
 	
@@ -53,14 +53,14 @@
 	$approvedbenefits_query = "SELECT 
 	u.id as id,
 	IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername))as name,
-	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->today_iso."') AND b.status = 1, b.timeofflength, 0)) as today, 
-	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->yestday_iso."') AND b.status = 1, b.timeofflength, 0)) as yesterday, 
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND b.status = 1, b.timeofflength, 0)) as thisweek, 
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND b.status = 1, b.timeofflength, 0)) as lastweek ,
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND b.status = 1, b.timeofflength, 0)) as thismonth,
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND b.status = 1, b.timeofflength, 0)) as lastmonth, 
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayof2monthago_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayof2monthago_iso."') AND b.status = 1, b.timeofflength, 0)) as 2monthago, 
-	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofyear_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofyear_iso."') AND b.status = 1, b.timeofflength, 0)) as thisyear
+	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->today_iso."') AND b.status = 1, b.leavelength, 0)) as today, 
+	SUM(IF(TO_DAYS(b.trxndate) = TO_DAYS('".$this->yestday_iso."') AND b.status = 1, b.leavelength, 0)) as yesterday, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaythisweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaythisweek_iso."') AND b.status = 1, b.leavelength, 0)) as thisweek, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->mondaylastweek_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->sundaylastweek_iso."') AND b.status = 1, b.leavelength, 0)) as lastweek ,
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofthismonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofthismonth_iso."') AND b.status = 1, b.leavelength, 0)) as thismonth,
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayoflastmonth_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayoflastmonth_iso."') AND b.status = 1, b.leavelength, 0)) as lastmonth, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayof2monthago_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayof2monthago_iso."') AND b.status = 1, b.leavelength, 0)) as 2monthago, 
+	SUM(IF(TO_DAYS(b.trxndate) >= TO_DAYS('".$this->firstdayofyear_iso."') AND TO_DAYS(b.trxndate) <= TO_DAYS('".$this->lastdayofyear_iso."') AND b.status = 1, b.leavelength, 0)) as thisyear
 	FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id AND b.ledgertype = 2 AND b.trxntype = 1) ".$where_query." GROUP BY u.id order by name ";
 	// debugMessage($approvedbenefits_query);
 	$approvedbenefits_result = $conn->fetchAll($approvedbenefits_query); // debugMessage($approvedbenefits_result); // exit;
@@ -73,8 +73,8 @@
 	if(!isEmptyString($request->userid)){
 		$where_query .= " AND b.userid = '".$request->userid."' ";
 	}
-	if(!isEmptyString($request->timeoffid)){
-		$where_query .= " AND b.timeoffid = '".$request->timeoffid."' ";
+	if(!isEmptyString($request->leaveid)){
+		$where_query .= " AND b.leaveid = '".$request->leaveid."' ";
 	}
 	if(!isEmptyString($request->status)){
 		$where_query .= " AND b.status = '".$request->status."' ";
@@ -99,7 +99,7 @@
 		$group_query = " GROUP BY u.id, YEAR(b.trxndate) ";
 	}
 	
-	$trends_query = "SELECT u.id as id, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, b.trxndate, DAY(b.trxndate) as theday, MONTH(b.trxndate) as themonth, YEAR(b.trxndate) as theyear, YEARWEEK(b.trxndate, 3) as theyearweek, WEEK(b.trxndate,3) as theweek, SUM(b.timeofflength) as timeofflength FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id) ".$where_query." ".$group_query." order by b.trxndate asc, name asc ";
+	$trends_query = "SELECT u.id as id, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as name, b.trxndate, DAY(b.trxndate) as theday, MONTH(b.trxndate) as themonth, YEAR(b.trxndate) as theyear, YEARWEEK(b.trxndate, 3) as theyearweek, WEEK(b.trxndate,3) as theweek, SUM(b.leavelength) as leavelength FROM useraccount AS u LEFT Join ledger AS b ON (b.userid = u.id) ".$where_query." ".$group_query." order by b.trxndate asc, name asc ";
 	// debugMessage($trends_query);
 	$trends_result = $conn->fetchAll($trends_query); // debugMessage($approvedhours_result);
 	
@@ -112,7 +112,7 @@
 			$processeddata[$line['trxndate']][$line['id']]['name'] = $line['name'];
 			$processeddata[$line['trxndate']][$line['id']]['date'] = $line['trxndate'];
 			$processeddata[$line['trxndate']][$line['id']]['id'] = $line['id'];
-			$processeddata[$line['trxndate']][$line['id']]['timeofflength'] = $line['timeofflength'];
+			$processeddata[$line['trxndate']][$line['id']]['leavelength'] = $line['leavelength'];
 		}
 		if($groupby == "2"){
 			$processeddata[$line['theyearweek']][$line['id']]['id'] = $line['id'];
@@ -122,7 +122,7 @@
 			$processeddata[$line['theyearweek']][$line['id']]['theweek'] = $line['theweek'];
 			$processeddata[$line['theyearweek']][$line['id']]['theyearweek'] = $line['theyearweek'];
 			$processeddata[$line['theyearweek']][$line['id']]['id'] = $line['id'];
-			$processeddata[$line['theyearweek']][$line['id']]['timeofflength'] = $line['timeofflength'];
+			$processeddata[$line['theyearweek']][$line['id']]['leavelength'] = $line['leavelength'];
 		}
 		if($groupby == "3"){
 			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
@@ -130,14 +130,14 @@
 			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['theyear'] = $line['theyear'];
 			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['themonth'] = $line['themonth'];
 			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['id'] = $line['id'];
-			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['timeofflength'] = $line['timeofflength'];
+			$processeddata[$line['theyear'].$line['themonth']][$line['id']]['leavelength'] = $line['leavelength'];
 		}
 		if($groupby == "4"){
 			$processeddata[$line['theyear']][$line['id']]['id'] = $line['id'];
 			$processeddata[$line['theyear']][$line['id']]['name'] = $line['name'];
 			$processeddata[$line['theyear']][$line['id']]['theyear'] = $line['theyear'];
 			$processeddata[$line['theyear']][$line['id']]['id'] = $line['id'];
-			$processeddata[$line['theyear']][$line['id']]['timeofflength'] = $line['timeofflength'];
+			$processeddata[$line['theyear']][$line['id']]['leavelength'] = $line['leavelength'];
 		}
 	}/**/
 	// debugMessage($processeddata); exit;
@@ -166,7 +166,7 @@ $(document).ready(function() {
 			enabled: false
 		},
         title: {
-            text: 'Timeoff Accruals (<?php echo $request->startdate; ?> - <?php echo $request->enddate; ?>)',
+            text: 'Leave Accruals (<?php echo $request->startdate; ?> - <?php echo $request->enddate; ?>)',
 			style: {
                 color: '#4a6694',
                 fontSize: '14px'
@@ -208,8 +208,8 @@ table.table tbody.monitorbody tr td.variabletd {
 	<div class="col-sm-12">
         <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
             <ul class="nav nav-tabs hideonprint">
-                <li class="<?php echo $action == 'timeoffstats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'timeoffstats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'timeoffstats' ? '' : $this->baseUrl('report/timeoffstats'); ?>">Summary Report</a></li>
-                <li class="<?php echo $action == 'timeoffdetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'timeoffdetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/timeoffdetails'); ?>">Detailed Report</a></li>
+                <li class="<?php echo $action == 'leavestats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'leavestats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'leavestats' ? '' : $this->baseUrl('report/leavestats'); ?>">Summary Report</a></li>
+                <li class="<?php echo $action == 'leavedetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'leavedetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/leavedetails'); ?>">Detailed Report</a></li>
             </ul>
             <div class="row">
                 <div class="col-sm-12">
@@ -323,15 +323,15 @@ table.table tbody.monitorbody tr td.variabletd {
                                 <li>
                                     <label class="blocked" style="font-size:12px !important;">Category</label>
                                     <?php
-                                        $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                        $dropdown = new Zend_Form_Element_Select('leaveid',
                                                             array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $timeoffs),
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All'), $leaves),
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
                                                                 'class' => array("form-control", "input-sm")
                                                             )
                                         );  
-                                        $dropdown->setValue($request->getParam('timeoffid')); 
+                                        $dropdown->setValue($request->getParam('leaveid')); 
                                         echo $dropdown->render();
                                     ?>
                                 </li>
@@ -405,7 +405,7 @@ table.table tbody.monitorbody tr td.variabletd {
                                                         <?php } ?>
                                                     </td>
                                                     <?php foreach($userids as $id => $user){ ?>
-                                                        <td class="rightalign"><?php echo isArrayKeyAnEmptyString($id, $line) ? '' : $line[$id]['timeofflength']; ?></td>
+                                                        <td class="rightalign"><?php echo isArrayKeyAnEmptyString($id, $line) ? '' : $line[$id]['leavelength']; ?></td>
                                                     <?php } ?>
                                                 </tr>
                                             <?php } ?>

@@ -63,7 +63,7 @@
                                     $countries = getCountries();
                                     $countrydropdown = new Zend_Form_Element_Select('country',
                                                         array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>", "UG"=>"Uganda"), $countries),
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => "<Select One>"), $countries),
                                                             'view' => new Zend_View(), 
                                                             'decorators' => array('ViewHelper'),
                                                             'class' => array('form-control','input-sm','xwidth200')                                            	)
@@ -135,14 +135,14 @@
                         <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
-                                <input type="text" name="phone" id="phone" class="form-control width150 isnumber inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /> 
+                                <input type="text" name="phone" id="phone" class="form-control width150 isnumber inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g <?php echo getDefaultPhoneCode(); ?>782123456" maxlength="<?php echo getMaxPhoneLength(); ?>" /> 
                                 <div id="phone_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
                             <div class="col-sm-8">
-                                <input type="text" name="phone2" id="phone2" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g 256414123456" maxlength="12" /><div id="phone2_error"></div>
+                                <input type="text" name="phone2" id="phone2" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g <?php echo getDefaultPhoneCode(); ?>414123456" maxlength="<?php echo getMaxPhoneLength(); ?>" /><div id="phone2_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -240,7 +240,7 @@
                         <div class="form-group contact_text">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_phone_label'); ?>:</label>
                             <div class="col-sm-8">
-                                <input type="text" name="contactphone" id="contactphone" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getContactPhone(); ?>" placeholder="e.g 256782123456" maxlength="12" /><div id="contactphone_error"></div>
+                                <input type="text" name="contactphone" id="contactphone" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getContactPhone(); ?>" placeholder="e.g <?php echo getDefaultPhoneCode(); ?>782123456" maxlength="12" /><div id="contactphone_error"></div>
                             </div>
                         </div>
                         <div class="form-group">

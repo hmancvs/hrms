@@ -155,7 +155,7 @@ class CronController extends IndexController   {
 				# build the mailer class
 				// $mail->addTo($config->get(APPLICATION_ENV)->get("databasebackupemail"));
 				$mail->addTo($backupemail);
-				$mail->setFrom($config->notification->emailmessagesender, $config->notification->notificationsendername);
+				$mail->setFrom($config->notification->defaultadminemail, $config->notification->defaultadminname);
 				$mail->setSubject(sprintf($this->_translate->_("database_backup_subject"), getAppName(), date("j F Y h:iA"))); #  Subject in the email to be sent.
 				$mail->setBodyHtml(sprintf($this->_translate->_("database_backup_body"), getAppName())); #  Brief Message.
 					

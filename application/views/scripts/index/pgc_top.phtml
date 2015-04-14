@@ -1,3 +1,8 @@
+<?php 
+if($request->pdf == '1'){
+	ob_start();
+}
+?>
 <!doctype html>
 <html>
 <head>
@@ -13,7 +18,7 @@
     <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/themes.css')); ?>" rel="stylesheet" type="text/css" />
     <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/custom.css')); ?>" rel="stylesheet" type="text/css" />
     <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/app.css')); ?>" rel="stylesheet" type="text/css" />
-    <title><?php echo $title.$browserappend; ?></title>
+    <title><?php echo $controller == 'profile' && $action ==  'view' ? $pagetitle.$browserappend : $title.$browserappend; ?></title>
 <body class="print DTTT_Print">
 	<style>
 		.edit, .requiredmark, .save_trigger, .cancel_trigger {
@@ -30,18 +35,115 @@
 		}
 		p.view {
 			display:inline-block;
+			margin-top:0;
+		}
+		/* Based on The MailChimp Reset INLINE: Yes. */  
+		/* Client-specific Styles */
+		#outlook a {padding:0;} /* Force Outlook to provide a "view in browser" menu link. */
+		body{width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; margin:0; padding:0;} 
+		/* Prevent Webkit and Windows Mobile platforms from changing default font sizes.*/ 
+		.ExternalClass {width:100%;} /* Force Hotmail to display emails at full width */  
+		.ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {line-height: 100%;}
+		/* Forces Hotmail to display normal line spacing.  More on that: http://www.emailonacid.com/forum/viewthread/43/ */ 
+		#backgroundTable {margin:0; padding:0; width:100% !important; line-height: 100% !important;}
+		/* End reset */
+
+		/* Some sensible defaults for images
+		Bring inline: Yes. */
+		img {outline:none; text-decoration:none; -ms-interpolation-mode: bicubic;} 
+		a img {border:none;} 
+		.image_fix {display:block;}
+
+		/* Yahoo paragraph fix
+		Bring inline: Yes. */
+		p {margin: 1em 0;}
+		p.view {
+			margin-top:0;
+		}
+
+		/* Hotmail header color reset
+		Bring inline: Yes. */
+		h1, h2, h3, h4, h5, h6 {color: black !important;}
+
+		h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {color: blue !important;}
+
+		h1 a:active, h2 a:active,  h3 a:active, h4 a:active, h5 a:active, h6 a:active {
+		color: red !important; /* Preferably not the same color as the normal header link color.  There is limited support for psuedo classes in email clients, this was added just for good measure. */
+		}
+
+		h1 a:visited, h2 a:visited,  h3 a:visited, h4 a:visited, h5 a:visited, h6 a:visited {
+		color: purple !important; /* Preferably not the same color as the normal header link color. There is limited support for psuedo classes in email clients, this was added just for good measure. */
+		}
+
+		/* Outlook 07, 10 Padding issue fix
+		Bring inline: No.*/
+		table td {border-collapse: collapse;}
+
+		/* Remove spacing around Outlook 07, 10 tables
+		Bring inline: Yes */
+		table { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+
+
+		/***************************************************
+		****************************************************
+		MOBILE TARGETING
+		****************************************************
+		***************************************************/
+		@media only screen and (max-device-width: 480px) {
+			/* Part one of controlling phone number linking for mobile. */
+			a[href^="tel"], a[href^="sms"] {
+						text-decoration: none;
+						color: blue; /* or whatever your want */
+						pointer-events: none;
+						cursor: default;
+					}
+
+			.mobile_link a[href^="tel"], .mobile_link a[href^="sms"] {
+						text-decoration: default;
+						color: orange !important;
+						pointer-events: auto;
+						cursor: default;
+					}
+
+		}
+
+		/* More Specific Targeting */
+
+		@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
+		/* You guessed it, ipad (tablets, smaller screens, etc) */
+			/* repeating for the ipad */
+			a[href^="tel"], a[href^="sms"] {
+						text-decoration: none;
+						color: blue; /* or whatever your want */
+						pointer-events: none;
+						cursor: default;
+					}
+
+			.mobile_link a[href^="tel"], .mobile_link a[href^="sms"] {
+						text-decoration: default;
+						color: orange !important;
+						pointer-events: auto;
+						cursor: default;
+					}
+		}
+		
+		.tab-content.printscreen, .box.box-bordered.box-color .box-content.printscreen {
+			border:none;
+			font-family: Arial, Verdana, sans-serif;
 		}
     </style>
-    <div id="container-fluid">
+    <div id="container-fluid" style="max-width:800px; margin:0 auto !important;">
         <div id="contentcontainer" class="container-fluid">
-            <div id="centercolumn" class="container-fluid padding5">
-            <div class="showonprint <?php echo isEmptyString($request->print) ? 'hidden' : ''; ?>">
-                <div class="divider15"></div>
+            <div id="centercolumn" class="container-fluid padding0">
+            <div class="showonprint centeralign">
                 <span id="reportactions">			
-                    <div id="print_page_action_buttons" style="margin-left:25px;">
+                    <div id="print_page_action_buttons">
                         <a title="Close Window" onClick="window.close()" href="javascript: void(0)"><i class="fa fa-times"></i> Close</a> &nbsp;
-                        <?php if($request->print == '1'){ ?>
+                        <?php if($request->print == '1' || $request->fullscreen == '1'){ ?>
                             <a title="Print" onClick="window.print()" href="javascript: void(0)" class="print" ><i class="fa fa-print"></i> Print</a> &nbsp; 
+                            <?php if($request->fullscreen == '1' && false){ ?>
+                            	<a title="PDF" href="<?php echo $viewurl.'/fullscreen/1/pgc/true/pdf/1'; ?>" class="pdf"><i class="fa fa-file"></i> PDF</a> &nbsp; 
+                            <?php } ?>
                         <?php } ?>
                     </div>
                 </span>

@@ -71,7 +71,6 @@ $(document).ready(function() {
         <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
         	<input name="entityname" id="entityname" type="hidden" value="Timesheet" />
         	<input type="hidden" name="userid" id="userid" value="<?php echo $timesheet->getUserID(); ?>" />
-            <input type="hidden" name="status" id="status" value="<?php echo $timesheet->getStatus(); ?>" />
             <input type="hidden" id="id" name="id" value="<?php echo encode($timesheet->getID()); ?>" />
             <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
             <input name="isrequest" id="isrequest" type="hidden" value="1" />  
@@ -120,6 +119,29 @@ $(document).ready(function() {
                                 <div id="inremarks_error"></div>
                             </div>
                         </div>
+                        <?php if($acl->checkPermission("Attendance", ACTION_APPROVE)){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                	<?php
+										$allstatuses = getTimesheetStatuses();
+										$dropdown = new Zend_Form_Element_Select('status',
+															array(
+																'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allstatuses),
+																'view' => new Zend_View(),
+																'decorators' => array('ViewHelper'),
+																'class' => array('form-control','input-sm','width200')
+															)
+										);  
+										$dropdown->setValue($timesheet->getStatus()); 
+										echo $dropdown->render();
+									?><div id="status_error"></div>
+                                </div>
+                          	</div>
+                        <?php } else { ?>
+                        	<input type="hidden" name="status" id="status" value="<?php echo $timesheet->getStatus(); ?>" />
+                        <?php } ?>
+                        <input type="hidden" name="status_old" id="status_old" value="<?php echo $timesheet->getStatus(); ?>" />
                     </div>
                	</div>
             </div>

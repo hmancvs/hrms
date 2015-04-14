@@ -17,7 +17,7 @@
 	
 	$reporttype = "";
 	$type = $request->type;
-	$reporttitle = "Timeoff Accruals Report";
+	$reporttitle = "Leave Accruals Report";
 	$subtitle = "Transactions";
 	$maxfilters = 5;
 	
@@ -60,7 +60,7 @@
 	
 	$selectable = array(
 		"userid"=>"userid",
-		"timeoffid"=>"timeoffid",
+		"leaveid"=>"leaveid",
 		"trxntype"=>"trxntype",
 		"isrequest"=>"isrequest",
 		"lengthtype"=>"lengthtype",
@@ -77,10 +77,10 @@
 	
 	$attributes = array(
 		"userid"=>"Employee",
-		"timeoffid"=>"Category",
+		"leaveid"=>"Category",
 		"trxntype"=>"Trxn Type",
 		"trxndate"=>"Trxn Date",
-		"timeofflength"=>"Duration",
+		"leavelength"=>"Duration",
 		"lengthtype"=>"Duration Type",
 		"status"=>"Status",
 		"remarks"=>"Remarks",
@@ -181,10 +181,10 @@
 	
 	$users = getUsers();
 	$trxtypes = getTrxnTypes();
-	$timeoffs = getTimeoffTypes();
-	$timeoffoptions = getHoursDaysDropdown();
+	$leaves = getLeaveTypes();
+	$leaveoptions = getHoursDaysDropdown();
 	$allstatuses = getBenefitStatuses();
-	$resource = "Timeoff Accruals Report";
+	$resource = "Leave Accruals Report";
 	
 	$title = $reporttitle;
 	$this->headTitle($title.$browserappend);
@@ -319,14 +319,14 @@ $(document).ready(function() {
 	<div class="col-sm-12">
         <form class="form-horizontal form-search makerelative" action="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" orginalaction="<?php echo $this->baseUrl("report/reportsearch/pageaction/".$action); ?>" method="get" id="reportform">
         <ul class="nav nav-tabs hideonprint">
-            <li class="<?php echo $action == 'timeoffstats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'timeoffstats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'timeoffstats' ? '' : $this->baseUrl('report/timeoffstats'); ?>">Summary Report</a></li>
-                <li class="<?php echo $action == 'timeoffdetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'timeoffdetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/timeoffdetails'); ?>">Detailed Report</a></li>
+            <li class="<?php echo $action == 'leavestats' ? 'active' : ''; ?>"><a href="#summary" class="<?php echo $action == 'leavestats' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $action == 'leavestats' ? '' : $this->baseUrl('report/leavestats'); ?>">Summary Report</a></li>
+                <li class="<?php echo $action == 'leavedetails' ? 'active' : ''; ?>"><a href="#details" class="<?php echo $action == 'leavedetails' ? 'gonowhere' : 'blockanchor'; ?>" goto="<?php echo $this->baseUrl('report/leavedetails'); ?>">Detailed Report</a></li>
         </ul>
 		<div class="box box box-color xbox-bordered">
 			<div class="box-title noheader">
                 <h3></h3>
             </div>
-            <div class="box-content nopadding">
+            <div class="box-content" style="padding: 5px 0px;">
                 <div class="row">
                     <div class="col-sm-9">
                         <ul class="resetlist listactions">
@@ -406,15 +406,15 @@ $(document).ready(function() {
                                             echo $dropdown->render();
                                         ?>
                                         <?php
-                                            $dropdown = new Zend_Form_Element_Select('timeoffid_'.$i,
+                                            $dropdown = new Zend_Form_Element_Select('leaveid_'.$i,
                                                                 array(
-                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $timeoffs),
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $leaves),
                                                                     'view' => new Zend_View(),
                                                                     'decorators' => array('ViewHelper'),
                                                                     'class' => array("form-control","input-sm","selects","selects_".$i)
                                                                 )
                                             );  
-                                            $dropdown->setValue($request->{'timeoffid_'.$i}); 
+                                            $dropdown->setValue($request->{'leaveid_'.$i}); 
                                             echo $dropdown->render();
                                         ?>
                                         <?php
@@ -444,7 +444,7 @@ $(document).ready(function() {
                                         <?php
                                             $dropdown = new Zend_Form_Element_Select('lengthtype_'.$i,
                                                                 array(
-                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $timeoffoptions),
+                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'Select'), $leaveoptions),
                                                                     'view' => new Zend_View(),
                                                                     'decorators' => array('ViewHelper'),
                                                                     'class' => array("form-control","input-sm","selects","selects_".$i)
@@ -500,8 +500,8 @@ $(document).ready(function() {
                                                     <?php } ?>
                                                     <th class="nowrapping trxndate">Trxn Date</th>
                                                     <th class="nowrapping trxntype">Trxn Type</th>
-                                                    <th class="nowrapping timeoffid">Category</th>
-                                                    <th class="nowrapping timeofflength">Duration</th>
+                                                    <th class="nowrapping leaveid">Category</th>
+                                                    <th class="nowrapping leavelength">Duration</th>
                                                     <th class="nowrapping lengthtype">Duration Type</th>
                                                     <th class="nowrapping status">Status</th>
                                                     <th class="nowrapping dateapproved">Date Approved</th>
@@ -524,7 +524,7 @@ $(document).ready(function() {
                                                             $viewnotes = '<b>Remarks:</b> '.nl2br($line['remarks']);
                                                             $remarks = '<span class="floatleft"><a title="Click to view Details" class="alert-dialog gonowhere" containerstyle="text-align:left; "message="'.$viewnotes.'" style="margin-left:10px;">View</a></span>';
                                                         }
-                                                        $total += formatNumber($line['timeofflength']);
+                                                        $total += formatNumber($line['leavelength']);
                                                 ?>
                                                     <tr style="font-size:12px;">
                                                        <?php if(!$istimesheetuser){ ?>
@@ -532,9 +532,9 @@ $(document).ready(function() {
                                                         <?php } ?>
                                                         <td class="trxndate"><?php echo changeMySQLDateToPageFormat($line['trxndate']); ?></td>
                                                         <td class="trxntype"><?php echo isArrayKeyAnEmptyString($line['trxntype'], $trxtypes) ? '' : $trxtypes[$line['trxntype']]; ?></td>
-                                                        <td class="timeoffid"><?php echo isArrayKeyAnEmptyString($line['timeoffid'], $timeoffs) ? '' : $timeoffs[$line['timeoffid']]; ?></td>
-                                                        <td class="timeofflength bolded" style="text-align:right;"><?php echo formatNumber($line['timeofflength']); ?></td>
-                                                        <td class="lengthtype"><?php echo isArrayKeyAnEmptyString($line['lengthtype'], $timeoffoptions) ? '' : $timeoffoptions[$line['lengthtype']]; ?></td>
+                                                        <td class="leaveid"><?php echo isArrayKeyAnEmptyString($line['leaveid'], $leaves) ? '' : $leaves[$line['leaveid']]; ?></td>
+                                                        <td class="leavelength bolded" style="text-align:right;"><?php echo formatNumber($line['leavelength']); ?></td>
+                                                        <td class="lengthtype"><?php echo isArrayKeyAnEmptyString($line['lengthtype'], $leaveoptions) ? '' : $leaveoptions[$line['lengthtype']]; ?></td>
                                                         <td class="status"><?php echo isArrayKeyAnEmptyString($line['status'], $allstatuses) ? '' : $allstatuses[$line['status']]; ?></td>
                                                         <td class="dateapproved"><?php echo changeMySQLDateToPageFormat($line['dateapproved']); ?></td>
                                                         <td class="approvedbyid"><?php echo isArrayKeyAnEmptyString($line['approvedbyid'], $users) ? '' : $users[$line['approvedbyid']]; ?></td>
@@ -555,8 +555,8 @@ $(document).ready(function() {
                                                         <td class="trxndate bolded" style="text-align:right;">Totals</td>
                                                     <?php } ?>
                                                     <td class="trxntype"></td>
-                                                    <td class="timeoffid"></td>
-                                                    <td class="timeofflength bolded" style="text-align:right;"><?php echo formatNumber($total); ?></td>
+                                                    <td class="leaveid"></td>
+                                                    <td class="leavelength bolded" style="text-align:right;"><?php echo formatNumber($total); ?></td>
                                                     <td class="lengthtype"></td>
                                                     <td class="status"></td>
                                                     <td class="dateapproved"></td>

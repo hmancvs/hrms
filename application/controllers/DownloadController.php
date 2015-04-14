@@ -6,9 +6,9 @@ class DownloadController extends IndexController {
 	 */
 	public function indexAction() {
 		// automatic file mime type handling
-		$filename = decode($this->_getParam('filename')); 
-		$full_path = decode($this->_getParam('path')); 
-		
+		$filename = decode($this->_getParam('filename')); //debugMessage($filename);
+		$full_path = decode($this->_getParam('path')); //debugMessage($full_path); 
+		// exit();
 		// file headers to force a download
 	    header('Content-Description: File Transfer');
 	    header('Content-Type: application/octet-stream');
@@ -61,5 +61,5 @@ class DownloadController extends IndexController {
 		//OUTPUT CSV CONTENT
 		echo $data;
 		exit();
-	}	
+	}
 }

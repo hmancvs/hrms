@@ -1,0 +1,186 @@
+
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>Summary</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_firstname_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getFirstName(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_lastname_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getLastName(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_othernames_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getOtherName(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_fullname_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getdisplayname(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_gender_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getGenderText(); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_salutation_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo getDatavariables('SALUTATION', $user->getSalutation(), true); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nationality_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getCountryName(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_dateofbirth_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getDateofBirth()); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_maritalstatus_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo getDatavariables('MARITAL_STATUS_VALUES', $user->getMaritalStatus(), true); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>Contact Information</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_email_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getEmail(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altemail_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getEmail2(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getPhone2(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getPhone(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_skype_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getSkype(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_linkedin_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getLinkedIn(); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>Address</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_address_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getFullAddress(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_citytown_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getTown(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_postalcode_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getPostalCode(); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend>Emergency Details</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-8">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_name_label'); ?>:</label>
+                            <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $user->getContactName(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_rship_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo getDatavariables('CONTACT_RELATIONSHIPS', $user->getContactRshp(), true); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_phone_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getContactPhone(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_email_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getContactEmail(); ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
+</div>

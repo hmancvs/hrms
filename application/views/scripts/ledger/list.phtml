@@ -68,9 +68,9 @@
 		$where_query .= " AND l.`ledgertype` = '".$ledgertype."' ";
 		$allowclear = true;
 		if($ledgertype == 2){
-			$title = "Timeoff Accruals";
+			$title = "Leave Accruals";
 			if($istimesheetuser){
-				$title = "My Timeoff Accruals";
+				$title = "My Leave Accruals";
 			}
 		}
 	}
@@ -84,9 +84,9 @@
 		$where_query .= " AND l.`benefitid` = '".$benefitid."' ";
 		$allowclear = true;
 	}
-	$timeoffid = $request->timeoffid;
-	if(!isEmptyString($timeoffid)){
-		$where_query .= " AND l.`timeoffid` = '".$timeoffid."' ";
+	$leaveid = $request->leaveid;
+	if(!isEmptyString($leaveid)){
+		$where_query .= " AND l.`leaveid` = '".$leaveid."' ";
 		$allowclear = true;
 	}
 	
@@ -125,15 +125,15 @@
 	
 	$paginate->processPost($request->getParams());
 	$all_results_query = "
-		select l.id, l.userid, l.companyid, l.benefitid, l.timeoffid, 
+		select l.id, l.userid, l.companyid, l.benefitid, l.leaveid, 
 		IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as `User`,
 		IF(isnull(mc.othername), concat(mc.firstname,' ',mc.lastname), concat(mc.firstname,' ',mc.lastname,' ',mc.othername)) as addedby,
 		l.trxndate, l.startdate AS startdate, l.enddate AS enddate,
-		l.timeofflength, l.lengthtype, l.`status` AS `status`, l.ledgertype, l.trxntype, l.amount, l.istaxable, l.isrequest, l.payrollid, l.filename,
+		l.leavelength, l.lengthtype, l.`status` AS `status`, l.ledgertype, l.trxntype, l.amount, l.istaxable, l.isrequest, l.payrollid, l.filename,
 		l.remarks AS remarks,l.createdby AS createdby,l.datecreated AS datecreated
 		from ledger l 
 		left join benefittype b on l.benefitid = b.id 
-		left join timeofftype p on l.timeoffid = p.id 
+		left join leavetype p on l.leaveid = p.id 
 		inner join useraccount u on l.userid = u.id
         left join useraccount mc on (l.createdby = mc.id)
 		".$where_query."  ".$paginate->getSearchAndFilterSQL()." GROUP BY l.id ".$order_query;
@@ -160,8 +160,8 @@
 	$benefittypes = getBenefitTypes();
 	$trxtypes = getTrxnTypes();
 	$benefits = getBenefits(2); // debugMessage($benefits);
-	$timeoffs = getTimeoffTypes();
-	$timeoffoptions = getHoursDaysDropdown();
+	$leaves = getLeaveTypes();
+	$leaveoptions = getHoursDaysDropdown();
 	$allstatuses = getBenefitStatuses();
 	
 	$this->headTitle($title.$browserappend);
@@ -192,13 +192,13 @@ $(document).ready(function() {
                                 <li>
                                     <!-- Split button -->
                                     <div class="btn-group">
-                                      <button type="button" href="<?php echo $addurl; ?>" class="btn btn-primary addpopup" title="Add Benefit" rel="Add Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"> Add <?php echo $ledgertype == 2 ? 'Timeoff' : 'Benefit'; ?></button>
+                                      <button type="button" href="<?php echo $addurl; ?>" class="btn btn-primary addpopup" title="Add <?php echo $ledgertype == 2 ? 'Leave Time' : 'Benefit'; ?>" rel="Add <?php echo $ledgertype == 2 ? 'Leave Time' : 'Benefit'; ?>" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"> Add <?php echo $ledgertype == 2 ? 'Leave Time' : 'Benefit'; ?></button>
                                       <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                       </button>
                                       <ul class="dropdown-menu" role="menu">
-                                        <li><a class="addpopup" href="<?php echo $addurl; ?>" title="Add Benefit" rel="Add Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Benefit</a></li>
+                                        <li><a class="addpopup" href="<?php echo $addurl; ?>" title="Add Benefit" rel="Add Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add <?php echo $ledgertype == 2 ? 'Leave Time' : 'Benefit'; ?></a></li>
                                         <li><a class="addpopup" href="<?php echo $addurl.'/type/2'; ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Deductions</a></li>
                                       </ul>
                                     </div>
@@ -276,15 +276,15 @@ $(document).ready(function() {
                             <?php if($ledgertype == 2){ ?>
                                 <li>
                                     <?php
-                                        $dropdown = new Zend_Form_Element_Select('timeoffid',
+                                        $dropdown = new Zend_Form_Element_Select('leaveid',
                                                             array(
-                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All Categories'), $timeoffs),
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => 'All Categories'), $leaves),
                                                                 'view' => new Zend_View(),
                                                                 'decorators' => array('ViewHelper'),
                                                                 'class' => array("xautofilter", "form-control", 'xwidth150', 'xchosen-select')
                                                             )
                                         );  
-                                        $dropdown->setValue($request->getParam('timeoffid')); 
+                                        $dropdown->setValue($request->getParam('leaveid')); 
                                         echo $dropdown->render();
                                     ?>
                                 </li>
@@ -327,7 +327,7 @@ $(document).ready(function() {
                                             <!-- <th style="width:100px;">Benefit Type</th>-->
                                             <th>Category</th>
                                             <?php if($ledgertype == 1){ ?>
-                                                <th>Amount (<?php echo $config->country->currencycode; ?>)</th>
+                                                <th>Amount (<?php echo getCountryCurrencyCode(); ?>)</th>
                                             <?php } ?>
                                             <?php if($ledgertype == 2){ ?>
                                                 <th>Time Accrued</th>
@@ -356,14 +356,14 @@ $(document).ready(function() {
                                                 if($line['ledgertype'] == 1){
                                                     $itemtype = isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '' : $benefits[$line['benefitid']];
                                                     $itemvalue = $line['amount'];
-                                                    $unit = ' ('.$config->country->currencycode.')';
+                                                    $unit = ' ('.getCountryCurrencyCode().')';
                                                 }
                                                 if($line['ledgertype'] == 2){
-                                                    $itemtype = isArrayKeyAnEmptyString($line['timeoffid'], $timeoffs) ? '' : $timeoffs[$line['timeoffid']];
-                                                    $itemvalue = $line['timeofflength'];
+                                                    $itemtype = isArrayKeyAnEmptyString($line['leaveid'], $leaves) ? '' : $leaves[$line['leaveid']];
+                                                    $itemvalue = $line['leavelength'];
                                                     $unit = '';
-                                                    if(!isArrayKeyAnEmptyString($line['lengthtype'], $timeoffoptions)){
-                                                        $unit = ' ('.$timeoffoptions[$line['lengthtype']].')';
+                                                    if(!isArrayKeyAnEmptyString($line['lengthtype'], $leaveoptions)){
+                                                        $unit = ' ('.$leaveoptions[$line['lengthtype']].')';
                                                     }
                                                 }
                                                 
@@ -397,7 +397,7 @@ $(document).ready(function() {
                                                 if($acl->checkPermission($resource, ACTION_APPROVE) && $line['status'] == '0' && $line['isrequest'] == '1'){
                                                     $canapprove = true;
                                                 }
-                                                if(($acl->checkPermission($resource, ACTION_APPROVE) && $line['status'] == '0' && $line['isrequest'] == '1') || ($canupdate && $line['status'] != '4') ){
+                                                if($acl->checkPermission($resource, ACTION_APPROVE) && $line['status'] == '0' && $line['isrequest'] == '1'){
                                                     $canreject = true; 
                                                 }
                                                 $file = '';
@@ -415,13 +415,13 @@ $(document).ready(function() {
                                                                 <a class="alert-dialog gonowhere inline" title="Update" message="Entry exists on approved Payroll and has been locked!">--</a> &nbsp;
                                                             <?php } ?>
                                                             <?php if($candelete) { ?>
-                                                                <a class="deleteline btn gonowhere inline" action="<?php echo $this->baseUrl('ledger/delete/id/'.encode($line['id'])."/entityname/Ledger/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" rel="tooltip" title="Delete Entry"><i class="fa fa-times"></i></a> &nbsp;
+                                                                <a class="deleteline btn gonowhere inline" action="<?php echo $this->baseUrl('ledger/delete/id/'.encode($line['id'])."/entityname/Ledger/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" rel="tooltip" title="Delete Entry"><i class="fa fa-trash"></i></a> &nbsp;
                                                             <?php } ?>
                                                             <?php if($canapprove){ ?>
                                                                 <a class="confirm-dialog btn gonowhere" title="Approve" action="<?php echo $this->baseUrl('ledger/approve/id/'.encode($line['id']).'/status/1/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to Approve this Request?"><i class="fa fa-check"></i></a> &nbsp;
                                                             <?php } ?>    
                                                             <?php if($canreject){ ?>
-                                                                <a class="confirm-prompt btn gonowhere" title="Reject" action="<?php echo $this->baseUrl('ledger/approve/id/'.encode($line['id']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Specify remarks and click ok to continue."><i class="fa fa-remove"></i></a> &nbsp;
+                                                                <a class="confirm-prompt btn gonowhere" title="Reject" action="<?php echo $this->baseUrl('ledger/approve/id/'.encode($line['id']).'/status/4/successurl/'.encode($this->viewurl)); ?>" message="Reject Entry: Specify remarks to continue."><i class="fa fa-remove"></i></a> &nbsp;
                                                             <?php } ?>
                                                         </td>
                                                         <td class="nullifempty"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($line['userid'])); ?>"><?php echo $line['User']; ?></a></td>

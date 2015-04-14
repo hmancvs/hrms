@@ -19,15 +19,6 @@
 		$mytext = "My ";
 	}
 ?>
-<div class="divider5"></div>
-<form class='search-form'>
-	<div class="contentArea searchbar">
-        <div class="search-pane makerelative" style="padding:2px;">
-            <input type="text" name="search" placeholder="Search <?php echo getAppName(); ?>..." id="inputSearch" class="search form-control" tabindex="1"><a style="right:4px; top:4px; position:absolute;" class="btn btn-primary gonowhere"><i class="fa fa-search"></i></a>
-        </div>
-        <ul id="divResult"></ul>
-    </div>
-</form>
 <div class="subnav">
     <div class="subnav-title">
         <a href="#" class='toggle-subnav'><i class="fa fa-angle-down"></i><span>Quick Links</span> </a>
@@ -49,8 +40,8 @@
         <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
              <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
         <?php } ?>
-        <?php if ($acl->checkPermission('Time off', ACTION_CREATE) && !$acl->checkPermission('Time off', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
-            <li><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/index'); ?>">Request Timeoff</a></li>
+        <?php if ($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
+            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>">Request Leave</a></li>
         <?php } ?>
         <?php if ($acl->checkPermission('User Account', ACTION_CREATE)) { ?>	
             <li><a class="blockanchor" href="<?php echo $this->baseUrl('profile'); ?>">New Employee</a></li>
@@ -62,7 +53,7 @@
 	<div class="subnav-title ui-sortable-handle">
 		<a class="toggle-subnav" href="#">
 			<i class="fa fa-angle-down"></i>
-			<span>Timeoff Taken</span>
+			<span>Leave Taken</span>
 		</a>
 	</div>
 	<div class="subnav-content">
@@ -76,7 +67,7 @@
 	<div class="subnav-title ui-sortable-handle">
 		<a class="toggle-subnav" href="#">
 			<i class="fa fa-angle-down"></i>
-			<span>Timeoff Available</span>
+			<span>Leave Available</span>
 		</a>
 	</div>
 	<div class="subnav-content">
@@ -107,7 +98,7 @@
             <a href="#">Benefits Received</a>
         </li>
         <li>
-            <a href="#">Timeoff Accrued</a>
+            <a href="#">Leave Accrued</a>
         </li>
     </ul>-->
 </div>

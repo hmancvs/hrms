@@ -43,6 +43,9 @@ class IndexController extends Zend_Controller_Action  {
 		$this->view->viewurl = $_SERVER['REQUEST_URI'];
 		/*debugMessage($_SERVER['REQUEST_URI']);
 		debugMessage($this->getRequest()); exit();*/
+		
+		# set default timezone based on company in session
+		# date_default_timezone_set(getTimeZine());
     }
     
     /**
@@ -125,7 +128,7 @@ class IndexController extends Zend_Controller_Action  {
     		switch ($this->_getParam('action')) {
 				case "" :
 				case ACTION_CREATE :
-					if(in_array($new_object->getTableName(), array('member'))){
+					if(in_array($new_object->getTableName(), array('useraccount'))){
 						$new_object->transactionSave();
 					} else {
 						$new_object->beforeSave(); 
@@ -133,8 +136,8 @@ class IndexController extends Zend_Controller_Action  {
 						// there are no errors so call the afterSave() hook
 						$new_object->afterSave();
 					}
-					/*debugMessage($new_object->toArray());
-					debugMessage('errors are '.$new_object->getErrorStackAsString()); exit();*/
+					/* debugMessage($new_object->toArray());
+					debugMessage('errors are '.$new_object->getErrorStackAsString()); exit(); */
 					break;
 				case ACTION_EDIT:  
 					// update the entity 
@@ -194,7 +197,7 @@ class IndexController extends Zend_Controller_Action  {
     		$session->setVar(FORM_VALUES, $this->_getAllParams());
     		$session->setVar(ERROR_MESSAGE, $e->getMessage()); 
     		$this->_logger->err("Saving Error ".$e->getMessage());
-    		debugMessage($e->getMessage()); exit();
+    		// debugMessage($e->getMessage()); exit();
     		
     		// return to the create page
     		if (isEmptyString($this->_getParam(URL_FAILURE))) {
@@ -543,27 +546,16 @@ class IndexController extends Zend_Controller_Action  {
 		}
     }
 	
-	public function leftcolumnAction(){
-		$session = SessionWrapper::getInstance(); 
-     	$this->_helper->layout->disableLayout();
-		$this->_helper->viewRenderer->setNoRender(TRUE);
-		$formvalues = $this->_getAllParams();
-    	// debugMessage($formvalues);
-		
-		if($this->_getParam('value') == 1){
-			 $session->setVar('toggled', "1");
-		} else {
-			 $session->setVar('toggled', "");
-		}
-	}
-	
 	public function themechangeAction(){
 		$session = SessionWrapper::getInstance();
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		$formvalues = $this->_getAllParams();
-		// debugMessage($formvalues);
+		$conn = Doctrine_Manager::connection();
 		$session->setVar($this->_getParam('type'), $this->_getParam('value'));
+		$layout = $this->_getParam('type');
+		$query = "UPDATE company set ".$layout." = '".$this->_getParam('value')."' where id = '".getCompanyID()."' "; // debugMessage($query);
+		$result = $conn->execute($query);
 	}
 	
 	public function colorchangeAction(){
@@ -571,9 +563,11 @@ class IndexController extends Zend_Controller_Action  {
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		$formvalues = $this->_getAllParams();
-		// debugMessage($formvalues);
+		$conn = Doctrine_Manager::connection();
 		$session->setVar('colortheme', $this->_getParam('value'));
-		echo 'colortheme now '.$session->getVar('colortheme');
+		// echo 'colortheme now '.$session->getVar('colortheme');
+		$query = "UPDATE company set colortheme = '".$this->_getParam('value')."' where id = '".getCompanyID()."' ";
+		$result = $conn->execute($query);
 	}
 	
 	public function sidebarconfigAction(){
@@ -581,9 +575,11 @@ class IndexController extends Zend_Controller_Action  {
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		$formvalues = $this->_getAllParams();
-		// debugMessage($formvalues);
+		$conn = Doctrine_Manager::connection();
 		$session->setVar('showsidebar', $this->_getParam('value'));
 		// echo 'toggle now is '.$session->getVar('show_sidebar');
+		$query = "UPDATE company set showsidebar = '".$this->_getParam('value')."' where id = '".getCompanyID()."' ";
+		$result = $conn->execute($query);
 	}
 	
 	public function changecompanyAction(){

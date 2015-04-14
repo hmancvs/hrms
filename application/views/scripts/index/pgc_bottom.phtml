@@ -3,3 +3,28 @@
 </div>
 </body>
 </html>
+<?php 
+if($request->pdf == '1'){
+	$pdf_html = ob_get_clean(); 
+    # filename          
+	$timestamp = time().rand(100, 5000);
+	$temp_file_pdf = ($timestamp).".pdf";
+	$temp_file_html = ($timestamp).".html";
+	$temp_file_doc = ($timestamp).".doc";
+	$temp_file_txt = ($timestamp).".txt";
+	// $temp_file_html = '13853537363737.html';
+	# path to remote file
+	$path = BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$temp_file_pdf;
+	$path_html = BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$temp_file_html;
+	$path_doc = BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$temp_file_doc;
+	$path_txt = BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$temp_file_txt;	
+	$relativepathtodocument = $this->serverUrl($this->baseUrl('temp/'.$temp_file_pdf));
+	# save file to temp folder
+	// file_put_contents($path_html, $pdf_html);
+	// file_put_contents($path_doc, $pdf_html);
+	# write pdf to file
+	/*$mpdf=new mPDF('win-1252','A4'); 
+	$mpdf->WriteHTML($pdf_html);
+	$mpdf->Output($path, 'F');*/
+}
+?>

@@ -150,7 +150,7 @@
 	$employeesstatuses = getDatavariables('EMPLOYEE_STATUS');
 	$departments = getDepartments();
 	$positions = getDatavariables('EMPLOYEE_POSITIONS');
-	
+	// $rate = getNssfCompanyRate();
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
@@ -170,7 +170,7 @@
 			<div class="box-title noheader">
                 <h3></h3>
             </div>
-            <div class="box-content nopadding">
+            <div class="box-content" style="padding: 5px 0px;">
                 <div class="row">
                     <div class="col-sm-9">
                         <ul class="resetlist listactions">
@@ -321,7 +321,7 @@
                                                                     <ul class="resetlist">
                                                                         <li><span class="bolded">Contacts</span></li>
                                                                         <li><span class="nullifempty"><?php echo snippet($line['email'], '23','...'); ?></span></li>
-                                                                        <li><span class="nullifempty"><?php echo $line['phone']; ?></span></li
+                                                                        <li><span class="nullifempty"><?php echo $line['phone']; ?></span></li>
                                                                     </ul>
                                                                 </div>
                                                             </div>

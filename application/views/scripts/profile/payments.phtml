@@ -1,7 +1,10 @@
 <div class="row">
     <div class="col-sm-12 paddingleft0">
         <fieldset class="fieldsetcontainer minheight200">
-            <legend><?php echo $isme ? 'My ' : ''; ?>Transaction History</legend>
+            <legend class="hideonprint"><?php echo $isme ? 'My Transaction History' : 'Transaction History'; ?></legend>
+            <?php if($request->print == 1 || $request->pgc == 'true'){ ?>
+            	<legend><?php echo $user->getName().' - Payslip'; ?></legend>
+            <?php } ?>
             <div class="panel-body well-sm">
                 <div class="row-fluid">
                     <div class="col-sm-12">
@@ -22,20 +25,18 @@
 							$result = $conn->fetchAll($all_results_query); // debugMessage($result);
 							$hasdata = count($result) > 0 ? true : false;
 							$countlabel = count($result) == 1 ? " Transaction" : " Transactions";
-							
-							
 						?>
                         <?php if($hasdata){ ?>
-                            <div class="paginatecustom padding10" style="padding-bottom: 4px; padding-left:0; font-style:italic;"><?php echo "Viewing <b>".count($result)."</b> ".$countlabel." "; ?></div>
+                            <div class="paginatecustom padding10 hideonprint" style="padding-bottom: 4px; padding-left:0; font-style:italic;"><?php echo "Viewing <b>".count($result)."</b> ".$countlabel." "; ?></div>
                         <?php } ?>
                         <table class="table list table-bordered border-cells data-table" id="datatable">
                             <thead>
                                 <tr style="font-size:12px; font-weight:normal;">
                                     <th class="nowrapping" style="width:100px;"><label class="control-label">Transaction Date</label></th>
                                     <th style="width:150px;"><label class="control-label">Payment Period</label></th>
-                                    <th style="width:100px;"><label class="control-label">Gross</label></th>
-                                    <th style="width:100px;"><label class="control-label">Net</label></th>
-                                    <th style="width:130px;"><label class="control-label">Actions</label></th>
+                                    <th style="width:100px;"><label class="control-label">Gross (<?php echo getCountryCurrencyCode(); ?>)</label></th>
+                                    <th style="width:100px;"><label class="control-label">Net (<?php echo getCountryCurrencyCode(); ?>)</label></th>
+                                    <th style="width:130px;" class="hideonprint"><label class="control-label">Actions</label></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -48,14 +49,14 @@
                                         $payrolldetail = new PayrollDetail();
                                         $payrolldetail->populate($line['id']);
                                         $payroll = $payrolldetail->getPayroll();
-                                        $period = date('jS', strtotime($payroll->getStartDate())).'-'.date('jS', strtotime($payroll->getPayrollDate())).' '.date('F Y', strtotime($payroll->getPayrollDate()));
+                                        $period = date('jS', strtotime($payroll->getStartDate())).' - '.date('jS', strtotime($payroll->getPayrollDate())).' '.date('F Y', strtotime($payroll->getPayrollDate()));
                                     ?>
                                         <tr style="font-size:12px; font-weight:normal;">
                                             <td class="nowrapping"><?php echo changeMySQLDateToPageFormat($payroll->getPayrollDate()); ?></td>
                                             <td><?php echo $period; ?></td>
                                             <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetEarning()); ?></td>
                                             <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetPay()); ?></td>
-                                            <td>
+                                            <td class="hideonprint">
                                                 <?php if($ref == 'list'){ ?>
                                                     <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view'; ?>" class="btn btn-primary btn-xs blockanchor">Payslip Details</a> &nbsp;
                                                 <?php } ?>
@@ -91,13 +92,13 @@
                         ?>
                             <div class="divider20"></div>
                             <div id="payslip_<?php echo $id; ?>" class="payslipdata alert_<?php echo $id; ?>">
-                                <label class="blocked bolded" style="font-size:13px !important; color:#4a6694; margin-left:10px;">Payslip Details</label>
+                                <label class="blocked bolded" style="font-size:13px !important; color:#4a6694; margin-left:10px;"><?php echo $showfullscreen ? '' : 'Payslip Details'; ?></label>
                                 <table class="table table-bordered border-cells" style="font-size:12px !important; width:auto; margin:5px;">
                                     <thead>
                                         <tr>
-                                            <th style="width:267px;">Transaction Details</th>
-                                            <th style="width:100px; text-align:center;">CR</th>
-                                            <th style="width:100px; text-align:center;">DR</th>
+                                            <th style="width:267px;">Transactions</th>
+                                            <th style="width:100px; text-align:center;">Credit (<?php echo getCountryCurrencyCode(); ?>)</th>
+                                            <th style="width:100px; text-align:center;">Debit (<?php echo getCountryCurrencyCode(); ?>)</th>
                                         </tr>
                                     </thead>
                                     <tbody>

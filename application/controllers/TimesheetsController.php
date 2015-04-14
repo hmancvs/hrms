@@ -169,7 +169,7 @@ class TimesheetsController extends SecureController  {
 		$config = Zend_Registry::get("config");
 		$this->_translate = Zend_Registry::get("translate");
 			
-		$formvalues = $this->_getAllParams(); // debugMessage($formvalues);
+		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit;
 	
 		if(!isArrayKeyAnEmptyString('id', $formvalues)){
 			if(isArrayKeyAnEmptyString('status', $formvalues)){
@@ -178,18 +178,26 @@ class TimesheetsController extends SecureController  {
 			$timesheet = new Timesheet();
 			$timesheet->populate(decode($formvalues['id']));
 			$timesheet->setStatus($formvalues['status']);
-			$timesheet->setHours($timesheet->getComputedHours());
+			if(!isEmptyString($timesheet->getDateIn()) && !isEmptyString($timesheet->getDateOut())){
+				$timesheet->setHours($timesheet->getComputedHours());
+			}
 			$timesheet->setDateApproved(DEFAULT_DATETIME);
 			$timesheet->setApprovedByID($session->getVar('userid'));
+			if(!isArrayKeyAnEmptyString('reason', $formvalues)){
+				$timesheet->setComments("<br/>Rejected with remarks: ".$formvalues['reason']);
+			}
+			// debugMessage($timesheet->toArray());
 				
 			try {
-				$timesheet->save();
-				$session->setVar(SUCCESS_MESSAGE, "Successfully Approved");
+				if($timesheet->save()){
+					$session->setVar(SUCCESS_MESSAGE, "Successfully Approved");
+				}
+				$timesheet->afterApprove();
 			} catch (Exception $e) {
 				$session->setVar(ERROR_MESSAGE, $e->getMessage());
 			}
 		}
-	
+		// exit;
 		if(!isArrayKeyAnEmptyString('ids', $formvalues)){
 			$idsarray = array_remove_empty(explode(',', $formvalues['ids'])); // debugMessage($idsarray);
 			if(isArrayKeyAnEmptyString('status', $formvalues)){
@@ -209,12 +217,16 @@ class TimesheetsController extends SecureController  {
 				}
 				
 				try {
-					$timesheet_collection->save();
-					$msg = "Successfully Approved";
-					if($formvalues['status'] == 4){
-						$msg = "Successfully Rejected";
+					if($timesheet_collection->save()){
+						$msg = "Successfully Approved";
+						if($formvalues['status'] == 4){
+							$msg = "Successfully Rejected";
+						}
+						$session->setVar(SUCCESS_MESSAGE, $msg);
+						foreach($timesheet_collection as $timesheet){
+							$timesheet->afterApprove();
+						}
 					}
-					$session->setVar(SUCCESS_MESSAGE, $msg);
 				} catch (Exception $e) {
 					$session->setVar(ERROR_MESSAGE, $e->getMessage());
 				}

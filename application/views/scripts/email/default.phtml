@@ -1,0 +1,8 @@
+<?php include(APPLICATION_PATH.'/views/scripts/email/emailheader.phtml'); ?>
+<h3 style="font-weight:normal; margin: 20px 0;"><?php echo $this->subject; ?></h3>
+
+<p>Dear <?php echo $this->firstname; ?>,</p>
+
+<?php echo $this->contents; ?>
+
+<?php include(APPLICATION_PATH.'/views/scripts/email/emailfooter.phtml'); ?>

@@ -305,17 +305,24 @@ $(document).ready(function() {
                                     ?>
                                         <li class="<?php echo $readclass; ?> clearfix" id="row_<?php echo $line['id']; ?>">
                                             <div class="col-sm-12 padding10 clearfix">
-                                                <div class="selector col-sm-2 padding0">
+                                                <div class="selector col-sm-2 padding0 centeralign">
                                                     <div class="divider5"></div>
                                                     <input type="checkbox" name="checkor" class="isread messagechecker" id="message_<?php echo $line['id']; ?>" value="<?php echo $line['messagerecipientid']; ?>" style="margin-right:15px; vertical-align:top;" /> 
-                                                    <img class="imagecontainer" src="<?php echo getImagePath($line['senderid'], $line['profilephoto'], $line['gender']); ?>" style="width:65px; display:inline;" />
+                                                    <?php if($line['senderid'] == 1){ ?>
+                                                        <i class="fa fa-flag centeralign" style="font-size:48px; margin-left:5px;"></i>
+                                                    <?php } else { ?>
+                                                        <img class="imagecontainer" src="<?php echo getImagePath($line['senderid'], $line['profilephoto'], $line['gender']); ?>" style="width:65px; display:inline;" />
+                                                    <?php } ?>
+                                                    
                                                     <div class="divider10"></div>
                                                 </div>
                                                 <div class="message col-sm-10 padding0">
                                                     <a href="<?php echo $reply_path; ?>" id="link_<?php echo $line['id']; ?>" class="blockanchor" title="<?php echo $message_title; ?>">
-                                                        <h3 class="sender col-sm-12 padding0"><?php echo $line['Sender'].$sendtype; ?> </h3>
-                                                        <div class="summary clearfix col-sm-12 padding0">   
-                                                            <span>Subject: <?php echo isEmptyString($line['Subject']) ? snippet($line['Contents'], 100, '...' ) : $line['Subject']; ?></span>
+                                                        <h3 class="sender col-sm-12 padding0 bolded">
+															<?php echo $line['senderid'] == 1 ? 'System Alert' : $line['Sender']; ?>: <?php echo snippet($line['Subject'], 100, '...' ); ?>
+                                                        </h3>
+                                                       	<div class="summary clearfix col-sm-12 padding0">   
+                                                            <span class="notbolded"><?php echo snippet($line['Contents'], 100, '...' ); ?></span>
                                                         </div>
                                                     </a>
                                                     <div class="divider10"></div>

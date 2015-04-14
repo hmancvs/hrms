@@ -1,6 +1,6 @@
 <?php
 
-class TimeoffController extends SecureController  {
+class LeaveController extends SecureController  {
 	
 	/**
 	 * @see SecureController::getResourceForACL()
@@ -8,7 +8,7 @@ class TimeoffController extends SecureController  {
 	 * @return String
 	 */
 	function getResourceForACL() {
-		return "Time off";
+		return "Leave";
 	}
 	
 	# return action
@@ -27,7 +27,7 @@ class TimeoffController extends SecureController  {
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 	
-		$formvalues = $this->_getAllParams(); 
+		$formvalues = $this->_getAllParams(); debugMessage($formvalues);
 		$session = SessionWrapper::getInstance();
 		$this->_translate = Zend_Registry::get("translate");
 	
@@ -36,23 +36,23 @@ class TimeoffController extends SecureController  {
 		$formvalues['approvedbyid'] = $session->getVar('userid');
 		// debugMessage($formvalues);
 		
-		$timeoff = new Timeoff();
-		$timeoff->populate($id);
+		$leave = new Leave();
+		$leave->populate($id);
 	
-		$timeoff->processPost($formvalues);
-		/* debugMessage('error is '.$timeoff->getErrorStackAsString());
-		debugMessage($timeoff->toArray()); exit(); */
+		$leave->setStatus($formvalues['status']);
+		$leave->setDateApproved(DEFAULT_DATETIME);
+		$leave->setApprovedByID($session->getVar('userid'));
+		if(!isArrayKeyAnEmptyString('reason', $formvalues)){
+			$leave->setReason("<br/>Rejected with remarks: ".$formvalues['reason']);
+		}
 	
-		if($timeoff->hasError()){
-			$session->setVar(ERROR_MESSAGE, $timeoff->getErrorStackAsString());
-		} else {
-			try {
-				$timeoff->save();
-				$timeoff->afterApprove($formvalues['status']);
-				$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($formvalues[SUCCESS_MESSAGE]));
-			} catch (Exception $e) {
-				$session->setVar(ERROR_MESSAGE, $e->getMessage());
-			}
+		try {
+			$leave->save();
+			$leave->afterApprove($formvalues['status']);
+			$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($formvalues[SUCCESS_MESSAGE]));
+		} catch (Exception $e) {
+			// debugMessage('error '.$e->getMessage());
+			$session->setVar(ERROR_MESSAGE, $e->getMessage());
 		}
 		// exit();
 		$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));

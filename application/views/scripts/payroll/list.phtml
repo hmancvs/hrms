@@ -63,7 +63,7 @@
 	$midmonthlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($middate)).' '.date('M', strtotime($startdate));
 	$monthendlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($enddate)).' '.date('M', strtotime($startdate));
 	
-	$isgenerated = false; $updateurl = ""; $iscompleted = false;
+	$isgenerated = false; $updateurl = ""; $iscompleted = false; $all_results_query =  ""; $userids = array();
 	if(!isEmptyString($startdate) && !isEmptyString($enddate)){
 		$isgenerated = true;
 		$subtitle = 'Payroll Report - '.date('F', strtotime($startdate)).' '.date('Y', strtotime($startdate)); // .' <span class="notbolded" style="font-size:12px;">('.$request->startdate.' to '.$request->enddate.')</span>'
@@ -122,7 +122,7 @@
 			$updateurl = $payroll->getUrl();
 			$where_query = " WHERE p.payrollid = '".$payrollid."' ";
 			
-			$all_results_query = "SELECT p.*, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY p.userid ORDER BY name ASC ";
+			$all_results_query = "SELECT p.*, p.id as payrolldetailid, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY p.userid ORDER BY name ASC ";
 			// debugMessage($all_results_query); exit;
 			
 			$conn = Doctrine_Manager::connection(); 
@@ -151,6 +151,7 @@
 	$resource = "Payroll";
 	$pageid = "payroll_list";
 	$this->headTitle($title.$browserappend);
+	
 ?>
 <script>
 $(document).ready(function() {
@@ -273,8 +274,9 @@ $(document).ready(function() {
 	$("#save").click(function(e){
 		e.preventDefault();
 		$("#status").val(1);
-		$("#restoredata").html($('#tempstore').html());
-		$("#reportform").attr('action', '<?php echo $this->baseUrl('payroll/create'); ?>').attr('method', 'post').submit();
+		// $("#restoredata").html($('#tempstore').html());
+		// var data = base64_encode($('#tempstore :input').serialize()); // $("#reportform").serialize();alert(data);
+		$("#reportform").attr('action', '<?php echo $this->baseUrl('payroll/create/'); ?>').attr('method', 'post').submit();
 	});	
 	
 	$("#complete").click(function(e){
@@ -442,7 +444,7 @@ $(document).ready(function() {
                         <input type="hidden" name="reloadid" id="reloadid" value="<?php echo $request->reloadid; ?>" />
                         <input type="hidden" name="ignorelist" id="ignorelist" value="<?php echo $ignorelist; ?>" />
                         <input type="hidden" name="<?php echo URL_SUCCESS; ?>" id="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($this->baseUrl('payroll/list/id/')); ?>" />
-                        <input type="hidden" name="<?php echo URL_FAILURE; ?>" id="<?php echo URL_FAILURE; ?>" value="<?php echo encode($this->viewurl); ?>" />
+                        <input type="hidden" name="<?php echo URL_FAILURE; ?>" id="<?php echo URL_FAILURE; ?>" value="<?php echo (encode($this->viewurl)); ?>" />
                     </div>
               	</div>
                 <div class="row">
@@ -482,19 +484,19 @@ $(document).ready(function() {
                                                         <th>Hours Approved <br />(<?php echo $midmonthlabel; ?>)</th>
                                                     <?php } ?>
                                                     <th>Hours Approved <br />(<?php echo $monthendlabel; ?>)</th>
-                                                    <th>Rate</th>
+                                                    <th>Rate (<?php echo getCountryCurrencyCode(); ?>)</th>
                                                     <?php if($ismonthly){ ?>
-                                                        <th>Mid Month Gross Pay <br />(<?php echo $midmonthlabel; ?>)</th>
+                                                        <th>Mid Month Gross (<?php echo getCountryCurrencyCode(); ?>) <br />(<?php echo $midmonthlabel; ?>)</th>
                                                     <?php } ?>    
-                                                    <th>Basic Salary <br />(<?php echo $monthendlabel; ?>)</th>
+                                                    <th>Basic Salary (<?php echo getCountryCurrencyCode(); ?>)<br />(<?php echo $monthendlabel; ?>)</th>
                                                     <?php if($ismonthly){ ?>
-                                                        <th>Transport (+)</th>
-                                                        <th>Other Benefits (+)</th>
-                                                        <th>Gross</th>
-                                                        <th>NSSF (-)</th>
-                                                        <th>PAYE (-)</th>
-                                                        <th>Other Deductions (-)</th>
-                                                        <th>Net</th>
+                                                        <th>Transport (+) <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>Other Benefits (+)<br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>Gross <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>NSSF (-) <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>PAYE (-) <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>Other Deductions (-) <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                        <th>Net <br />(<?php echo getCountryCurrencyCode(); ?>)</th>
                                                         <?php if(!$isprint){ ?>
                                                         <th>Payslip</th>
                                                         <?php } ?>
@@ -507,8 +509,12 @@ $(document).ready(function() {
 										    <?php 
                                                 // debugMessage(json_encode($result));
                                                 $i = 1; $userids = array(); 
-                                                $total_hourspending = $total_halfhoursworked = $total_fullhoursworked = $total_midmonthpay = $total_gross = $total_nssf = $total_paye = $total_otherdeductions = $total_netminusdeductions = $total_transport = $total_totalbenefits = $total_netpayout = 0;
+                                                $total_hourspending = $total_halfhoursworked = $total_fullhoursworked = $total_midmonthpay = $total_gross = $total_nssf = $total_paye = $total_otherdeductions = $total_netminusdeductions = $total_transport = $total_totalbenefits = $total_netpayout = 0; $hiddenfieldsdata = array();
                                                 foreach($result as $employee){
+													$payrolldetailid = '';
+													if(!isEmptyString($payrollid)){
+														$payrolldetailid = $employee['payrolldetailid'];
+													}
                                                     $newledgertrxns = array();
                                                     $userids [] = $employee['id'];
                                                     $employeeid = $employee['id'];
@@ -802,7 +808,7 @@ $(document).ready(function() {
                                                                 
                                                                 // accrual of leave hours
                                                                 if($benefit['type'] == 2){
-                                                                    switch($benefit['timeofftypeid']){
+                                                                    switch($benefit['leavetypeid']){
                                                                         case 1:
                                                                             $total_leavehrs = $benefit['accrualvalue']; 
                                                                             if($benefit['accrualtype'] == 2){
@@ -1025,7 +1031,7 @@ $(document).ready(function() {
                                                     // compute nssf
                                                     $nssf = 0;
                                                     if(/*$result['empstatus'] == 1 && $ismonthly || */$paysnssf){
-                                                        $nssf = $gross * ($config->system->nssfemployeerate/100);
+                                                        $nssf = $gross * (getNssfEmployeeRate()/100);
                                                         if(!isEmptyString($payrollid)){
                                                             $nssf = $employee['nssf'];
                                                         }
@@ -1092,15 +1098,10 @@ $(document).ready(function() {
 													if(!in_array($employee['id'], $ignore_array)){
 	                                                    $total_netpayout += $netpayout;
 													}
-                                                    
-                                                    /*if(count($newledgertrxns) > 0){
-                                                        debugMessage($newledgertrxns);
-                                                    }*/
 													
 													$name = '';
 													if(!$isprint){
 														$name .= '<a href="'.$this->baseUrl('profile/view/id/'.encode($employeeid)).'" title="View Profile" target="_blank">'.$employee['name'].'</a>';
-														//// $name .= '<a href="'.$this->baseUrl('profile/view/id/'.encode($employeeid)).'" title="View Profile" target="_blank">'.$employee['name'].'</a>';
 													} else {
 														$name .= $employee['name'];
 													}
@@ -1123,7 +1124,11 @@ $(document).ready(function() {
                                                             e.preventDefault();
                                                             var message = 'testing';
                                                             var payslip = $("#payslip_<?php echo $employeeid; ?>").html(); // alert(payslip);
-                                                            bootbox.alert(payslip); 
+															<?php if(!isEmptyString($payrollid)){ ?>
+                                                            	bootbox.alert(payslip); 
+															<?php } else { ?>
+																bootbox.alert('<span class="centeralign blocked">Save Payroll as Draft to Preview</span>');
+															<?php } ?>
                                                             return false;
                                                         });
 														
@@ -1185,12 +1190,12 @@ $(document).ready(function() {
 														<?php if(!$isprint){ ?>
                                                         <div id="payslip_<?php echo $employeeid; ?>" class="hidden payslipdata alert_<?php echo $employeeid; ?>">
                                                             <label class="blocked bolded">Payslip: <?php echo $employee['name']; ?> <?php echo $monthendlabel; ?></label>
-                                                            <table class="table table-bordered" style="font-size:11px !important;">
+                                                            <table class="table table-bordered" style="font-size:11px !important; margin-bottom:2px;">
                                                                 <thead>
                                                                     <tr>
-                                                                        <th>Item</th>
-                                                                        <th style="width:25%; text-align:center;">CR</th>
-                                                                        <th style="width:25%; text-align:center;">DR</th>
+                                                                        <th>Transaction</th>
+                                                                        <th style="width:25%; text-align:center;">Credit (<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                                        <th style="width:25%; text-align:center;">Debit (<?php echo getCountryCurrencyCode(); ?>)</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -1271,6 +1276,9 @@ $(document).ready(function() {
                                                                     </tr>
                                                                 </tbody>
                                                             </table>
+                                                            <div style="display:block; text-align:center;">
+                                                            	<a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">Print Preview</a>
+                                                            </div>
                                                         </div>
                                                         <?php } ?>
                                                     </td>
@@ -1332,31 +1340,31 @@ $(document).ready(function() {
                                                     <?php } ?>    
                                                     <td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatMoneyOnly($gross); ?>
                                                     	<?php if(!$isprint){ ?>
-                                                        <div class="hiddendata hidden">
-                                                            <input type="hidden" id="hourspending_<?php echo $employeeid; ?>" name="hourspending_<?php echo $employeeid; ?>" value="<?php echo formatNumber($hourspending, 2); ?>" />
-                                                            <input type="hidden" id="halfhoursworked_<?php echo $employeeid; ?>" name="halfhoursworked_<?php echo $employeeid; ?>" value="<?php echo formatNumber($halfhoursworked, 2); ?>" />
-                                                            <input type="hidden" id="fullhoursworked_<?php echo $employeeid; ?>" name="fullhoursworked_<?php echo $employeeid; ?>" value="<?php echo formatNumber($fullhoursworked, 2); ?>" />
-                                                            <input type="hidden" id="leavehrs_<?php echo $employeeid; ?>" name="leavehrs_<?php echo $employeeid; ?>" value="<?php echo formatNumber($leaveaccrued); ?>" />
-                                                            <input type="hidden" id="sickhrs_<?php echo $employeeid; ?>" name="sickhrs_<?php echo $employeeid; ?>" value="<?php echo formatNumber($sickaccrued); ?>" />
-                                                            
-                                                            
-                                                            <input type="hidden" id="midgross_<?php echo $employeeid; ?>" name="midgross_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($midmonthpay); ?>" />
-                                                            <input type="hidden" id="endgross_<?php echo $employeeid; ?>" name="endgross_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($gross); ?>" />
-                                                            <input type="hidden" id="nssf_<?php echo $employeeid; ?>" name="nssf_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($nssf); ?>" />
-                                                            
-                                                            <input type="hidden" id="paye_<?php echo $employeeid; ?>" name="paye_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($paye); ?>" />
-                                                            <input type="hidden" id="netearning_<?php echo $employeeid; ?>" name="netearning_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($netminusdeductions); ?>" />
-                                                            <input type="hidden" id="transport_<?php echo $employeeid; ?>" name="transport_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($transport); ?>" />
-                                                            <input type="hidden" id="othercredit_<?php echo $employeeid; ?>" name="othercredit_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($totalbenefits); ?>" />
-                                                            <input type="hidden" id="otherdebit_<?php echo $employeeid; ?>" name="otherdebit_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($otherdeductions); ?>" />
-                                                            <input type="hidden" id="netpay_<?php echo $employeeid; ?>" name="netpay_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($netpayout); ?>" />
-                                                            <input type="hidden" id="totaltaxable_<?php echo $employeeid; ?>" name="totaltaxable_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($result['totaltaxable']); ?>" />
-                                                            <input type="hidden" id="totalbenefits_<?php echo $employeeid; ?>" name="totalbenefits_<?php echo $employeeid; ?>" value="<?php echo formatMoneyOnly($allbenefits); ?>" />
-                                                            <input type="hidden" id="benefitdetails_<?php echo $employeeid; ?>" name="benefitdetails_<?php echo $employeeid; ?>" value="<?php echo encode(json_encode($results_credits_array)); ?>" />
-                                                            <input type="hidden" id="deductiondetails_<?php echo $employeeid; ?>" name="deductiondetails_<?php echo $employeeid; ?>" value="<?php echo encode(json_encode($results_debits_array)); ?>" />
-                                                            <input type="hidden" id="recurringtrxns_<?php echo $employeeid; ?>" name="recurringtrxns_<?php echo $employeeid; ?>" value="<?php echo encode(json_encode($newledgertrxns)); ?>" />
-                                                            <input type="hidden" id="isignored_<?php echo $employeeid; ?>" name="isignored_<?php echo $employeeid; ?>" value="<?php echo in_array($employee['id'], $ignore_array) ? '1' : '0'; ?>" />
-                                                        </div>
+															<?php 
+                                                                $hiddenfieldsdata["hourspending_".$employeeid] = formatNumber($hourspending, 2);
+                                                                $hiddenfieldsdata["hourspending_".$employeeid] = formatNumber($hourspending, 2);
+                                                                $hiddenfieldsdata["halfhoursworked_".$employeeid] = formatNumber($halfhoursworked, 2);
+                                                                $hiddenfieldsdata["fullhoursworked_".$employeeid] = formatNumber($fullhoursworked, 2);
+                                                                $hiddenfieldsdata["leavehrs_".$employeeid] = formatNumber($leaveaccrued, 2);
+                                                                $hiddenfieldsdata["sickhrs_".$employeeid] = formatNumber($sickaccrued, 2);
+                                                                $hiddenfieldsdata["midgross_".$employeeid] = formatMoneyOnly($midmonthpay);
+                                                                $hiddenfieldsdata["endgross_".$employeeid] = formatMoneyOnly($gross);
+                                                                
+                                                                $hiddenfieldsdata["nssf_".$employeeid] = formatMoneyOnly($nssf);
+                                                                $hiddenfieldsdata["paye_".$employeeid] = formatMoneyOnly($paye);
+                                                                $hiddenfieldsdata["netearning_".$employeeid] = formatMoneyOnly($netminusdeductions);
+                                                                $hiddenfieldsdata["transport_".$employeeid] = formatMoneyOnly($transport);
+                                                                $hiddenfieldsdata["othercredit_".$employeeid] = formatMoneyOnly($totalbenefits);
+                                                                $hiddenfieldsdata["otherdebit_".$employeeid] = formatMoneyOnly($otherdeductions);
+                                                                
+                                                                $hiddenfieldsdata["netpay_".$employeeid] = formatMoneyOnly($netpayout);
+                                                                $hiddenfieldsdata["totaltaxable_".$employeeid] = formatMoneyOnly($result['totaltaxable']);
+                                                                $hiddenfieldsdata["totalbenefits_".$employeeid] = formatMoneyOnly($allbenefits);
+                                                                $hiddenfieldsdata["benefitdetails_".$employeeid] = encode(json_encode($results_credits_array));
+                                                                $hiddenfieldsdata["deductiondetails_".$employeeid] = encode(json_encode($results_debits_array));
+                                                                $hiddenfieldsdata["recurringtrxns_".$employeeid] = encode(json_encode($newledgertrxns));
+                                                                $hiddenfieldsdata["isignored_".$employeeid] = in_array($employee['id'], $ignore_array) ? '1' : '0';
+                                                            ?>
                                                         <?php } ?>
                                                     </td>
                                                     <?php if($ismonthly){ ?>
@@ -1368,7 +1376,7 @@ $(document).ready(function() {
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($otherdeductions); ?></td>
                                                         <td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatMoneyOnly($netpayout); ?></td>
                                                         <?php if(!$isprint){ ?>
-                                                        <td <?php echo $strike; ?>><a class="xalert-dialog gonowhere payslip_<?php echo $employeeid; ?>" id="alert_<?php echo $employeeid; ?>" title=" Payslip Details">Preview</a>
+                                                        <td <?php echo $strike; ?> style="text-align:center;"><a class="xalert-dialog gonowhere payslip_<?php echo $employeeid; ?>" id="alert_<?php echo $employeeid; ?>" title=" Payslip Details">Preview</a>
                                                         <?php } ?>
                                                         </td>
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatNumber($leaveaccrued); ?></td>
@@ -1412,8 +1420,6 @@ $(document).ready(function() {
                                                 </tr>
                                             </tbody>
                                         </table>
-                                        <input type="hidden" name="employees" id="employees" value="<?php echo implode(',', $userids); ?>" />
-                                        <input type="hidden" name="employeequery" id="employeequery" value="<?php echo encode($all_results_query); ?>" />
                                     <?php } ?>
                                 <?php } ?>
                             </div>
@@ -1424,7 +1430,12 @@ $(document).ready(function() {
        	</div>
     	</form>
         <div id="tempstore">
-        	
+        	<?php 
+				$hiddenfieldsdata['employees'] = implode(',', $userids);
+				$hiddenfieldsdata['employeequery'] = encode($all_results_query);
+				$session->setVar('restoredata', encode(json_encode($hiddenfieldsdata)));
+				// debugMessage(encode(json_encode($hiddenfieldsdata))); 
+			?>
         </div>
 	</div>
 </div>

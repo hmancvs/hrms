@@ -79,7 +79,7 @@ $(document).ready(function() {
                                     </td>
                                     <td>
                                         <?php if($option->isEditable()){ ?>		
-                                            <input type="text" name="optionvalue_<?php echo $t; ?>" id="optionvalue_<?php echo $t; ?>" class="form-control"  style="width:95%; padding:4px;" value="<?php echo $option->getOptionValue(); ?>" />
+                                            <input type="text" name="optionvalue_<?php echo $t; ?>" id="optionvalue_<?php echo $t; ?>" class="form-control <?php echo in_array($id, array(61,62)) ? 'readonly' : ''; ?>"  style="width:95%; padding:4px;" value="<?php echo $option->getOptionValue(); ?>" <?php echo in_array($id, array(61,62)) ? 'title="Change these from the Default Company Profile under Manage Companies" rel="tooltip"' : ''; ?> />
                                         <?php } else { ?>    
                                             <?php echo $option->getOptionValue(); ?>
                                             <div class="alert alert-info" style="margin:10px;">Updates to this option are currently disabled.</div>

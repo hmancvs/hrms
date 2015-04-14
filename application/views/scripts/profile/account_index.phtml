@@ -69,4 +69,56 @@
         </fieldset>
         <div class="divider10"></div>
     </div>
+    <link rel="stylesheet" href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/plugins/icheck/all.css')); ?>">
+	<script src="<?php echo $this->serverUrl($this->baseUrl('javascript/plugins/icheck/jquery.icheck.min.js')); ?>"></script>
+    <style>
+        .check-line  {
+            display:block;
+        }
+        .check-line .inline {	
+            width:100%; left:25px; top:-2px;
+        }
+        .fa.checker {
+            background-color:#333;
+            color:#fff;
+            font-size:12px;
+            padding:5px;
+            margin-right:15px;
+        }
+        .fa.checker.unchecked {
+            padding:5px 6px;
+        }
+    </style>
+    <div class="col-sm-12">
+        <fieldset class="fieldsetcontainer">
+            <legend>Preferences</legend>
+            <div class="panel-body well-sm">
+                <div class="row-fluid">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <div class="col-sm-12">
+                                <?php 
+                                    $preferrances = getUserPreferrenceOptions();
+                                ?>
+                                <?php foreach($preferrances as $key => $preferrance){ 
+                                    $currentvalue = $user->get($key, true); // debugMessage($currentvalue);
+                                ?>
+                                    <div class="check-line">
+                                    	<input type="checkbox" id="<?php echo $key; ?>" name="<?php echo $key; ?>" value="1" class="icheck-me" data-skin="square" data-color="blue" <?php echo $currentvalue == 1 ? 'checked' : ''; ?>>
+                                        <input type="hidden" id="<?php echo $key.'_old'; ?>" name="<?php echo $key.'_old'; ?>" value="<?php echo $currentvalue; ?>" />
+                                        <label class='inline' for="<?php echo $key; ?>">
+                                            <p class="form-control-static nullifempty view inline bolded"><?php echo $preferrance; ?></p>
+                                        </label>
+                                    </div>
+                                    <?php if($key == 'emailon_leave_approvalcompleted' || $key == 'emailon_leave_approvalrequired'){ ?>
+                                        <div class="divider30"></div>
+                                    <?php } ?>
+                                <?php } ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    </div>
 </div>

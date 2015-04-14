@@ -1,8 +1,11 @@
-<?php
+ <?php
 	include APPLICATION_PATH.'/includes/header.php';
 	
 	$user = new UserAccount();
 	$theid = is_numeric($request->id) ? $request->id : decode($request->id);
+	if(isEmptyString($theid)){
+		$theid = $userid;
+	}
     $user->populate($theid);
 	$id = $user->getID();
 	
@@ -16,6 +19,9 @@
 		if($request->detect == '1'){
 			$posturl = $this->baseUrl($controller."/processgps");
 		}
+	}
+	if($tab == 'settings'){
+		$tab = "account";
 	}
 	if(isEmptyString($section)){
 		$section = 'view';
@@ -36,6 +42,7 @@
 		$isme = false;
 		$description = 'My Profile';	
 	}
+	$multipart = "";
 	
 	if($tab == 'employment'){
 		$indexurl = $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment');
@@ -45,6 +52,12 @@
 	}
 	if($tab == 'account'){
 		$indexurl = $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/account');
+	}
+	if($tab == 'documents'){
+		$formmethod = 'post';
+		$posturl = $this->baseUrl("document/create");
+		$formid = "indexform";
+		$multipart = ' enctype="multipart/form-data"';
 	}
 	
 	$allowedit = false;
@@ -57,8 +70,13 @@
 		$allowview = false;
 	}
 	
+	$showfullscreen = false;
+	if($request->fullscreen == 1 || $request->pgc == 'true'){
+		$showfullscreen = true;
+	}
+	
 	$pageid = "profile_view";
-	$this->headTitle($title.$browserappend);
+	$this->headTitle($user->getName().$browserappend);
 ?>
 <?php if(!isEmptyString($request->pgc)){ ?>
 	<?php require APPLICATION_PATH."/views/scripts/index/pgc_top.phtml"; ?>
@@ -83,248 +101,81 @@
 <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isDeactivated()) { ?>
     <div class="alert alert-warning fade in">User profile was de-activated</div>
 <?php } ?>
-<div id="<?php echo $pageid; ?>">
-    <form id="<?php echo $formid; ?>" class="form-horizontal" method="<?php echo $formmethod; ?>" action="<?php echo $posturl; ?>">
-    	<div class="box box-bordered box-color">
-            <div class="box-title hideonprint">
-                <h3><i class="fa fa-user"></i> <?php echo $pagetitle; ?></h3>
-                <div class="actions">
-                	<!--<a class="btn" data-toggle="modal" href="#dialog2" action=""><i class="fa fa-plus-circle"></i>Add Task</a>-->
-                    <?php if($allowedit) { ?>
-                        <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a>
-                    <?php } ?>
-                    <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme && false){ ?>
-                        <a class="deleteline btn btn-primary" action="<?php echo $this->baseUrl('profile/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>" message="<?php echo $user->isUserActive() ? 'Delete on this Profile is  disabled. Contact Super Admin' : $this->translate('global_delete_confirm_message'); ?>" title="Remove Entry" rel="tooltip"><i class="fa fa-trash"></i></a>
-                    <?php } ?>
-                    <?php if ($acl->checkPermission($resourcename, ACTION_LIST)) { ?>
-                        <a class="btn btn-primary" href="<?php echo $listurl; ?>" title="List <?php echo $listitems; ?>" rel="tooltip"><i class="fa fa-arrow-right"></i></a>
-                    <?php } ?>
+<?php if(!$showfullscreen){ ?>
+    <div id="<?php echo $pageid; ?>">
+        <form id="<?php echo $formid; ?>" class="form-horizontal" method="<?php echo $formmethod; ?>" action="<?php echo $posturl; ?>" <?php echo $multipart; ?>>
+            <div class="box box-bordered box-color">
+                <div class="box-title hideonprint">
+                    <h3><i class="fa fa-user"></i> <?php echo $pagetitle; ?></h3>
+                    <div class="actions">
+                        <a class="btn btn-primary" href="<?php echo stripUrl($viewurl).'/fullscreen/1/pgc/true'; ?>" title="Preview Profile in Fullscreen" rel="tooltip" target="_blank"><i class="fa fa-print"></i> Print Preview</a> 
+                        <?php if($allowedit) { ?>
+                            <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i> Edit</a> 
+                        <?php } ?>
+                        <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme && false){ ?>
+                            <a class="deleteline btn btn-primary" action="<?php echo $this->baseUrl('profile/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>" message="<?php echo $user->isUserActive() ? 'Delete on this Profile is  disabled. Contact Super Admin' : $this->translate('global_delete_confirm_message'); ?>" title="Remove Entry" rel="tooltip"><i class="fa fa-trash"></i></a> 
+                        <?php } ?>
+                        <?php if ($acl->checkPermission($resourcename, ACTION_LIST)) { ?>
+                            <a class="btn btn-primary" href="<?php echo $listurl; ?>" title="List <?php echo $listitems; ?>" rel="tooltip"><i class="fa fa-arrow-right"></i> List</a> 
+                        <?php } ?>
+                    </div>
                 </div>
-            </div>
-            <div class="box-content nopadding clearfix" style="min-height:500px; height:auto;">
-                <div class="tabs-container col-sm-3 col-xs-12 padding0  hideonprint">
-                    <ul class="tabs tabs-inline tabs-left">
-                        <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>About</a></li>
-                        <li class="<?php echo $tab == 'employment' ? 'active' : ''; ?>"><a data-toggle="tab" href="#employment"><i class="fa fa-briefcase"></i>Employment Details</a></li>
-                        <li class="<?php echo $tab == 'benefits' ? 'active' : ''; ?>"><a data-toggle="tab" href="#benefits"><i class="fa fa-gift"></i>Employee Benefits</a></li>
-                        <li class="<?php echo $tab == 'payment' ? 'active' : ''; ?>"><a data-toggle="tab" href="#payment"><i class="fa fa-money"></i>Payment History</a></li>
-                        <li class="<?php echo $tab == 'account' ? 'active' : ''; ?>"><a data-toggle="tab" href="#account"><i class="fa fa-cog"></i>Account</a></li>
-                        <li class="list-group-item padding0 centeralign noround nobg" style="padding:1px;">
-                            <div class="divider1"></div>
-                            <?php if($allowedit){ ?>
-                                <a href="<?php echo $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>" class="editpic imagecontainer blockanchor blocked" title="Update Profile Photo" style="border-radius:0;"><img id="profileimage" class="imagecontainer noround" src="<?php echo $user->getMediumPicturePath(); ?>" style="width:100%; height:auto;" /><pre id="uploadlink" class=""><i class="icon-pencil"></i> Upload Photo</pre></a>
-                            <?php } else { ?>
-                                <img id="profileimage" class="imagecontainer noround" src="<?php echo $user->getMediumPicturePath(); ?>" style="width:100%; height:auto;" />
-                                <div class="divider10"></div>
-                            <?php } ?>
-                        </li>
-                    </ul>
-                </div>
-                <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0">
-                    <div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
-                        <div class="row">
-                            <div class="col-sm-12 paddingleft0">
-                                <fieldset class="fieldsetcontainer">
-                                    <legend>Summary</legend>
-                                    <div class="panel-body well-sm">
-                                        <div class="row-fluid">
-                                            <div class="col-sm-6">
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_firstname_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getFirstName(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_lastname_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getLastName(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_othernames_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getOtherName(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_fullname_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getdisplayname(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_gender_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getGenderText(); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-sm-6">
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_salutation_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo getDatavariables('SALUTATION', $user->getSalutation(), true); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nationality_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getCountryName(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_dateofbirth_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getDateofBirth()); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_maritalstatus_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo getDatavariables('MARITAL_STATUS_VALUES', $user->getMaritalStatus(), true); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </fieldset>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12 paddingleft0">
-                                <fieldset class="fieldsetcontainer">
-                                    <legend>Contact Information</legend>
-                                    <div class="panel-body well-sm">
-                                        <div class="row-fluid">
-                                            <div class="col-sm-8">
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_email_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getEmail(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altemail_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getEmail2(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getPhone2(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getPhone(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_skype_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getSkype(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_linkedin_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getLinkedIn(); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </fieldset>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12 paddingleft0">
-                                <fieldset class="fieldsetcontainer">
-                                    <legend>Address</legend>
-                                    <div class="panel-body well-sm">
-                                        <div class="row-fluid">
-                                            <div class="col-sm-8">
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_address_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getFullAddress(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_citytown_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getTown(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_postalcode_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getPostalCode(); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </fieldset>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-sm-12 paddingleft0">
-                                <fieldset class="fieldsetcontainer">
-                                    <legend>Emergency Details</legend>
-                                    <div class="panel-body well-sm">
-                                        <div class="row-fluid">
-                                            <div class="col-sm-8">
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_name_label'); ?>:</label>
-                                                    <div class="col-sm-8"><p class="form-control-static nullifempty view"><?php echo $user->getContactName(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_rship_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo getDatavariables('CONTACT_RELATIONSHIPS', $user->getContactRshp(), true); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_phone_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getContactPhone(); ?></p>
-                                                    </div>
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nextkin_email_label'); ?>:</label>
-                                                    <div class="col-sm-8">
-                                                        <p class="form-control-static nullifempty view"><?php echo $user->getContactEmail(); ?></p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </fieldset>
-                            </div>
-                        </div>
+                <div class="box-content nopadding clearfix <?php echo $request->print == 1 || $request->pgc == 'true' ? 'printscreen' : ''; ?>" style="min-height:500px; height:auto;">
+                    <div class="tabs-container col-sm-3 col-xs-12 padding0  hideonprint">
+                        <ul class="tabs tabs-inline tabs-left">
+                            <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>About</a></li>
+                            <li class="<?php echo $tab == 'employment' ? 'active' : ''; ?>"><a data-toggle="tab" href="#employment"><i class="fa fa-briefcase"></i>Employment Details</a></li>
+                            <li class="<?php echo $tab == 'benefits' ? 'active' : ''; ?>"><a data-toggle="tab" href="#benefits"><i class="fa fa-gift"></i>Employee Benefits</a></li>
+                            <li class="<?php echo $tab == 'documents' ? 'active' : ''; ?>"><a data-toggle="tab" href="#documents"><i class="fa fa-file"></i>Documents</a></li>
+                            <li class="<?php echo $tab == 'payment' ? 'active' : ''; ?>"><a data-toggle="tab" href="#payment"><i class="fa fa-money"></i>Payment History</a></li>
+                            <li class="<?php echo $tab == 'account' ? 'active' : ''; ?>"><a data-toggle="tab" href="#account"><i class="fa fa-cog"></i>Account</a></li>
+                            <li class="list-group-item padding0 centeralign noround nobg" style="padding:1px;">
+                                <div class="divider1"></div>
+                                <?php if($allowedit){ ?>
+                                    <a href="<?php echo $this->baseUrl('profile/picture/id/'.encode($user->getID())); ?>" class="editpic imagecontainer blockanchor blocked" title="Update Profile Photo" style="border-radius:0;"><img id="profileimage" class="imagecontainer noround" src="<?php echo $user->getMediumPicturePath(); ?>" style="width:100%; height:auto;" /><pre id="uploadlink" class=""><i class="icon-pencil"></i> Upload Photo</pre></a>
+                                <?php } else { ?>
+                                    <img id="profileimage" class="imagecontainer noround" src="<?php echo $user->getMediumPicturePath(); ?>" style="width:100%; height:auto;" />
+                                    <div class="divider10"></div>
+                                <?php } ?>
+                            </li>
+                        </ul>
                     </div>
-                    <div id="employment" class="tab-pane <?php echo $tab == 'employment' ? 'active' : ''; ?>">
-						<?php require APPLICATION_PATH."/views/scripts/profile/employment_view.phtml"; ?>
-                    </div>
-                    <div id="benefits" class="tab-pane <?php echo $tab == 'benefits' ? 'active' : ''; ?>">
-                         <?php require APPLICATION_PATH."/views/scripts/profile/benefits_view.phtml"; ?>
-                    </div>
-                    <div id="payment" class="tab-pane <?php echo $tab == 'payment' ? 'active' : ''; ?>">
-                        <?php require APPLICATION_PATH."/views/scripts/profile/payments.phtml"; ?>
-                    </div>
-                    <div id="account" class="tab-pane <?php echo $tab == 'account' ? 'active' : ''; ?>">
-                        <?php require APPLICATION_PATH."/views/scripts/profile/account_view.phtml"; ?>
+                    <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0 <?php echo $request->print == 1 || $request->pgc == 'true' ? 'printscreen' : ''; ?>" <?php echo $request->print == 1 || $request->pgc == 'true' ? 'style="width:100%; margin:0 auto;"' : ''; ?>>
+                        <div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
+                            <?php require APPLICATION_PATH."/views/scripts/profile/overview_view.phtml"; ?>
+                        </div>
+                        <div id="employment" class="tab-pane <?php echo $tab == 'employment' ? 'active' : ''; ?>">
+                            <?php require APPLICATION_PATH."/views/scripts/profile/employment_view.phtml"; ?>
+                        </div>
+                        <div id="benefits" class="tab-pane <?php echo $tab == 'benefits' ? 'active' : ''; ?>">
+                             <?php require APPLICATION_PATH."/views/scripts/profile/benefits_view.phtml"; ?>
+                        </div>
+                        <div id="documents" class="tab-pane <?php echo $tab == 'documents' ? 'active' : ''; ?>">
+                             <?php require APPLICATION_PATH."/views/scripts/profile/documents_view.phtml"; ?>
+                        </div>
+                        <div id="payment" class="tab-pane <?php echo $tab == 'payment' ? 'active' : ''; ?>">
+                            <?php require APPLICATION_PATH."/views/scripts/profile/payments.phtml"; ?>
+                        </div>
+                        <div id="account" class="tab-pane <?php echo $tab == 'account' ? 'active' : ''; ?>">
+                            <?php require APPLICATION_PATH."/views/scripts/profile/account_view.phtml"; ?>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
-</div>    
+        </form>
+    </div>    
+<?php } else { ?>
+    <div style="width:800px; margin:0 auto !important; font-family: Arial, Verdana, sans-serif;">
+        <h3 style="font-weight:bold; color:#333333 !important; font-size:20px; margin-left:-15px; font-family: Arial, Verdana, sans-serif;"><?php echo $user->getName(); ?></h3>
+        <form id="<?php echo $formid; ?>" class="form-horizontal">
+            <div class="" id="summarydetails">
+            <?php require APPLICATION_PATH."/views/scripts/profile/overview_view.phtml"; ?>
+            <?php require APPLICATION_PATH."/views/scripts/profile/employment_view.phtml"; ?>
+            <?php require APPLICATION_PATH."/views/scripts/profile/benefits_view.phtml"; ?>
+            </div>
+        </form>
+    </div>
+<?php } ?>
 <?php
 	require_once APPLICATION_PATH.'/includes/footer.php';
 ?>

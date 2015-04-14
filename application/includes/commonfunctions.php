@@ -57,10 +57,10 @@ define("CURRENT_RESULTS_QUERY", "crq");
 # the page title for current list
 define("PAGE_TITLE", "ttl");
 
-define('DEFAULT_USER_GROUP', '2');
+define('DEFAULT_USER_GROUP', '3');
 define('DEFAULT_ID', '1');
 define('VALIDATE_PHONE_ACTIVATED', false);
-define('DEFAULT_DATETIME', date("Y-m-d H:i:s", strtotime('now')));
+define('DEFAULT_DATETIME', date("Y-m-d H:i:s", time()));
 define('DEFAULT_PROGRAM_LINES', 20);
 define('DEFAULT_REGULAR_LEAVE_HRS', 160);
 define('DEFAULT_SICK_LEAVE_HRS', 320);
@@ -68,26 +68,65 @@ define('DEFAULT_REGULAR_LEAVE_DAYS', 21);
 define('DEFAULT_SICK_LEAVE_DAYS', 4);
 define('HOURS_IN_DAY', 8);
 define('HOURS_IN_WEEK', 40);
+define('DEFAULT_WORKING_DAYS', '1,2,3,4,5');
 define('DEFAULT_COMPANYID', 1);
 define('PAYEID', 2);
 define('NSSFID', 3);
 define('ADVANCE', 5);
-define('TPID', 16);
+define('TPID', 9);
 define('DEFAULT_NSSF_EMP', 5);
 define('DEFAULT_NSSF_COM', 10);
 define('DEFAULT_LUNCH_DURATION', 1);
+define('DEFAULT_APPNAME_CHARS', 12);
+define('YEAR_START', getFirstDayOfMonth(1, date('Y')));
+define('YEAR_END', getLastDayOfMonth(12, date('Y')));
 
-function getAppName(){
+function companiesRequireApproval(){
 	$config = Zend_Registry::get("config"); 
-	return $config->system->appname;
+	return $config->system->approvalrequired == 'on' || $config->system->approvalrequired == '1' ? true : false;
+}
+function getDefaultCharsForAppName(){
+	$config = Zend_Registry::get("config"); 
+	return $config->system->appnamechars;
+}
+function getTrialDays(){
+	$config = Zend_Registry::get("config"); 
+	return $config->system->daysoftrial;
+}
+function getDefaultLayout($id = '1'){
+	return 1;
+}
+function getDefaultTopBar($id = '1'){
+	return 2;
+}
+function getDefaultSideBar($id = '1'){
+	return 2;
+}
+function getDefaultTheme($id = '1'){
+	return 'blue';
+}
+function getDefaultShowSideBar($id = '1'){
+	return 0;
+}
+function getAppName(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['appname']) ? $currentcompany['appname'] : (!isEmptyString($defaultcompany['appname']) ? $defaultcompany['appname'] : $config->system->appname);
 }
 function getAppFullName(){
+	$session = SessionWrapper::getInstance();
 	$config = Zend_Registry::get("config");
 	return $config->system->appname;
 }
 function getCompanyName(){
+	$session = SessionWrapper::getInstance();
 	$config = Zend_Registry::get("config"); 
-	return $config->system->companyname;
+	// return $config->system->companyname;
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['name']) ? $currentcompany['name'] : (!isEmptyString($defaultcompany['name']) ? $defaultcompany['name'] : $config->system->companyname);
 }
 function getCompanySignoff(){
 	$config = Zend_Registry::get("config"); 
@@ -97,33 +136,27 @@ function getCopyrightInfo(){
 	$config = Zend_Registry::get("config"); 
 	return $config->system->copyrightinfo;
 }
-function getCountryCode(){
+function getDefaultAdminEmail($default = false){
+	$session = SessionWrapper::getInstance();
 	$config = Zend_Registry::get("config"); 
-	return $config->country->countrycode;
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['defaultadminemail']) ? $currentcompany['defaultadminemail'] : (!isEmptyString($defaultcompany['defaultadminemail']) ? $defaultcompany['defaultadminemail'] : $config->notification->defaultadminemail);
 }
-function getCountryCurrency(){
+function getDefaultAdminName($default = false){
+	$session = SessionWrapper::getInstance();
 	$config = Zend_Registry::get("config"); 
-	return $config->country->currencysymbol;
-}
-function getCountryCurrencyCode(){
-	$config = Zend_Registry::get("config"); 
-	return $config->country->currencycode;
-}
-function getDefaultAdminEmail(){
-	$config = Zend_Registry::get("config"); 
-	return $config->notification->defaultadminemail;
-}
-function getDefaultAdminName(){
-	$config = Zend_Registry::get("config"); 
-	return $config->notification->defaultadminname;
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['defaultadminname']) ? $currentcompany['defaultadminname'] : (!isEmptyString($defaultcompany['defaultadminname']) ? $defaultcompany['defaultadminname'] : $config->notification->defaultadminname);
 }
 function getEmailMessageSender(){
 	$config = Zend_Registry::get("config"); 
-	return $config->notification->emailmessagesender;
+	return getDefaultAdminName();
 }
 function getNotificationSenderName(){
 	$config = Zend_Registry::get("config"); 
-	return $config->notification->notificationsendername;
+	return getDefaultAdminName();
 }
 function getSmsServer(){
 	$config = Zend_Registry::get("config");
@@ -152,6 +185,118 @@ function getSmsTestNumber(){
 function getWebsiteConnection(){
 	$manager = Doctrine_Manager::getInstance();
 	return $manager->connection(WEBSITE_CONNECT_STRING);
+}
+function getYearStart(){
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['yearstart']) ? $currentcompany['yearstart'] : (!isEmptyString($defaultcompany['yearstart']) ? $defaultcompany['yearstart'] : YEAR_START);
+}
+function getYearEnd(){
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['yearend']) ? $currentcompany['yearend'] : (!isEmptyString($defaultcompany['yearend']) ? $defaultcompany['yearend'] : YEAR_END);
+}
+function getHoursInDay(){
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['hoursinday']) ? $currentcompany['hoursinday'] : (!isEmptyString($defaultcompany['hoursinday']) ? $defaultcompany['hoursinday'] : HOURS_IN_DAY);
+}
+function getNssfEmployeeRate(){
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['nssfemployeerate']) ? $currentcompany['nssfemployeerate'] : (!isEmptyString($defaultcompany['nssfemployeerate']) ? $defaultcompany['nssfemployeerate'] : DEFAULT_NSSF_EMP);
+}
+function getNssfCompanyRate(){
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['nssfcompanyrate']) ? $currentcompany['nssfcompanyrate'] : (!isEmptyString($defaultcompany['nssfcompanyrate']) ? $defaultcompany['nssfcompanyrate'] : DEFAULT_NSSF_COM);
+}
+function getMinPhoneLength(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['phoneminlength']) ? $currentcompany['phoneminlength'] : (!isEmptyString($defaultcompany['phoneminlength']) ? $defaultcompany['phoneminlength'] : $config->country->phoneminlength);
+}
+function getMaxPhoneLength(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['phonemaxlength']) ? $currentcompany['phonemaxlength'] : (!isEmptyString($defaultcompany['phonemaxlength']) ? $defaultcompany['phonemaxlength'] : $config->country->phonemaxlength);
+}
+function getDefaultPhoneCode(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	$currentcompany = $session->getVar('currentcompany'); //debugMessage($currentcompany);
+	$defaultcompany = $session->getVar('defaultcompany'); // debugMessage($defaultcompany);
+	return !isEmptyString($currentcompany['countryphonecode']) ? $currentcompany['countryphonecode'] : (!isEmptyString($defaultcompany['countryphonecode']) ? $defaultcompany['countryphonecode'] : $config->country->countryphonecode);
+}
+function getCountryCode(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['countryisocode']) ? $currentcompany['countryisocode'] : (!isEmptyString($defaultcompany['countryisocode']) ? $defaultcompany['countryisocode'] : $config->country->countryisocode);
+}
+function getCountryCurrencySymbol(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['currencysymbol']) ? $currentcompany['currencysymbol'] : (!isEmptyString($defaultcompany['currencysymbol']) ? $defaultcompany['currencysymbol'] : $config->country->currencysymbol);
+}
+function getCountryCurrencyCode(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['currencycode']) ? $currentcompany['currencycode'] : (!isEmptyString($defaultcompany['currencycode']) ? $defaultcompany['currencycode'] : $config->country->currencycode);
+	
+}
+function getCurrencyDecimalPlaces(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['currencydecimalplaces']) ? $currentcompany['currencydecimalplaces'] : (!isEmptyString($defaultcompany['currencydecimalplaces']) ? $defaultcompany['currencydecimalplaces'] : $config->country->currencydecimalplaces);
+}
+function getNumberDecimalPlaces(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['numberdecimalplaces']) ? $currentcompany['numberdecimalplaces'] : (!isEmptyString($defaultcompany['numberdecimalplaces']) ? $defaultcompany['numberdecimalplaces'] : $config->country->numberdecimalplaces);
+}
+function getNationalIDMinLength(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['nationalidminlength']) ? $currentcompany['nationalidminlength'] : (!isEmptyString($defaultcompany['nationalidminlength']) ? $defaultcompany['nationalidminlength'] : $config->country->nationalidminlength);
+}
+function getNationalIDMaxLength(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['nationalidmaxlength']) ? $currentcompany['nationalidmaxlength'] : (!isEmptyString($defaultcompany['nationalidmaxlength']) ? $defaultcompany['nationalidmaxlength'] : $config->country->nationalidmaxlength);
+}
+function getTimeZine(){
+	$config = Zend_Registry::get("config");
+	$session = SessionWrapper::getInstance();
+	$currentcompany = $session->getVar('currentcompany');
+	$defaultcompany = $session->getVar('defaultcompany');
+	return !isEmptyString($currentcompany['timezone']) ? $currentcompany['timezone'] : (!isEmptyString($defaultcompany['timezone']) ? $defaultcompany['timezone'] : $config->country->timezone);
+}
+function getThemeColor(){
+	$session = SessionWrapper::getInstance();
+	return $session->getVar('colortheme');
 }
 /**
  * Change a date from MySQL database Format (yyyy-mm-dd) to the format displayed on pages(mm/dd/yyyy)
@@ -864,6 +1009,23 @@ function getImagePath($id, $filename, $gender){
 	
 	return $photo_path;
 }
+function hasLogo($id, $filename){
+	$real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."company".DIRECTORY_SEPARATOR."comp_".$id.DIRECTORY_SEPARATOR."logo".DIRECTORY_SEPARATOR.$filename;
+	if(file_exists($real_path) && !isEmptyString($filename)){
+		return true;
+	}
+	
+	return false;
+}
+function getCompanyLogoPath($id, $filename){
+	$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
+	$photo_path = $baseUrl.'/uploads/default/default_logo.png';
+	if(hasLogo($id, $filename)){
+		$photo_path = $baseUrl.'/uploads/company/comp_'.$id.'/logo/'.$filename;
+	}
+	
+	return $photo_path;
+}
 # determine if loggedin user is admin
 function isAdmin() {
 	$session = SessionWrapper::getInstance(); 
@@ -1101,13 +1263,32 @@ function getJsIncludes(){
 		"javascript/plugins/validation/jquery.validate.min.js", #<!-- validate v1.13.1 -->
 		"javascript/plugins/validation/additional-methods.min.js",
 		"javascript/plugins/custom/highcharts/highcharts.js", 
-		"javascript/plugins/custom/highcharts/exporting.js", 
-		"javascript/plugins/custom/highcharts/data.js",
+		"javascript/plugins/custom/highcharts/exporting.js",
+		"javascript/plugins/custom/highcharts/data.js"
+		
+	);
+	return $files;
+}
+function getJsIncludes2(){
+	$files = array(
 		"javascript/plugins/bootbox/jquery.bootbox.js",
 		"javascript/plugins/datepicker/bootstrap-datepicker.js",
 		"javascript/plugins/timepicker/bootstrap-timepicker.min.js",
 		"javascript/plugins/custom/table2CSV.js",
-	
+		//"javascript/plugins/placeholder/jquery.placeholder.min.js",
+		"javascript/plugins/custom/jquery.elastic.source.js",
+		"javascript/plugins/chosen/chosen.jquery.min.js",
+		"javascript/plugins/momentjs/jquery.moment.min.js",
+		"javascript/plugins/momentjs/moment-range.min.js",
+
+		"javascript/plugins/datatables/jquery.dataTables.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.tableTools.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.colReorder.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.colVis.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.scroller.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.fixedColumns.min.js",
+		"javascript/plugins/datatables/extensions/dataTables.fixedHeader.min.js",
+			
 		# application specific js
 		'javascript/app.js'
 	);

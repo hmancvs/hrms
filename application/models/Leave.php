@@ -1,13 +1,13 @@
 <?php
 /**
- * Model for leave/timeoff
+ * Model for leave
  */
-class Timeoff extends BaseEntity  {
+class Leave extends BaseEntity  {
 	
 	public function setTableDefinition() {
 		parent::setTableDefinition();
 		
-		$this->setTableName('timeoff');
+		$this->setTableName('leave');
 		$this->hasColumn('userid', 'integer', null, array('notblank' => true));
 		$this->hasColumn('typeid', 'integer', null, array('notblank' => true));
 		$this->hasColumn('startdate','date', null, array('notblank' => true));
@@ -35,11 +35,11 @@ class Timeoff extends BaseEntity  {
 		
 		// set the custom error messages
 		$this->addCustomErrorMessages(array(
-										"userid.notblank" => $this->translate->_("timeoff_userid_error"),
-										"type.notblank" => $this->translate->_("timeoff_type_error"),
+										"userid.notblank" => $this->translate->_("leave_userid_error"),
+										"type.notblank" => $this->translate->_("leave_type_error"),
 										"startdate.notblank" => $this->translate->_("leave_startdate_error"),
-										"enddate.notblank" => $this->translate->_("timeoff_enddate_error"),
-										"duration.notblank" => $this->translate->_("timeoff_duration_error")
+										"enddate.notblank" => $this->translate->_("leave_enddate_error"),
+										"duration.notblank" => $this->translate->_("leave_duration_error")
        	       						));     
 	}
 	/*
@@ -60,7 +60,7 @@ class Timeoff extends BaseEntity  {
 								'foreign' => 'id'
 						)
 		);
-		$this->hasOne('TimeoffType as type',
+		$this->hasOne('LeaveType as type',
 						array(
 								'local' => 'typeid',
 								'foreign' => 'id'
@@ -84,7 +84,7 @@ class Timeoff extends BaseEntity  {
 			unset($formvalues['durationtype']);
 		} else {
 			if($formvalues['durationtype'] == 2){
-				$formvalues['duration'] = $formvalues['duration'] * $config->system->hoursinday;
+				$formvalues['duration'] = $formvalues['duration'] * getHoursInDay();
 				$formvalues['durationtype'] = 1;
 			}
 		}
@@ -139,6 +139,91 @@ class Timeoff extends BaseEntity  {
 	}
 	# send notifications
 	function afterApprove(){
+		$this->sendApprovalConfirmationNotification();
+		return true;
+	}
+	# Send notification to inform user
+	function sendApprovalConfirmationNotification() {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		$session = SessionWrapper::getInstance();
+	
+		// assign values
+		$template->assign('firstname', $this->getUser()->getFirstName());
+	
+		$statuslabel = $this->isApproved() ? "Approved" : "Rejected";
+		$subject = "Leave ".$statuslabel;
+	
+		$save_toinbox = true;
+		$type = "leave";
+		$subtype = "leave_".strtolower($statuslabel);
+		$viewurl = $template->serverUrl($template->baseUrl('leave/view/id/'.encode($this->getID())));
+	
+		$rejectreason = "";
+		if($this->isRejected()){
+			$rejectreason = "<br><b>Synopsis:</b> ".$this->getComments()."";
+		}
+		$days = $this->getDuration()/getHoursInDay();
+		$message_contents = "<p>This is to confirm that your Leave Request from <b>".changeMySQLDateToPageFormat($this->getStartDate())."</b> to <b> ".changeMySQLDateToPageFormat($this->getEndDate())."</b> has been successfully ".$statuslabel.$rejectreason.".</p>
+		<p>To view your request online <a href='".$viewurl."'>click here<a></p>
+		<br />
+		<p>".$this->getApprover()->getName()."<br />
+		".getAppName()."</p>
+		";
+		$template->assign('contents', $message_contents);
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+	
+		// configure base stuff
+		$mail->addTo($this->getUser()->getEmail(), $this->getUser()->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+	
+		$mail->setSubject($subject);
+		// render the view as the body of the email
+	
+		$html = $template->render('default.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); exit();
+	
+		if($this->getUser()->allowEmailForTimesheetApproval() && !isEmptyString($this->getUser()->getEmail())){
+			try {
+				$mail->send();
+				$session->setVar("custommessage1", "Email sent to ".$this->getUser()->getEmail());
+			} catch (Exception $e) {
+				$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			}
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+					"senderid" => DEFAULT_ID,
+					"subject" => $subject,
+					"contents" => $message_contents,
+					"html" => $html,
+					"type" => $type,
+					"subtype" => $subtype,
+					"refid" => $this->getID(),
+					"recipients" => array(
+							md5(1) => array("recipientid" => $this->getUserID())
+					)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+	
 		return true;
 	}
 }

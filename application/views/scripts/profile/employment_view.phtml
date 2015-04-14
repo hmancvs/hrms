@@ -1,8 +1,8 @@
 <div class="row makerelative">
     <div class="col-sm-12 paddingleft0">
     	<div class="makeabsolute" style="right:25px; top:25px; z-index:1000;">
-			<?php if($allowedit) { ?>
-                <a class="btn btn-primary btn-xs blockanchor" style="z-index:1000;" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+			<?php if($allowedit && !$showfullscreen) { ?>
+                <a class="btn btn-primary btn-xs blockanchor hideonprint" style="z-index:1000;" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
             <?php } ?>
         </div>
         <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
@@ -37,7 +37,13 @@
                         <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_manager_label'); ?>:</label>
                             <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo isEmptyString($user->getManagerID()) ? '' : '<a href="'.$this->baseUrl('profile/view/id/'.encode($user->getManagerID())).'" class="block">'.$user->getManager()->getName().'</a>'; ?></p>
+                                <p class="form-control-static nullifempty view">
+									<?php if($showfullscreen){ ?> 
+										<?php echo isEmptyString($user->getManagerID()) ? '' : $user->getManager()->getName(); ?>
+                                    <?php } else { ?>
+                                    	<?php echo isEmptyString($user->getManagerID()) ? '' : '<a href="'.$this->baseUrl('profile/view/id/'.encode($user->getManagerID())).'" class="block">'.$user->getManager()->getName().'</a>'; ?>
+                                    <?php } ?>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -46,6 +52,12 @@
                             <label class="col-sm-5 control-label"><?php echo $this->translate('profile_empidno_label'); ?>:</label>
                             <div class="col-sm-7">
                                 <p class="form-control-static nullifempty view"><?php echo $user->getIDNo(); ?></p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_nationalid_label'); ?>:</label>
+                            <div class="col-sm-7">
+                                <p class="form-control-static nullifempty view"><?php echo $user->getNationalID(); ?></p>
                             </div>
                         </div>
                         <div class="form-group">

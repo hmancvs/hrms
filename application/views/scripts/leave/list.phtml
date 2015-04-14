@@ -8,7 +8,7 @@
 		$istimesheetuser = true;
 	}
 	
-	$title = "Timeoff Requests"; 
+	$title = "Leave Requests"; 
 	
 	$style = '2';
 	if(!isEmptyString($request->style)){
@@ -19,9 +19,9 @@
 		$style = $session->getVar('style');
 	}
 	
-	$timeofftypes = getTimeoffTypes();
-	$timeoffstatuses = getTimeoffStatuses();
-	$timeoffoptions = getHoursDaysDropdown();
+	$leavetypes = getLeaveTypes();
+	$leavestatuses = getLeaveStatuses();
+	$leaveoptions = getHoursDaysDropdown();
 	
 	# Create an instance of the class to handle the pagination
 	$paginate = new Pagination();	
@@ -66,7 +66,7 @@
 	$status = trim($request->status);
 	if(!isEmptyString($status)){
 		
-		if(!isArrayKeyAnEmptyString($status, $timeoffstatuses)){
+		if(!isArrayKeyAnEmptyString($status, $leavestatuses)){
 			switch($status){
 				case '0':
 					$title = "Leave Requests for Approval";
@@ -111,15 +111,15 @@
 		IF(isnull(mc.othername), concat(mc.firstname,' ',mc.lastname), concat(mc.firstname,' ',mc.lastname,' ',mc.othername)) as addedby,
 		IF(p.displayname <> '', p.displayname, concat(p.firstname, ' ', p.lastname, ' ', p.othername)) as approver,
 		t.startdate, t.enddate, t.starttime, t.endtime, t.returndate, t.returntime, t.createdby AS createdby, t.datecreated AS datecreated, t.dateapproved,
-		t.typeid, t.`status`, t.duration, t.durationtype, t.remarks, t.reason
-		from timeoff t 
-		inner join timeofftype x on t.typeid = x.id 
+		t.typeid, t.`status`, t.duration, t.durationtype, t.remarks, t.reason 
+		from `leave` t 
+		inner join leavetype x on t.typeid = x.id 
 		inner join useraccount u on t.userid = u.id
         left join useraccount mc on (t.createdby = mc.id)
 		left join useraccount p on (t.approvedbyid = p.id)
 		".$where_query."  ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$order_query;
 	
-	// debugMessage($all_results_query);
+	// debugMessage($all_results_query); // exit;
 	$paginate->setItemCountFromSQLQuery($all_results_query);
 	
 	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
@@ -131,9 +131,9 @@
 	$result = $conn->fetchAll($current_results_query);
 	$has_no_data = (count($result) == 0) ? true : false; 
 	
-	$listurl = $this->baseUrl('timeoff/list');
-	$addurl = $this->baseUrl('timeoff/index');
-	$resource = "Time off"; // $resource = "Department";
+	$listurl = $this->baseUrl('leave/list');
+	$addurl = $this->baseUrl('leave/index');
+	$resource = "Leave"; // $resource = "Department";
 	$icon = "glyphicon glyphicon-time";
 	$description = '';
 	$isdatatable = true;
@@ -154,17 +154,17 @@ $(document).ready(function() {
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
 <div class="row">
 	<div class="col-sm-12">
-    	<form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("timeoff/listsearch"); ?>" orginalaction="<?php echo $this->baseUrl("timeoff/listsearch"); ?>"  method="get" id="listform">
-		<div class="box box box-color xbox-bordered">
+    	<form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("leave/listsearch"); ?>" orginalaction="<?php echo $this->baseUrl("leave/listsearch"); ?>"  method="get" id="listform">
+		<div class="box box box-color">
 			<div class="box-title noheader">
                 <h3></h3>
             </div>
-            <div class="box-content nopadding">
+            <div class="box-content" style="padding: 5px 0px;">
                 <div class="row">
                     <div class="col-sm-9">
                         <ul class="resetlist listactions">
                         	<?php if($acl->checkPermission($resource, ACTION_APPROVE) || $loggedinuser->isPermanent()) { ?>
-                                <li><a class="btn btn-primary blockanchor" href="<?php echo $addurl; ?>"  title="Request Timeoff">Request Timeoff</a></li>
+                                <li><a class="btn btn-primary blockanchor" href="<?php echo $addurl; ?>"  title="Request Leave">Request Leave</a></li>
                             <?php } ?>
                             <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
                     		<li><input name="enddate" id="enddate" type="text" class="form-control input-sm datefield ordinary readonly width100" placeholder="To:" value="<?php echo $request->enddate; ?>" /></li>
@@ -189,7 +189,7 @@ $(document).ready(function() {
 								<?php
                                     $dropdown = new Zend_Form_Element_Select('typeid',
                                                         array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Types'), $timeofftypes),
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Types'), $leavetypes),
                                                             'view' => new Zend_View(),
                                                             'decorators' => array('ViewHelper'),
                                                             'class' => array("form-control", 'width150', 'input-sm')
@@ -203,7 +203,7 @@ $(document).ready(function() {
                                 <?php
                                     $dropdown = new Zend_Form_Element_Select('status',
                                                         array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $timeoffstatuses),
+                                                            'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $leavestatuses),
                                                             'view' => new Zend_View(),
                                                             'decorators' => array('ViewHelper'),
                                                             'class' => array("form-control", 'width125', 'input-sm')
@@ -219,13 +219,10 @@ $(document).ready(function() {
                        	</ul>
                   	</div>
                     <div class="col-sm-3">
-                        <div class="divider5"></div>
-                        <div class="col-sm-12 padding0">
-                            <div class="input-group">
-                                <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." />
-                                <span class="input-group-addon"><i class="fa fa-search"></i></span>
-                            </div>
-                        </div>	
+                        <div class="input-group">
+                            <input name="searchterm" id="searchterm" class="form-control form-search" value="<?php echo $request->searchterm; ?>" type="text" placeholder="Search..." />
+                            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+                        </div>
                         <input type="hidden" name="style" id="style" value="<?php echo $style; ?>" />
                         <input type="hidden" name="exporttrigger" id="exporttrigger" value="<?php echo $request->exporttrigger; ?>" />
                     </div>
@@ -249,13 +246,7 @@ $(document).ready(function() {
                                 <?php } else { ?>    
                                     <table class="table table-hover table-nomargin table-bordered dataTable dataTable-fixedcolumn dataTable-scroll-x dataTable-scroll-y" id="datatable" data-nosearch data-noinfo data-nopagination>
                                         <thead>
-                                            <?php if($request->forapproval != '1'){ ?>
-                                                <th>Actions</th>
-                                            <?php } ?>    
-                                            <?php if($request->forapproval == '1'){ ?>
-                                                <th>Approve</th>
-                                                <th>Reject</th>
-                                            <?php } ?>
+                                            <th>Actions</th>
                                             <?php if($acl->checkPermission($resource, ACTION_APPROVE)){ ?>
                                                 <th>Employee</th>
                                             <?php } ?>
@@ -263,7 +254,7 @@ $(document).ready(function() {
                                             <th>End Date</th>
                                             <th>Return Date</th>
                                             <th>Duration</th>
-                                            <th>Timeoff Type</th>
+                                            <th>Leave Type</th>
                                             <th>Status</th>
                                             <th>Date Submitted</th>
                                             <th>Approved By</th>
@@ -273,11 +264,11 @@ $(document).ready(function() {
                                         <tbody>
                                             <?php
                                                 foreach($result as $line){
-                                                    $viewurl = $this->baseUrl('timeoff/view/id/'.encode($line['id']));
-                                                    $indexurl = $this->baseUrl('timeoff/index/id/'.encode($line['id']));
+                                                    $viewurl = $this->baseUrl('leave/view/id/'.encode($line['id']));
+                                                    $indexurl = $this->baseUrl('leave/index/id/'.encode($line['id']));
                                                     
                                                     $style = ''; $customclass = '';
-                                                    $status = isArrayKeyAnEmptyString($line['status'], $timeoffstatuses) ? '' : $timeoffstatuses[$line['status']];
+                                                    $status = isArrayKeyAnEmptyString($line['status'], $leavestatuses) ? '' : $leavestatuses[$line['status']];
                                                     if($line['status'] == 0){ // requested
                                                         $customclass = ' alert-warning bolded';
                                                     }
@@ -327,41 +318,33 @@ $(document).ready(function() {
                                                     }
                                                     
                                                     $unit = '';
-                                                    if(!isArrayKeyAnEmptyString($line['durationtype'], $timeoffoptions)){
-                                                        $unit = ' ('.$timeoffoptions[$line['durationtype']].')';
+                                                    if(!isArrayKeyAnEmptyString($line['durationtype'], $leaveoptions)){
+                                                        $unit = ' ('.$leaveoptions[$line['durationtype']].')';
                                                     }
                                                     
                                             ?>
                                                 <tr style="font-size:13px;">
                                                     <?php ob_start(); ?>
-                                                        <a class="btn btn-default btn-xs confirm-prompt noimgbutton inline" title="Reject Request" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$line['id'].'/status/2/successurl/'.encode($this->viewurl).'/successmessage/leave_rejected_success'); ?>" message="Reject <?php echo $line['duration'].$unit; ?> requested by <?php echo $line['User']; ?>. <br>Please specify Reason/Comment to continue"><i class="fa fa-times"></i></a>
+                                                        <a class="btn btn-default btn-xs confirm-prompt noimgbutton inline" title="Reject Request" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('leave/updatestatus/id/'.$line['id'].'/status/2/successurl/'.encode($this->viewurl).'/successmessage/leave_rejected_success'); ?>" message="Reject <?php echo $line['duration'].$unit; ?> requested by <?php echo $line['User']; ?>. <br>Please specify Reason/Comment to continue"><i class="fa fa-times"></i></a>
                                                     <?php $rejecthtml = ob_get_clean(); ?>
                                                     <?php ob_start(); ?>
-                                                        <a class="btn btn-success btn-xs confirm-dialog noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" title="Approve Request" action="<?php echo $this->baseUrl('timeoff/updatestatus/id/'.$line['id'].'/status/1/successurl/'.encode($this->viewurl).'/successmessage/leave_approve_success'); ?>" message="Are you sure you want to Approve <?php echo $line['duration'].$unit; ?> requested by <br><?php echo $line['User']; ?> from <?php echo changeMySQLDateToPageFormat($line['startdate']); ?> to <?php echo changeMySQLDateToPageFormat($line['enddate']); ?>"><i class="fa fa-check"></i></a>
+                                                        <a class="btn btn-success btn-xs confirm-dialog noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" title="Approve Request" action="<?php echo $this->baseUrl('leave/updatestatus/id/'.$line['id'].'/status/1/successurl/'.encode($this->viewurl).'/successmessage/leave_approve_success'); ?>" message="Are you sure you want to Approve <?php echo $line['duration'].$unit; ?> requested by <br><?php echo $line['User']; ?> from <?php echo changeMySQLDateToPageFormat($line['startdate']); ?> to <?php echo changeMySQLDateToPageFormat($line['enddate']); ?>"><i class="fa fa-check"></i></a>
                                                     <?php $approvehtml = ob_get_clean(); ?>
-                                                    <?php if($request->forapproval != '1'){ ?>
-                                                        <td>
-                                                            <a class="btn btn-default btn-xs noimgbutton blockanchor inline" title="View Request Details" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $viewurl; ?>"><i class="fa fa-list"></i></a>
-                                                            <?php if ($allowdelete) { ?>
-                                                                <a class="btn btn-default btn-xs noimgbutton deleteline gonowhere inline" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('timeoff/delete/id/'.encode($line['id'])."/entityname/Timeoff/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="fa fa-times"></i></a>
-                                                            <?php } ?>  
-                                                            <?php if ($allowedit) { ?>
-                                                                <a class="inline blockanchor btn btn-primary btn-sm noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $indexurl; ?>" title="Update"><i class="fa fa-edit"></i></a>
-                                                            <?php } ?>
-                                                        </td>
-                                                    <?php } ?>
-                                                    <?php if($request->forapproval == '1' && $acl->checkPermission($resource, ACTION_APPROVE)){ ?>
-                                                        <th class="nullifempty">
-                                                            <?php if($allowapprove){ ?>
-                                                                <?php echo $approvehtml; ?>    
-                                                            <?php } ?>
-                                                        </th>
-                                                        <th>
-                                                            <?php if($allowreject){ ?>
-                                                                <?php echo $rejecthtml; ?>                   
-                                                            <?php } ?>
-                                                        </th>
-                                                    <?php } ?>
+                                                    <td>
+                                                        <a class="btn btn-default btn-xs noimgbutton blockanchor inline" title="View Request Details" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $viewurl; ?>"><i class="fa fa-list"></i></a>
+                                                        <?php if ($allowdelete) { ?>
+                                                            <a class="btn btn-default btn-xs noimgbutton deleteline gonowhere inline" style="padding-top: 2px; padding-bottom:4px;" action="<?php echo $this->baseUrl('leave/delete/id/'.encode($line['id'])."/entityname/Leave/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete Entry"><i class="fa fa-times"></i></a>
+                                                        <?php } ?>  
+                                                        <?php if ($allowedit) { ?>
+                                                            <a class="inline blockanchor btn btn-primary btn-sm noimgbutton inline" style="padding-top: 2px; padding-bottom:4px;" href="<?php echo $indexurl; ?>" title="Update"><i class="fa fa-edit"></i></a>
+                                                        <?php } ?>
+                                                        <?php if($allowapprove){ ?>
+                                                            <?php echo $approvehtml; ?>    
+                                                        <?php } ?>
+                                                        <?php if($allowreject){ ?>
+                                                            <?php echo $rejecthtml; ?>                   
+                                                        <?php } ?>
+                                                    </td>
                                                     <?php if($acl->checkPermission($resource, ACTION_APPROVE)){ ?>
                                                         <td class="nullifempty"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($line['userid'])); ?>"><?php echo $line['User']; ?></a></td>
                                                     <?php } ?>    
@@ -369,7 +352,7 @@ $(document).ready(function() {
                                                     <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['enddate']); ?></td>
                                                     <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['returndate']); ?></td>
                                                     <td class="nullifempty"><?php echo $line['duration'].$unit; ?></td>
-                                                    <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['typeid'], $timeofftypes) ? '' : $timeofftypes[$line['typeid']]; ?></td>
+                                                    <td class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['typeid'], $leavetypes) ? '' : $leavetypes[$line['typeid']]; ?></td>
                                                     <td class="nullifempty <?php echo $customclass; ?>" <?php echo $style; ?>><?php echo $status; ?></td>
                                                     <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['datecreated']); ?></td>
                                                     <td class="nullifempty"><?php echo $line['approver']; ?></td>

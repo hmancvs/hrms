@@ -336,7 +336,7 @@ $(document).ready(function() {
 														if(!in_array($employee['id'], $ignore_array)){
                                                         	$total_nssf += $nssf;
 															if($employee['nssf'] > 0){
-																$companycontrb = $gross*($config->system->nssfcompanyrate/100);
+																$companycontrb = $gross*(getNssfCompanyRate()/100);
 																$total_employeer += $companycontrb;
 																$total_contrib += ($nssf + $companycontrb);
 															}

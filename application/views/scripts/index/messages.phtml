@@ -4,7 +4,7 @@
             <div class="alert alert-success alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar(SUCCESS_MESSAGE); ?>
             </div>
         <?php } ?>
-        <?php if (!isEmptyString($session->getVar(ERROR_MESSAGE)) && false) { ?>
+        <?php if (!isEmptyString($session->getVar(ERROR_MESSAGE))) { ?>
             <div class="alert alert-danger alert-dismissable"><button data-dismiss="alert" class="close" type="button">×</button><?php echo $session->getVar(ERROR_MESSAGE); ?></div>
         <?php } ?>
         <?php if (!isEmptyString($session->getVar("infomessage"))) { ?>

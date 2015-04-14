@@ -2,7 +2,7 @@
 	require_once APPLICATION_PATH.'/includes/header.php';
 	
 	# Page title
-	$title = "Timeoff Categories";
+	$title = "Leave Categories";
 	
 	$style = '2';
 	if(!isEmptyString($request->style)){
@@ -30,7 +30,7 @@
 	}
 	
 	$paginate->processPost($request->getParams());
-	$all_results_query = "select t.id as id, t.name, t.description, t.defaultquantity, t.quantitytype, t.calendarcolor, t.deductfromallowance, t.paid, t.bookable, t.authorised, t.viewoncalendar from timeofftype t WHERE t.name <> '' ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$paginate->getSortSQL();
+	$all_results_query = "select t.id as id, t.name, t.description, t.defaultquantity, t.quantitytype, t.calendarcolor, t.deductfromallowance, t.paid, t.bookable, t.authorised, t.viewoncalendar from leavetype t WHERE t.name <> '' ".$paginate->getSearchAndFilterSQL()." GROUP BY t.id ".$paginate->getSortSQL();
 	
 	# debugMessage($all_results_query);
 	$paginate->setItemCountFromSQLQuery($all_results_query);
@@ -45,9 +45,9 @@
 	$has_no_data = (count($result) == 0) ? true : false; 
 	$isdatatable = false;
 	
-	$listurl = $this->baseUrl('config/timeoff');
-	$addurl = $this->baseUrl('config/timeoffindex');
-	$moduleitem = "Time Off Type";
+	$listurl = $this->baseUrl('config/leave');
+	$addurl = $this->baseUrl('config/leaveindex');
+	$moduleitem = "Leave Type";
 	$resource = "System Config"; // $resource = "Department";
 	$icon = "glyphicon glyphicon-cog";
 	
@@ -80,7 +80,7 @@
                         <div class="col-sm-8">
                             <ul class="resetlist listactions">
                                 <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
-                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/timeoffindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
+                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/leaveindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
                                 <?php //} ?>
                             </ul>
                         </div>
@@ -107,7 +107,7 @@
                         <?php } ?>
              			<?php
 							foreach($result as $line){
-								$indexurl = $this->baseUrl('config/timeoffindex/id/'.encode($line['id']));
+								$indexurl = $this->baseUrl('config/leaveindex/id/'.encode($line['id']));
 						?>
 							<tr>
 								<td class="nullifempty"><?php echo $line['name']; ?></td>
@@ -133,7 +133,7 @@
 										<a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
 									<?php //} ?>
 									<?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
-										<a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/TimeoffType/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
+										<a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/LeaveType/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
 									<?php //} ?>
 								</td>
 							</tr>

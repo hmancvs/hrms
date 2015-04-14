@@ -202,7 +202,7 @@ $(document).ready(function() {
                         <label class="col-sm-3 control-label">Amount: <?php echo $this->translate("global_required_field_marker"); ?></label>
                         <div class="col-sm-9">
                             <input type="text" name="amount" id="amount" class="form-control input-sm isnumber centeralign width100 inline" value="<?php echo $ledger->getAmount(); ?>" />
-                            &nbsp; (<?php echo $config->country->currencycode; ?> Amount)
+                            &nbsp; (<?php echo getCountryCurrencyCode(); ?> Amount)
                             <div id="amount_error"></div>
                         </div>
                     </div>

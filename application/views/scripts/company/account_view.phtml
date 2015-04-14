@@ -2,7 +2,7 @@
     <div class="col-sm-12 paddingleft0">
     	<div class="makeabsolute" style="right:25px; top:25px; z-index:1000;">
 			<?php if($allowedit) { ?>
-                <a class="btn btn-primary btn-xs blockanchor" style="z-index:1000;" href="<?php echo $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/account'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+                <a class="btn btn-primary btn-xs blockanchor" style="z-index:1000;" href="<?php echo $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/account'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update Settings</a>
             <?php } ?>
         </div>
         <fieldset class="fieldsetcontainer">
@@ -85,13 +85,65 @@
                 <div class="row-fluid">
                     <div class="col-sm-12">
                         <div class="form-group">
-                            <label class="col-sm-4 control-label">Current Accounting Period <br/>Start Date:</label>
+                            <label class="col-sm-4 control-label">Current Accounting Period Start Date:</label>
                             <div class="col-sm-8"><?php echo  isEmptyString($company->getyearstart()) ? '' : date('m/d/Y', strtotime($company->getyearstart())); ?></div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-4 control-label">Current Accounting Period <br/>End Date:</label>
+                            <label class="col-sm-4 control-label">Current Accounting Period End Date:</label>
                             <div class="col-sm-8"><?php echo  isEmptyString($company->getyearend()) ? '' : date('m/d/Y', strtotime($company->getyearend())); ?></div>
                         </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Default Country:</label>
+                            <div class="col-sm-8"><?php echo getFullCountryName($company->getcountryisocode()); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Country Timezone:</label>
+                            <div class="col-sm-8"><?php echo getFullTimezone($company->gettimezone()); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Currency Code:</label>
+                            <div class="col-sm-8"><?php echo $company->getcurrencycode(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Currency Symbol:</label>
+                            <div class="col-sm-8"><?php echo $company->getcurrencysymbol(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Decimal places for Currency:</label>
+                            <div class="col-sm-8"><?php echo $company->getcurrencydecimalplaces(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Decimal places for Hours and other Numbers:</label>
+                            <div class="col-sm-8"><?php echo $company->getnumberdecimalplaces(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Phone Number Country Prefix:</label>
+                            <div class="col-sm-8"><?php echo $company->getcountryphonecode(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Phone Number Maximum Length:</label>
+                            <div class="col-sm-8"><?php echo $company->getphonemaxlength(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Phone Number Minimum Length:</label>
+                            <div class="col-sm-8"><?php echo $company->getphoneminlength(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">National ID Maximum Length:</label>
+                            <div class="col-sm-8"><?php echo $company->getnationalidmaxlength(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">National ID Minimum Length:</label>
+                            <div class="col-sm-8"><?php echo $company->getnationalidminlength(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Default Email for Sending System Notifications:</label>
+                            <div class="col-sm-8"><?php echo $company->getDefaultAdminEmail(); ?></div>
+                       	</div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Sender Name for System Notifications:</label>
+                            <div class="col-sm-8"><?php echo $company->getDefaultAdminName(); ?></div>
+                       	</div>
                     </div>
                 </div>
             </div>

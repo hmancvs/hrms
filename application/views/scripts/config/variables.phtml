@@ -171,7 +171,7 @@ $(document).ready(function(){
                                         <th>Department</th>
                                     <?php } ?>
                                     <?php if($lookupid == 9){ ?>
-                                        <th>Default Amount (<?php echo $config->country->currencycode; ?>)</th>
+                                        <th>Default Amount (<?php echo getCountryCurrencyCode(); ?>)</th>
                                     <?php } ?>
                                 <?php } ?>
                                 <th style="width:150px;">Action</th>

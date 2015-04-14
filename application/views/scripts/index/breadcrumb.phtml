@@ -7,34 +7,39 @@
     </div>
     <div class="pull-right">
         <ul class="stats">
-        	<?php if(isAdmin()){ ?>
-                <li>
-                    <?php
-                        // debugMessage('current '.$companyid);
-                        $companies = getCompanies();
-                        $dropdown = new Zend_Form_Element_Select('companyid',
-                                            array(
-                                                'multiOptions' => $companies,
-                                                'view' => new Zend_View(), 
-                                                'decorators' => array('ViewHelper'),
-                                                'class' => array('form-control','input-sm','width200'),
-                                                'id' => 'changecompany',
-                                                'action' => $this->baseUrl('index/changecompany/successurl/'.encode($this->viewurl))
-                                            )
-                                        );
-                        $dropdown->setValue($session->getVar('companyid')); 
-                        echo $dropdown->render(); 
-                    ?>
-                </li>
-            <?php } ?>
-            <li class='<?php echo $session->getVar('unread') > 0 ? 'lightred' : 'lightgrey'; ?>'>
-                <a href="<?php echo $this->baseUrl('notifications/list'); ?>">
-                    <i class="fa fa-flag"></i>
-                    <div class="details">
-                        <span class="big">Notifications</span>
-                        <span>(<?php echo $session->getVar('unread'); ?> Unread)</span>
+            <li style="margin:0; padding:0; padding-right:5px; <?php echo isAdmin() ? 'margin-top:-8px;' : 'margin-top:0'; ?>" id="searchsection">
+                <?php if(isAdmin()){ ?>
+                    <div class="blocked">
+                        <?php
+                            // debugMessage('current '.$companyid);
+                            $companies = getCompanies();
+                            $dropdown = new Zend_Form_Element_Select('companyid',
+                                                array(
+                                                    'multiOptions' => $companies,
+                                                    'view' => new Zend_View(), 
+                                                    'decorators' => array('ViewHelper'),
+                                                    'class' => array('form-control','input-sm','width200'),
+                                                    'id' => 'changecompany',
+                                                    'action' => $this->baseUrl('index/changecompany/successurl/'.encode($this->viewurl)),
+                                                    'style' => 'float:right'
+                                                )
+                                            );
+                            $dropdown->setValue($session->getVar('companyid')); 
+                            echo $dropdown->render(); 
+                        ?>
                     </div>
-                </a>
+                    <div class="divider5"></div>
+                <?php } ?>
+                <div class="blocked">
+                    <form class='search-form'>
+                        <div class="contentArea searchbar">
+                            <div class="search-pane makerelative">
+                              <input type="text" name="search" placeholder="Search <?php echo getAppName(); ?>..." style="width:320px;" id="inputSearch" class="search form-control" tabindex="1"><a style="right:2px; top:2px; position:absolute; background-color:#999;" class="btn btn-primary gonowhere"><i class="fa fa-search" style="font-size:20px;"></i></a>
+                            </div>
+                            <ul id="divResult"></ul>
+                        </div>
+                    </form>
+                </div>
             </li>
             <li class='blue'>
                 <i class="fa fa-calendar"></i>

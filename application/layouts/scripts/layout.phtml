@@ -31,6 +31,13 @@
 			// use baseURL() to output the full URL of the cached file and use it as normal with headLink(). also use setFile so that each file is added
 			$this->minifyHeadScript()->appendFile($js);
 		}  
+		// echo $this->minifyHeadScript();
+		
+		$jsfiles = getJsIncludes2();
+		foreach ($jsfiles as $js) {
+			// use baseURL() to output the full URL of the cached file and use it as normal with headLink(). also use setFile so that each file is added
+			$this->minifyHeadScript()->appendFile($js);
+		}  
 		echo $this->minifyHeadScript();
 		
 		$request = Zend_Controller_Front::getInstance()->getRequest();
@@ -40,21 +47,47 @@
 		$session = SessionWrapper::getInstance();		
 		$companyid = isEmptyString($session->getVar('companyid')) ? DEFAULT_COMPANYID :  $session->getVar("companyid");
 		
-		$bodyclasses = "app ";
+		$bodyclasses = "";
 		$fulltemplate = true;
 		if($controller == 'user' && $action == 'login'){
 			$fulltemplate = false;
 			$bodyclasses .= "login ";
 		}
 		$isprint = false;
-		if($request->print == '1'){
+		if($request->print == '1' || $request->fullscreen == '1'){
 			$fulltemplate = false; $isprint = true;
 			$bodyclasses .= "print ";
 		}
-		$colortheme = ''; $attr = "";
-		if(isEmptyString($request->colortheme) && !isEmptyString($session->getVar('colortheme'))){
-			$colortheme = $session->getVar('colortheme');
+		
+		$default_theme_data = getDefaultThemeOptions(DEFAULT_COMPANYID); // debugMessage($default_theme_data);
+		$current_theme_data = getDefaultThemeOptions($companyid, $default_theme_data); // debugMessage($current_theme_data);
+		// theme layout options
+		$layout_options = array(1=>'fluid', 2=>'fixed'); $layout = $current_theme_data['layout'];
+		if(!isEmptyString($request->layout)){
+			$layout = $request->layout;
+			$session->setVar('layout', $request->layout);
 		}
+		
+		$topbar_options = array(1=>'default',2=>'fixed'); $topbar = $current_theme_data['topbar'];
+		if(!isEmptyString($request->topbar)){
+			$topbar = $request->topbar;
+			$session->setVar('topbar', $request->topbar);
+		}
+		
+		$sidebar_options = array(1=>'default', 2=>'fixed'); $sidebar = $current_theme_data['sidebar'];
+		if(!isEmptyString($request->sidebar)){
+			$sidebar = $request->sidebar;
+			$session->setVar('sidebar', $request->sidebar);
+		}
+		
+		// show or hide sidebar
+		$showsidebar = $current_theme_data['showsidebar'];
+		if(!isEmptyString($request->showsidebar)){
+			$show_sidebar = $request->showsidebar;
+			$session->setVar('showsidebar', $request->showsidebar);
+		}
+		
+		$colortheme = $current_theme_data['colortheme']; $attr = "";
 		if(!isEmptyString($request->colortheme)){
 			$colortheme = $request->colortheme;
 			$session->setVar('colortheme', $request->colortheme);
@@ -62,44 +95,6 @@
 		if(!isEmptyString($colortheme)){
 			$bodyclasses .= "theme-".$colortheme." ";
 			$attr = ' data-theme="theme-'.$colortheme.'"';
-		}
-		
-		// theme layout options
-		$layout_options = array(1=>'fluid', 2=>'fixed'); $layout = 1;
-		if(!isEmptyString($request->layout)){
-			$layout = $request->layout;
-			$session->setVar('layout', $request->layout);
-		}
-		if(isEmptyString($request->layout) && !isEmptyString($session->getVar('layout'))){
-			$layout = $session->getVar('layout');
-		}
-		
-		$topbar_options = array(1=>'default',2=>'fixed'); $topbar = 2;
-		if(!isEmptyString($request->topbar)){
-			$topbar = $request->topbar;
-			$session->setVar('topbar', $request->topbar);
-		}
-		if(isEmptyString($request->topbar) && !isEmptyString($session->getVar('topbar'))){
-			$topbar = $session->getVar('topbar');
-		}
-		
-		$sidebar_options = array(1=>'default', 2=>'fixed'); $sidebar = 1;
-		if(!isEmptyString($request->sidebar)){
-			$sidebar = $request->sidebar;
-			$session->setVar('sidebar', $request->sidebar);
-		}
-		if(isEmptyString($request->sidebar) && !isEmptyString($session->getVar('sidebar'))){
-			$sidebar = $session->getVar('sidebar');
-		}
-		
-		// show or hide sidebar
-		$showsidebar = 0;
-		if(!isEmptyString($request->showsidebar)){
-			$show_sidebar = $request->showsidebar;
-			$session->setVar('showsidebar', $request->showsidebar);
-		}
-		if(isEmptyString($request->showsidebar) && !isEmptyString($session->getVar('showsidebar'))){
-			$showsidebar = $session->getVar('showsidebar');
 		}
 	?>
    

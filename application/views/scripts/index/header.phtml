@@ -24,9 +24,10 @@
 	$c->where("(mr.recipientid = '".$userid."' AND mr.isread = 0) ORDER BY m.datecreated");
 	$c->addComponent('m', 'Message m');
 	$c->addComponent('mr', 'm.recipients mr');
-		
+	
 	$unread_messages = $c->execute()->count();
 	$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:12px;">('.$unread_messages.' Unread)</span>';
+	$session->setVar('unread', $unread_messages);
 	
 	$ischeckin = false;
 	$istimesheetuser = false;
@@ -46,8 +47,18 @@
 	}
 ?>
 <div id="navigation" class="<?php echo $topbar == 2 ? 'navbar-fixed-top' : ''; ?>">
-    <div class="<?php echo $layout == 1 ? 'container-fluid' : 'container'; ?>">
-        <a href="<?php echo $this->baseUrl('dashboard'); ?>" id="brand"><?php echo getAppName(); ?></a>
+    <div class="<?php echo $layout == 1 ? 'container-fluid' : 'container'; ?>" <?php echo $logotype == 1 ? 'style="padding-left:0;"' : ''; ?>>
+		<a href="<?php echo $this->baseUrl('dashboard'); ?>" id="brand" class="<?php echo $logotype == 1 ? 'centeralign' : ''; ?>" style="background:none; padding-left:0; padding-right:0;  <?php echo $logotype == 1 ? 'min-width:175px; max-width:180px; margin-top:5px;' : ''; ?>">	
+			<?php if($logotype == 0){ ?>
+                <img src="<?php echo $logourl; ?>" style="height:22px; width:auto;" /> <?php echo $appname; ?>
+            <?php } ?>
+            <?php if($logotype == 1){ ?>
+                <img src="<?php echo $logourl; ?>" style="height:30px; width:auto;" />
+            <?php } ?>
+            <?php if($logotype == 2){ ?>
+                <?php echo $appname; ?>
+            <?php } ?>
+        </a>
         <?php if(isLoggedIn()){ ?>
         	<a class="toggle-nav gonowhere <?php echo $showsidebar == 1 ? 'hasbar' : ''; ?>" href="javascript: void(0)" rel="tooltip" data-placement="bottom" title="Toggle navigation"><i class="fa fa-bars"></i></a>
         <?php } else { ?>
@@ -91,11 +102,11 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
 							</li>
 						<?php } ?>
                         <?php if($ischeckin){ ?>
-                        	<li><a class="<?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($checkindetails['id']).'/type/2/userid/'.encode($checkindetails['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout  overdue and has been disabled. Contact Admin or a Supervisor.">Check Out</a>
+                        	<li><a class="<?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($checkindetails['id']).'/type/2/userid/'.encode($checkindetails['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout overdue and has been disabled. Contact Admin or a Supervisor.">Check Out</a>
 							</li>
                         <?php } ?>
 						<?php if ($acl->checkPermission('Timesheets', ACTION_CREATE)) { ?>
-                        	<li><a class="addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Time" rel="New Timesheet Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('timesheets/attendance'); ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a></li>
+                        	<li><a class="addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Time" rel="New Timesheet Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a></li>
                         <?php } ?>
 						<?php if ($acl->checkPermission('Attendance', ACTION_LIST)) { ?>
 							<li><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>">Attendance History</a></li>
@@ -129,11 +140,11 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                             <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>"><?php echo $istimesheetuser ? 'Benefits History' : 'Manage Benefits'; ?></a></li>
                         <?php } ?>
 						<?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Benefit</a></li>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Deduction</a></li>
+                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Benefit</a></li>
+                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Deduction</a></li>
                         <?php } ?>
                         <?php if($istimesheetuser && !isCompanyAdmin()) { ?>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request">Request Benefit</a></li>
+                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit">Request Benefit</a></li>
                         <?php } ?>
                         <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
                              <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
@@ -152,30 +163,43 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                     </ul>
                 </li>
             <?php } ?>
-            <?php if($acl->checkPermission('Time off', ACTION_LIST)) { ?>
-                <li class="<?php echo $controller == 'timeoff' ? 'active' : ''; ?>">
-                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Time off</span><span class="caret"></span></a>
+            <?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
+                <!--<li class="<?php //echo $controller == 'payroll' ? 'active' : ''; ?>">
+                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Payroll</span><span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                    	<?php if ($acl->checkPermission('Time off', ACTION_CREATE) && !$acl->checkPermission('Time off', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/index'); ?>">Request Timeoff</a></li>
+                    	<?php //if($acl->checkPermission('Payroll', ACTION_CREATE)) { ?>
+                            <li><a class="blockanchor" href="<?php //echo $this->baseUrl('payroll/list'); ?>">Generate Payroll</a></li>
+                        <?php //} ?>
+                        <?php //if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
+                            <li><a class="blockanchor" href="<?php //echo $this->baseUrl('payroll/history'); ?>">Payroll History</a></li>
+                        <?php //} ?>
+                    </ul>
+              	</li>-->
+            <?php } ?>
+            <?php if($acl->checkPermission('Leave', ACTION_LIST)) { ?>
+                <li class="<?php echo $controller == 'leave' ? 'active' : ''; ?>">
+                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Leave</span><span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                    	<?php if ($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>">Request Leave</a></li>
                         <?php } ?>
-                        <?php if ($acl->checkPermission('Time off', ACTION_APPROVE)) { ?>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list/whoisoff/1'); ?>">Who is Off?</a></li>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list/forapproval/1'); ?>"> Requests for Approval</a></li>
+                        <?php if ($acl->checkPermission('Leave', ACTION_APPROVE)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>">Who is Off?</a></li>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/list/forapproval/1'); ?>"> Requests for Approval</a></li>
                         <?php } ?>
-                        <?php if ($acl->checkPermission('Time off', ACTION_LIST)) { ?>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('timeoff/list'); ?>"><?php echo $istimesheetuser ? 'My Leave' : 'All Timeoff'; ?> Requests</a></li>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/2'); ?>"><?php echo $mytext; ?>Timeoff Accruals</a></li>
+                        <?php if ($acl->checkPermission('Leave', ACTION_LIST)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/list'); ?>"><?php echo $istimesheetuser ? 'My Leave' : 'All Leave'; ?> Requests</a></li>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/2'); ?>"><?php echo $mytext; ?>Leave Accruals</a></li>
                         <?php } ?>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('calendar/index'); ?>">Calendar</a></li>
                         <li class='dropdown-submenu'>
                             <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Reports</a>
                             <ul class="dropdown-menu">
-                                <?php if ($acl->checkPermission('Timeoff Analysis Report', ACTION_VIEW)) { ?>  
-                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/timeoffstats'); ?>"><?php echo $mytext; ?>Analysis Report</a></li>
+                                <?php if ($acl->checkPermission('Leave Analysis Report', ACTION_VIEW)) { ?>  
+                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/leavestats'); ?>"><?php echo $mytext; ?>Analysis Report</a></li>
                                 <?php } ?>
-                                <?php if ($acl->checkPermission('Timeoff Accruals Report', ACTION_VIEW)) { ?>  
-                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/timeoffdetails'); ?>"><?php echo $mytext; ?>Accruals Report</a></li>
+                                <?php if ($acl->checkPermission('Leave Accruals Report', ACTION_VIEW)) { ?>  
+                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/leavedetails'); ?>"><?php echo $mytext; ?>Accruals Report</a></li>
                                 <?php } ?>
                             </ul>
                         </li>
@@ -251,15 +275,15 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                                 </ul>
                             </li>
                         <?php } ?>
-                        <?php if($acl->checkPermission('Timeoff Analysis Report', ACTION_VIEW)) { ?>
+                        <?php if($acl->checkPermission('Leave Analysis Report', ACTION_VIEW)) { ?>
                         	<li class='dropdown-submenu'>
-                            <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Timeoff</a>
+                            <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Leave</a>
                             <ul class="dropdown-menu">
-                            	<?php if($acl->checkPermission('Timeoff Analysis Report', ACTION_VIEW)) { ?>
-                            		<li><a class="blockanchor" href="<?php echo $this->baseUrl('report/timeoffstats'); ?>">Statistics</a></li>
+                            	<?php if($acl->checkPermission('Leave Analysis Report', ACTION_VIEW)) { ?>
+                            		<li><a class="blockanchor" href="<?php echo $this->baseUrl('report/leavestats'); ?>">Statistics</a></li>
                                 <?php } ?>
-                                <?php if($acl->checkPermission('Timeoff Accruals Report', ACTION_VIEW)) { ?>
-                                	<li><a class="blockanchor" href="<?php echo $this->baseUrl('report/timeoffdetails'); ?>">Timeoff Accrual Report</a></li>
+                                <?php if($acl->checkPermission('Leave Accruals Report', ACTION_VIEW)) { ?>
+                                	<li><a class="blockanchor" href="<?php echo $this->baseUrl('report/leavedetails'); ?>">Leave Accrual Report</a></li>
                                 <?php } ?>
                             </ul>
                        	</li>
@@ -284,7 +308,9 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/6'); ?>">Contract Types</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/shifts'); ?>">Work Shifts</a></li>
                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/9'); ?>">Benefits Categories</a></li>
-                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/timeoff'); ?>">Timeoff Categories</a></li>
+                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/leave'); ?>">Leave Categories</a></li>
+                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('document/list'); ?>">Manage Documents</a></li>
+                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/variables/type/14'); ?>">Document Types</a></li>
                         <?php if(isAdmin()) { ?>
                         <li class='dropdown-submenu'>
                             <a href="#" data-toggle="dropdown" class='dropdown-toggle'>More Categories</a>
@@ -303,15 +329,25 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                             <li><a class="blockanchor" href="<?php echo $this->baseUrl('role/list'); ?>">User Roles</a></li>
                         <?php } ?>
                         <?php if ($acl->checkPermission('Company', ACTION_VIEW)) { ?>
-                        	<li><a href="<?php echo $this->baseUrl('company/view/id/'.encode($companyid).'/tab/account'); ?>">Company Settings</a></li>
+                        	<li><a href="<?php echo $this->baseUrl('company/view/id/'.encode($companyid)); ?>">Company Settings</a></li>
                         <?php } ?>
-                        <?php if ($acl->checkPermission('Company', ACTION_LIST) && isAdmin()) { ?>
-                        	<li><a href="<?php echo $this->baseUrl('company/list'); ?>">Manage Companies</a></li>
+                        <?php if ($acl->checkPermission('Company', ACTION_LIST)) { ?>
+                        	<li class='dropdown-submenu'>
+                            	<a href="#" data-toggle="dropdown" class='dropdown-toggle'>Manage Companies</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('company/list'); ?>">All Companies</a></li>
+                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('company/list/status/2'); ?>">Companies For Approval</a></li>
+                                    <?php if ($acl->checkPermission('Company', ACTION_CREATE)) { ?>
+                                    	<li><a class="blockanchor" href="<?php echo $this->baseUrl('company/index'); ?>">Setup New Company</a></li>
+                                    <?php } ?>
+                                </ul>
+                          	</li>
                         <?php } ?>
                         <?php if(isAdmin()) { ?>
                             <li class='dropdown-submenu'>
                                 <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Global System Settings</a>
                                 <ul class="dropdown-menu">
+                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig/section/system/noleft/1'); ?>">Default Application Settings</a></li>
                                     <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig/section/profile/noleft/1'); ?>">User Profile Settings</a></li>
                                     <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig/section/uploads/noleft/1'); ?>">File upload Options</a></li>
                                     <li><a class="blockanchor" href="<?php echo $this->baseUrl('config/globalconfig/section/notification/noleft/1'); ?>">Notification and Email Options</a></li>
@@ -337,34 +373,43 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                         <ul class="dropdown-menu pull-right message-ul">
                             <?php if($latestmsg->count() == 0){ ?>
                                 <li><div class="alert alert-info">No new messages</div></li>
+                                <li><a href="<?php echo $this->baseUrl('notifications/list'); ?>" class='more-messages'>Go to Message center<i class="fa fa-arrow-right"></i></a></li>
                             <?php } else { ?>
                                 <?php
                                     foreach($latestmsg as $message){ 
                                         // debugMessage($reply_path);
-                                        $readclass = "read";
-                                        $read_label = ' &nbsp;<span class="pagedescription" style="font-size:14px;">(Read)</span>';
+                                       	$readclass = "read";
+                                        $read_label = ' &nbsp;<span class="pagedescription" style="font-size:10px; position:absolute; right:12px; top:0; color:green;">(read)</span>';
                                         if(!$message->getMessageDetails()->hasReadMessage()){
                                             $readclass = "unread";
-                                            $read_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:12px;">(Unread)</span>';
+                                            $read_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:10px; position:absolute; right:12px; top:0;">(unread)</span>';
                                         }
-                                        
+										
                                         $message_title = "View message details";
                                         $reply_path = $this->baseUrl("notifications/view/id/".encode($message->getID()));
                                         
                                 ?>
-                                    <li>
-                                        <a href="<?php echo $reply_path; ?>">
-                                            <img src=" <?php echo getImagePath($message->getSenderID(), $message->getSender()->getProfilephoto(), $message->getSender()->getGender()); ?>" alt="">
-                                            <div class="details">
-                                                <div class="name"><?php echo $message->getSender()->getName(); ?></div>
-                                                <div class="message"><?php echo snippet($message->getSubject(), 45, ' ...more'); ?></div>
-                                            </div>
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="<?php echo $this->baseUrl('notifications/list'); ?>" class='more-messages'>Go to Message center<i class="fa fa-arrow-right"></i></a>
+                                    <li class="makerelative <?php echo $readclass; ?>" style="font-weight:normal; padding-top:5px;">
+										<?php if($message->getSenderID() == 1){ ?>
+                                            <i class="fa fa-flag" style="font-size:32px; float:left; margin-left:5px;"></i>
+                                        <?php } else { ?>
+                                            <img src="<?php echo getImagePath($message->getSenderID(), $message->getSender()->getProfilephoto(), $message->getSender()->getGender()); ?>" style="width:38px; margin-left:5px; float:left;" />
+                                        <?php } ?>
+                                        <div class="details" style="margin-left:50px; padding-right:15px; height:auto;">
+                                            <a href="<?php echo $reply_path; ?>">
+                                                <?php if($message->getSenderID() == 1){ ?>
+                                                    <div class="message bolded"><?php echo snippet($message->getSubject(), 30, ' ..'); ?></div>
+                                                    <div class="message"><?php echo snippet($message->getContents(), 65, ' ...more'); ?></div>
+                                                <?php } else { ?>
+                                                    <div class="name bolded"><?php echo $message->getSender()->getName(); ?></div>
+                                                    <div class="message"><?php echo snippet($message->getSubject(), 45, ' ...more'); ?></div>
+                                                <?php } ?>
+                                            </a>
+                                        </div>
+                                        <?php echo $read_label; ?>
                                     </li>
                                 <?php } ?>
+                                <li><a href="<?php echo $this->baseUrl('notifications/list'); ?>" class='more-messages'>Go to Message center<i class="fa fa-arrow-right"></i></a></li>
                             <?php } ?>                            
                         </ul>
                     </li>
@@ -428,13 +473,14 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                     </li>
                 <?php } ?>
                 <?php if(!isLoggedIn()){ ?>
-                	<a href="" class='btn btn-sm'><i class="fa fa-login"></i> Login</a>
+                	<div class="divider5"></div>
+                	<a href="<?php echo $this->baseUrl('user/login'); ?>" class='btn btn-large'><i class="fa fa-login"></i> Login</a>
                 <?php } ?>
             </ul>
             <?php if(isLoggedIn()){ ?>
             <div class="dropdown">
-                <a href="" class='dropdown-toggle' data-toggle="dropdown">
-                	<span class="hidden-xs"><?php //echo $loggedinuser->getName(); ?>Account</span>
+                <a href="" class='dropdown-toggle' data-toggle="dropdown" >
+                	<span class="hidden-xs" title="Logged in as <?php echo $loggedinuser->getName(); ?>">My Account</span>
                     <img class="hidden-xs" style="width:27px; height:27px;" src="<?php echo $loggedinuser->getMediumPicturePath(); ?>">
                     <button class="btn visible-xs"><i class="fa fa-user"></i></button>
                 </a>

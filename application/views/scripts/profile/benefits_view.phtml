@@ -1,12 +1,12 @@
 <div class="row">
 	<div class="makeabsolute" style="right:35px; top:11px; z-index:1000;">
-		<?php if($allowedit) { ?>
-            <a class="btn btn-primary btn-xs blockanchor xnoround" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/benefits'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update Recurring Benefits</a>
+		<?php if($allowedit && !$showfullscreen) { ?>
+            <a class="btn btn-primary btn-xs blockanchor xnoround hideonprint" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/benefits'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update Recurring Benefits</a>
         <?php } ?>
     </div>
     <div class="col-sm-12 paddingleft0">
     	<div class="tabbable tabbable-custom tabbable-full-width">
-            <ul class="nav nav-tabs">
+            <ul class="nav nav-tabs hideonprint">
                 <li class="<?php echo $section == 'view' ? 'active gonowhere' : ''; ?>" ><a href="#view">Recurring Benefits</a></li>
                 <li class="<?php echo $section == 'list' ? 'active gonowhere' : 'blockanchor'; ?>"><a href="<?php echo $this->baseUrl('ledger/list/userid/'.$user->getID()); ?>">One Time Benefits</a></li>
             </ul>
@@ -19,7 +19,7 @@
                             <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
                                 <thead class="paginationheader">
                                     <th>Benefit Type</th>
-                                    <th style="width:30%;">Rate (<?php echo $config->country->currencycode; ?>) / Frequency</th>
+                                    <th style="width:30%;">Rate (<?php echo getCountryCurrencyCode(); ?>) / Frequency</th>
                                     <th>Payroll Terms</th>
                                     <th style="width:20%;">Taxable</th>
                                 </thead>
@@ -28,7 +28,7 @@
                                         $ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
 										$payrolltypes = getPayrollTypes();
                                         $benefits = getBenefits(2); // debugMessage($benefits);
-                                        $timeoffs = getTimeoffTypes();
+                                        $leaves = getLeaveTypes();
                                         $usercashbenefits = getEmployeeBenefits($user->getID(), 1, " and benefitid <> 1 "); 
                                         $usertimebenefits = getEmployeeBenefits($user->getID(), 2); 
                                         $allterms = getAllBenefitTerms(); // debugMessage($allterms);
@@ -72,12 +72,12 @@
                         </div>
                     </fieldset>
                     <fieldset class="fieldsetcontainer minheight200">
-                        <legend style="font-size:12px;">Recurring Timeoff Benefits</legend>
+                        <legend style="font-size:12px;">Recurring Leave Benefits</legend>
                         <div class="panel-body well-sm">
                             <div class="divider10"></div>
                             <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
                                 <thead class="paginationheader">
-                                    <th>Timeoff Type</th>
+                                    <th>Leave Type</th>
                                     <!--<th style="width:25%;">Accrue As</th>-->
                                     <th style="width:75%;">Duration Assigned</th>
                                 </thead>
@@ -90,15 +90,15 @@
                                         <?php
                                             foreach($usertimebenefits as $key => $abenefit){ 
                                                 // debugMessage($abenefit);
-                                                $id = $abenefit['timeofftypeid'];
+                                                $id = $abenefit['leavetypeid'];
                                                 $accrualtype = $abenefit['accrualtype'];
                                                 $accrualfrequency = $abenefit['accrualfrequency'];
                                                 $accrualvalue = $abenefit['accrualvalue'];
                                         ?>
                                             <tr style="font-size:12px;">
-                                                <td><?php echo isArrayKeyAnEmptyString($id, $timeoffs) ? '--' : $timeoffs[$id]; ?></td>
+                                                <td><?php echo isArrayKeyAnEmptyString($id, $leaves) ? '--' : $leaves[$id]; ?></td>
                                                 <!--<td><?php //echo isArrayKeyAnEmptyString($accrualtype, $hoursdaysoptions) ? '--' : $hoursdaysoptions[$accrualtype]; ?></td>-->
-                                                <td><?php echo $accrualtype == '1' ? 'Assign 1 Day or '.$config->system->hoursinday.' Hours for every '.$accrualvalue.' Hours Approved ' : ''; ?>
+                                                <td><?php echo $accrualtype == '1' ? 'Assign 1 Day or '.getHoursInDay().' Hours for every '.$accrualvalue.' Hours Approved ' : ''; ?>
                                                     <?php echo $accrualtype == '2' ? formatNumber($accrualvalue,0).' Days '.$yearmonthvalues[$accrualfrequency] : ''; ?>
                                                     <?php // echo; ?></td>
                                             </tr>

@@ -12,23 +12,23 @@ class CalendarController extends IndexController  {
 	
 		$user = new UserAccount();
 		// $user->populate($formvalues['id']);
-		$events = getTimeoffRequests("", $config->system->yearstart, $config->system->yearend); // debugMessage($events);
+		$events = getLeaveRequests("", getYearStart(), getYearEnd()); // debugMessage($events);
 		$jsondata = array();
 		$i = 0;
 		if(count($events) > 0){
 			// $jsondata = $events;
-			$timeoffoptions = getHoursDaysDropdown();
+			$leaveoptions = getHoursDaysDropdown();
 			foreach ($events as $key => $value){
 				$jsondata[$key]['id'] = $value['id'];
 				$unit = '';
-				if(!isArrayKeyAnEmptyString($value['durationtype'], $timeoffoptions)){
+				if(!isArrayKeyAnEmptyString($value['durationtype'], $leaveoptions)){
 					$unit = ' on Leave';
 				}
 				$jsondata[$key]['title'] = $value['user'].$unit;
 				$jsondata[$key]['start'] = $value['startdate'];
 				$jsondata[$key]['end'] = $value['enddate'];
-				if((isTimesheetEmployee() && $value['userid'] == $session->getVar('userid')) || ($acl->checkPermission('Time off', ACTION_APPROVE))){
-					// $jsondata[$key]['url'] = $this->view->serverUrl($this->view->baseUrl('timeoff/view/id/'.encode($value['id'])));
+				if((isTimesheetEmployee() && $value['userid'] == $session->getVar('userid')) || ($acl->checkPermission('Leave', ACTION_APPROVE))){
+					// $jsondata[$key]['url'] = $this->view->serverUrl($this->view->baseUrl('leave/view/id/'.encode($value['id'])));
 				}
 			}
 		}

@@ -9,7 +9,10 @@ class SearchController extends IndexController  {
 		$conn = Doctrine_Manager::connection();
 		$formvalues = $this->_getAllParams();
 		$userid = $session->getVar('userid');
+		$companyid = getCompanyID();
 		$acl = getACLInstance();
+		$company_query = "";
+		$company_query = " u.companyid = '".$companyid."' AND ";
 		
 		$q = $formvalues['searchword'];
 		$html = '';
@@ -19,7 +22,7 @@ class SearchController extends IndexController  {
 		# search users if loggedin user has access
 		if($acl->checkPermission('User Account', ACTION_LIST)){
 			$query = "SELECT u.id FROM useraccount as u 
-				WHERE
+				WHERE ".$company_query."
 			   (u.firstname like '%".$q."%' or 
 				u.lastname like '%".$q."%' or 
 				u.othername like '%".$q."%' or 
@@ -51,14 +54,16 @@ class SearchController extends IndexController  {
 					$viewurl = $this->view->baseUrl('profile/view/id/'.encode($row['id']));
 					$html .= '
 					<li style="height:auto; min-height:90px;" class="display_box" align="left" url="'.$viewurl.'" theid="'.$row['id'].'">
-						<img class="imagecontainer" src="'.$media.'" style="width:78px; height:auto; float:left; margin-right:6px;" />
-						<div style="margin-left: 70px;">
-							<span class="name blocked">'.$name.'</span>
-							<span class="name blocked">'.$position.'</span>
-							<span class="blocked" style="margin-top:5px;">Email: '.$email.'</span>
-							<span class="blocked">Phone: '.$phone.'</span>
-							
-						</div>
+						<a href="'.$viewurl.'" style="color:#666; text-decoration:none;">
+							<img class="imagecontainer" src="'.$media.'" style="width:78px; height:auto; float:left; margin-right:6px;" />
+							<div style="margin-left: 70px;">
+								<span class="name blocked">'.$name.'</span>
+								<span class="name blocked">'.$position.'</span>
+								<span class="blocked" style="margin-top:5px;">Email: '.$email.'</span>
+								<span class="blocked">Phone: '.$phone.'</span>
+								
+							</div>
+						</a>
 					</li>';
 					
 				}

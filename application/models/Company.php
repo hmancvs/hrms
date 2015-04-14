@@ -2,14 +2,19 @@
 /**
  * Model for company
  */
-class Company extends BaseEntity  {
+class Company extends BaseEntity {
 	
 	public function setTableDefinition() {
 		parent::setTableDefinition();
 		
 		$this->setTableName('company');
+		# override the not null and not blank properties for the createdby column in the BaseEntity
+		$this->hasColumn('createdby', 'integer', 11, array('default' => NULL));
+		
 		$this->hasColumn('refno', 'string', 15);
 		$this->hasColumn('name', 'string', 255, array('notblank' => true));
+		$this->hasColumn('appname', 'string', 255);
+		$this->hasColumn('headertype', 'integer', null, array('default' => 0));
 		$this->hasColumn('slogan', 'string', 255);
 		$this->hasColumn('username', 'string', 255);
 		$this->hasColumn('abbrv', 'string', 255);
@@ -24,7 +29,7 @@ class Company extends BaseEntity  {
 		$this->hasColumn('city', 'string', 255);
 		$this->hasColumn('postalcode', 'string', 10);
 		$this->hasColumn('industrycode', 'string', 15);
-		$this->hasColumn('description', 'string', 255);
+		$this->hasColumn('description', 'string', 1000);
 		
 		$this->hasColumn('remarks', 'string', 255);
 		$this->hasColumn('yearstart','date', null, array('default' => getFirstDayOfMonth(1, date('Y'))));
@@ -49,6 +54,29 @@ class Company extends BaseEntity  {
 		$this->hasColumn('invitedbyid', 'integer', null);
 		$this->hasColumn('hasacceptedinvite', 'integer', null, array('default' => 0));
 		$this->hasColumn('dateinvited','date');
+		$this->hasColumn('startdate','date', null, array('default' => NULL));
+		$this->hasColumn('enddate','date', null, array('default' => NULL));
+		
+		$this->hasColumn('layout', 'string', 25, array('default' => getDefaultLayout()));
+		$this->hasColumn('topbar', 'string', 25, array('default' => getDefaultTopBar()));
+		$this->hasColumn('sidebar', 'string', 25, array('default' => getDefaultSideBar()));
+		$this->hasColumn('colortheme', 'string', 25, array('default' => getDefaultTheme()));
+		$this->hasColumn('showsidebar', 'string', 25, array('default' => getDefaultShowSideBar()));
+		$this->hasColumn('logo', 'string', 255);
+		
+		$this->hasColumn('defaultadminname', 'string', 255, array('default' => getDefaultAdminName()));
+		$this->hasColumn('defaultadminemail', 'string', 255, array('default' => getDefaultAdminEmail()));
+		$this->hasColumn('currencysymbol', 'string', 15, array('default' => getCountryCurrencySymbol()));
+		$this->hasColumn('currencycode', 'string', 15, array('default' => getCountryCurrencyCode()));
+		$this->hasColumn('currencydecimalplaces', 'string', 15, array('default' => getCurrencyDecimalPlaces()));
+		$this->hasColumn('numberdecimalplaces', 'string', 15, array('default' => getNumberDecimalPlaces()));
+		$this->hasColumn('countryisocode', 'string', 15, array('default' => getCountryCode()));
+		$this->hasColumn('phonemaxlength', 'string', 15, array('default' => getMaxPhoneLength()));
+		$this->hasColumn('phoneminlength', 'string', 15, array('default' => getMinPhoneLength()));
+		$this->hasColumn('nationalidminlength', 'string', 15, array('default' => getNationalIDMaxLength()));
+		$this->hasColumn('nationalidmaxlength', 'string', 15, array('default' => getNationalIDMinLength()));
+		$this->hasColumn('countryphonecode', 'string', 15, array('default' => getDefaultPhoneCode()));
+		$this->hasColumn('timezone', 'string', 255, array('default' => getTimeZine()));
 	}
 	
 	protected $confirmpassword;
@@ -86,6 +114,12 @@ class Company extends BaseEntity  {
 				array(
 						'local' => 'invitedbyid',
 						'foreign' => 'id'
+				)
+		);
+		$this->hasMany('UserAccount as users',
+				array(
+						'local' => 'id',
+						'foreign' => 'companyid'
 				)
 		);
 	}
@@ -136,17 +170,30 @@ class Company extends BaseEntity  {
 		if(isArrayKeyAnEmptyString('dateinvited', $formvalues)){
 			unset($formvalues['dateinvited']);
 		}
+		if(isArrayKeyAnEmptyString('startdate', $formvalues)){
+			$formvalues['startdate'] = DEFAULT_DATETIME;
+		}
 		if(!isArrayKeyAnEmptyString('isinvited', $formvalues)){
 			if($formvalues['isinvited'] == 1){
 				$this->setIsBeingInvited($formvalues['isinvited']);
 				$formvalues['invitedbyid'] = $session->getVar('userid');
-				$formvalues['dateinvited'] = date('Y-m-d', time());
+				$formvalues['dateinvited'] = DEFAULT_DATETIME;
 				$formvalues['hasacceptedinvite'] = 0;
 			}
 		}
 		if(isArrayKeyAnEmptyString('defaultuserid', $formvalues)){
-			$formvalues['defaultuser']['firstname'] = $this->getContactPerson();
-			$formvalues['defaultuser']['lastname'] = '.';
+			
+			$names = explode(' ', $this->getContactPerson()); debugMessage($names);
+			$formvalues['defaultuser']['firstname'] = $names[0];
+			if(!isArrayKeyAnEmptyString(1, $names)){
+				$formvalues['defaultuser']['lastname'] = $names[1];
+			} else {
+				$formvalues['defaultuser']['lastname'] = '.';
+			}
+			if(!isArrayKeyAnEmptyString(2, $names)){
+				$formvalues['defaultuser']['othername'] = $names[2];
+			}
+			
 			$formvalues['defaultuser']['email'] = $this->getEmail();
 			$formvalues['defaultuser']['status'] = 0;
 			$formvalues['defaultuser']['datecreated'] = date('Y-m-d', time());
@@ -181,6 +228,9 @@ class Company extends BaseEntity  {
 		} else {
 			$formvalues['yearend'] = date('Y-m-d', strtotime($formvalues['yearend']));
 		}
+		if(isArrayKeyAnEmptyString('headertype', $formvalues)){
+			$formvalues['headertype'] = 0;
+		}
 		// debugMessage($formvalues); exit();
 		parent::processPost($formvalues);
 	}
@@ -193,8 +243,17 @@ class Company extends BaseEntity  {
 		
 		if(!isEmptyString($this->getDefaultUserID()) && isEmptyString($this->getDefaultUser()->getCompanyID())){
 			$this->getDefaultUser()->setCompanyID($this->getID());
-			$this->getDefaultUser()->save();
+			$startdate = DEFAULT_DATETIME;
+			$expirydate = date("Y-m-d", strtotime(date("Y-m-d", strtotime($startdate)). " +".getTrialDays()." days "));
+			if(isEmptyString($this->getStartDate()) && $this->getID() != DEFAULT_COMPANYID){
+				$this->setStartDate($startdate);
+			}
+			if(isEmptyString($this->getEndDate()) && $this->getID() != DEFAULT_COMPANYID){
+				$this->setEndDate($expirydate);
+			}
+			$this->save();
 		}
+		
 		// invite via email
 		if($this->getIsInvited() == 1){
 			$this->getDefaultUser()->inviteViaEmail();
@@ -207,11 +266,36 @@ class Company extends BaseEntity  {
 		# check if user is being invited during update
 		if(!isEmptyString($this->getDefaultUserID()) && isEmptyString($this->getDefaultUser()->getCompanyID())){
 			$this->getDefaultUser()->setCompanyID($this->getID());
-			$this->getDefaultUser()->save();
+			$startdate = DEFAULT_DATETIME;
+			$expirydate = date("Y-m-d", strtotime(date("Y-m-d", strtotime($startdate)). " +".getTrialDays()." days "));
+			if(isEmptyString($this->getStartDate()) && $this->getID() != DEFAULT_COMPANYID){
+				$this->setStartDate($startdate);
+			}
+			if(isEmptyString($this->getEndDate()) && $this->getID() != DEFAULT_COMPANYID){
+				$this->setEndDate($expirydate);
+			}
+			$this->save();
 		}
 		// invite via email
 		if($this->getIsInvited() == 1){
 			$this->getDefaultUser()->inviteViaEmail();
+		}
+		
+		if($this->getID() == DEFAULT_ID){
+			$config_collection = new Doctrine_Collection(Doctrine_Core::getTable("AppConfig"));
+			$appconfig = new AppConfig();
+			$appconfig->populate(61);
+			$appconfig->setOptionValue($this->getAppName());
+			$config_collection->add($appconfig);
+		
+			$appconfig = new AppConfig();
+			$appconfig->populate(62);
+			$appconfig->setOptionValue($this->getName());
+			$config_collection->add($appconfig);
+				
+			if($config_collection->count() > 0){
+				$config_collection->save();
+			}
 		}
 		return true;
 	}
@@ -242,6 +326,12 @@ class Company extends BaseEntity  {
 	function isActive() {
 		return $this->getStatus() == 1;
 	}
+	function isPendingApproval() {
+		return $this->getStatus() == 2;
+	}
+	function isRejected(){
+		return $this->getStatus() == 3;
+	}
 	# determine full address
 	function getFullAddress(){
 		$str = '';
@@ -263,7 +353,7 @@ class Company extends BaseEntity  {
 		$allvalues = getDaysOfWeek();
 		$thevalues = $this->getDaysOfWeekArray();
 		if(isEmptyString($this->getWorkingDays())){
-			return $text;
+			// return $text;
 		}
 		if(count($thevalues) > 0){
 			foreach ($thevalues as $value) {
@@ -284,6 +374,110 @@ class Company extends BaseEntity  {
 			$str = $this->getRateCurrency();
 		}
 		return $str;
+	}
+	# determine default app name
+	function getDefaultName(){
+		if(isEmptyString($this->getAppName())){
+			return $this->config->system->appname;
+		} else {
+			return $this->getAppName();
+		}
+	}
+	# send notifications
+	function afterApprove($oldstatus = ''){
+		if(($this->isActive() || $this->isRejected()) && ($oldstatus = '2' || $oldstatus = '3') ){
+			$this->getDefaultUser()->sendSignupNotification($oldstatus);
+		}
+		# deactivate all active accounts for the company 
+		if($this->isInActive() && $oldstatus = '1'){
+			$this->deactivateAllAccounts();
+		}
+		# reactivate all previously inactive accounts for the company
+		if($this->isActive() && $oldstatus = '0'){
+			$this->reactivateAllAccounts();
+		}
+		return true;
+	}
+	# deactivate all user accounts
+	function deactivateAllAccounts(){
+		$user_collection = new Doctrine_Collection(Doctrine_Core::getTable("UserAccount"));
+		$users = $this->getUsers(); //debugMessage($users->toArray());
+		if($users->count() > 0){
+			foreach ($users as $user){
+				if($user->isUserActive()){
+					$user->setStatus(0);
+					$user->setActivationKey(md5($this->getCompanyID()));
+				}
+				$user_collection->add($user);
+			}
+			// debugMessage($user_collection->toArray());
+		}
+		if($user_collection->count() > 0){
+			try {
+				$user_collection->save();
+			} catch (Exception $e) {
+				debugMessage("An error occured in updating status. ".$e->getMessage());
+			}
+		}
+		
+		return true;
+	}
+	# reactivate all user accounts
+	function reactivateAllAccounts(){
+		$user_collection = new Doctrine_Collection(Doctrine_Core::getTable("UserAccount"));
+		$users = $this->getUsers(); //debugMessage($users->toArray());
+		if($users->count() > 0){
+			foreach ($users as $user){
+				if($user->isUserInActive() && $user->getActivationKey() == md5($this->getCompanyID())){
+					$user->setStatus(1);
+					$user->setActivationKey('');
+					$user_collection->add($user);
+				}
+			}
+			// debugMessage($user_collection->toArray());
+		}
+		if($user_collection->count() > 0){
+			try {
+				$user_collection->save();
+			} catch (Exception $e) {
+				debugMessage("An error occured in updating status. ".$e->getMessage());
+			}
+		}
+	
+		return true;
+	}
+	
+	# relative path to profile image
+	function hasProfileImage(){
+		$real_path = BASE_PATH.DIRECTORY_SEPARATOR."uploads".DIRECTORY_SEPARATOR."company".DIRECTORY_SEPARATOR."comp_";
+		$real_path = $real_path.$this->getID().DIRECTORY_SEPARATOR."logo".DIRECTORY_SEPARATOR.$this->getLogo();
+		if(file_exists($real_path) && !isEmptyString($this->getLogo())){
+			return true;
+		}
+		return false;
+	}
+	
+	# determine path to medium profile picture
+	function getPicturePath() {
+		$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
+		$path = "";
+		$path = $baseUrl.'/images/logo.png';
+		if($this->hasProfileImage()){
+			$path = $baseUrl.'/uploads/company/comp_'.$this->getID().'/logo/'.$this->getLogo();
+		}
+		// debugMessage($path);
+		return $path;
+	}
+	
+	function getLargePicturePath() {
+		$baseUrl = Zend_Controller_Front::getInstance()->getBaseUrl();
+		$path = "";
+		$path = $baseUrl.'/images/logo.png';
+		if($this->hasProfileImage()){
+			$path = $baseUrl.'/uploads/company/comp_'.$this->getID().'/logo/large_'.$this->getLogo();
+		}
+		// debugMessage($path);
+		return $path;
 	}
 }
 

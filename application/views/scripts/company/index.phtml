@@ -9,6 +9,7 @@
 		$button_title = $this->translate("global_button_save");
 		$successmessage = $this->translate('global_save_success');
 		$company->setStatus(1);
+		$company->setAppName($company->getDefaultName());
 	} else {
 		$pagetitle = "Update Profile"; 
 		$company->populate(decode($request->id));		
@@ -81,7 +82,7 @@
 		$breadcrumb = "Companies / ".$company->getName()." / ".$pagetitle;
 	}
 	$pageid = "company_index";
-	// $title = "Employees";
+	$allstatuses = getCompanyStatuses();
 	
 	$allowedit = false;
 	if($acl->checkPermission($resourcename, ACTION_EDIT)){
@@ -120,6 +121,10 @@ $(document).ready(function() {
 		// define the validation rules one field at a time
 		rules: {
 			name: "required",
+			appname: {
+				required: true, 
+				maxlength: <?php echo DEFAULT_APPNAME_CHARS; ?>
+			},
 			email: {
 				required: true, 
 				email: true
@@ -129,6 +134,10 @@ $(document).ready(function() {
 		// the messages for each of the fields being validated
 		messages: {		
 			name: "<?php echo $this->translate("global_name_error"); ?>",
+			appname: {
+				required: "Enter name of Application", 
+				maxlength: "Maximum <?php echo DEFAULT_APPNAME_CHARS; ?> Characters allowed"
+			},
 			email: {
 				"required": "<?php echo $this->translate("profile_email_error"); ?>", 
 				"email": "<?php echo $this->translate("profile_email_invalid_error"); ?>"
@@ -148,6 +157,8 @@ $(document).ready(function() {
 			}			
 		}
 	});
+	
+	$(".chosen-container.chosen-container-single").css({'width':'auto'});
 });
 </script>
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
@@ -164,7 +175,6 @@ $(document).ready(function() {
                         <input type="hidden" id="id" name="id" value="<?php echo encode($company->getID()); ?>" />
                         <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
                         <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
-                        <!--<input type="hidden" id="<?php //echo URL_SUCCESS; ?>" name="<?php //echo URL_SUCCESS; ?>" value="<?php //echo encode($successurl); ?>" /> -->
                         <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
                         <input type="hidden" id="status" name="status" value="<?php echo $company->getStatus(); ?>" />
                     	<?php if(isEmptyString($request->id)){ ?>
