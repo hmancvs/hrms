@@ -79,7 +79,7 @@ class Company extends BaseEntity {
 		$this->hasColumn('timezone', 'string', 255, array('default' => getTimeZine()));
 	}
 	
-	protected $confirmpassword;
+	protected $isbeinginvited;
 	
 	function getIsBeinginvited(){
 		return $this->isbeinginvited;
@@ -132,15 +132,23 @@ class Company extends BaseEntity {
 		// debugMessage($this->toArray(true));
 		# validate that username is unique
 		if($this->nameExists()){
-		$this->getErrorStack()->add("name.unique", "The name <b>".$this->getName()."</b> already exists. Please specify another.");
-	}
+			$this->getErrorStack()->add("name.unique", "The name <b>".$this->getName()."</b> already exists. Please specify another.");
+		}
+		
+		# validate that username is unique
+		if($this->usernameExists()){
+			$this->getErrorStack()->add("username.unique", sprintf($this->translate->_("profile_username_unique_error"), $this->getUsername()));
+		}
 	}
 	/*
 	 * Pre process model data
 	 */
 	function processPost($formvalues) {
-		$session = SessionWrapper::getInstance(); //debugMessage($formvalues);
+		$session = SessionWrapper::getInstance(); // debugMessage($formvalues);
 		// trim spaces from the name field
+		if(!isArrayKeyAnEmptyString('c_username', $formvalues)){
+			$formvalues['username'] = $formvalues['c_username'];
+		}
 		if(isArrayKeyAnEmptyString('status', $formvalues)){
 			unset($formvalues['status']);
 		}
@@ -170,19 +178,38 @@ class Company extends BaseEntity {
 		if(isArrayKeyAnEmptyString('dateinvited', $formvalues)){
 			unset($formvalues['dateinvited']);
 		}
-		if(isArrayKeyAnEmptyString('startdate', $formvalues)){
+		if(isArrayKeyAnEmptyString('id', $formvalues)){
 			$formvalues['startdate'] = DEFAULT_DATETIME;
 		}
-		if(!isArrayKeyAnEmptyString('isinvited', $formvalues)){
-			if($formvalues['isinvited'] == 1){
-				$this->setIsBeingInvited($formvalues['isinvited']);
+		if(!isArrayKeyAnEmptyString('sendinvite', $formvalues)){
+			if($formvalues['sendinvite'] == 1){
+				$this->setIsBeingInvited(1);
+				$formvalues['isinvited'] = 1;
 				$formvalues['invitedbyid'] = $session->getVar('userid');
 				$formvalues['dateinvited'] = DEFAULT_DATETIME;
 				$formvalues['hasacceptedinvite'] = 0;
 			}
 		}
-		if(isArrayKeyAnEmptyString('defaultuserid', $formvalues)){
+		
+		$updateuser = false;
+		if(!isArrayKeyAnEmptyString('defaultuserid', $formvalues)){
+			$user = new UserAccount();
+			$user->populate($formvalues['defaultuserid']);
+			if($user->isUserInActive()){
+				$updateuser = true;
+				$formvalues['defaultuser']['id'] = $formvalues['defaultuserid'];
+			}
 			
+		} else {
+			$updateuser = true;
+			$formvalues['defaultuser']['status'] = 0;
+			$formvalues['defaultuser']['datecreated'] = date('Y-m-d', time());
+			$formvalues['defaultuser']['createdby'] = $session->getVar('userid');
+			$formvalues['defaultuser']['usergroups'][0]["groupid"] = 3;
+			$formvalues['defaultuser']['type'] = 3;
+		}
+		
+		if($updateuser){
 			$names = explode(' ', $this->getContactPerson()); debugMessage($names);
 			$formvalues['defaultuser']['firstname'] = $names[0];
 			if(!isArrayKeyAnEmptyString(1, $names)){
@@ -193,20 +220,15 @@ class Company extends BaseEntity {
 			if(!isArrayKeyAnEmptyString(2, $names)){
 				$formvalues['defaultuser']['othername'] = $names[2];
 			}
-			
 			$formvalues['defaultuser']['email'] = $this->getEmail();
-			$formvalues['defaultuser']['status'] = 0;
-			$formvalues['defaultuser']['datecreated'] = date('Y-m-d', time());
-			$formvalues['defaultuser']['createdby'] = $session->getVar('userid');
-			$formvalues['defaultuser']['usergroups'][0]["groupid"] = 3;
-			$formvalues['defaultuser']['type'] = 3;
-			if(!isArrayKeyAnEmptyString('isinvited', $formvalues)){
+			if($this->getIsBeinginvited() == '1'){
 				$formvalues['defaultuser']['hasacceptedinvite'] = 0;
 				$formvalues['defaultuser']['dateinvited'] = date('Y-m-d', time());
 				$formvalues['defaultuser']['invitedbyid'] = $session->getVar('userid');
-				$formvalues['isinvited'] = 1;
+				$formvalues['defaultuser']['isinvited'] = 1;
 			}
 		}
+		
 		if(isArrayKeyAnEmptyString('openinghour', $formvalues)){
 			unset($formvalues['openinghour']);
 		} else {
@@ -255,7 +277,7 @@ class Company extends BaseEntity {
 		}
 		
 		// invite via email
-		if($this->getIsInvited() == 1){
+		if($this->getIsBeinginvited() == 1){
 			$this->getDefaultUser()->inviteViaEmail();
 		}
 		return true;
@@ -277,7 +299,7 @@ class Company extends BaseEntity {
 			$this->save();
 		}
 		// invite via email
-		if($this->getIsInvited() == 1){
+		if($this->getIsBeinginvited() == 1){
 			$this->getDefaultUser()->inviteViaEmail();
 		}
 		
@@ -479,6 +501,49 @@ class Company extends BaseEntity {
 		// debugMessage($path);
 		return $path;
 	}
+	# determine if the username has already been assigned
+	function usernameExists($username =''){
+		$conn = Doctrine_Manager::connection();
+		# validate unique username and email
+		$id_check = "";
+		if(!isEmptyString($this->getID())){
+			$id_check = " AND id <> '".$this->getID()."' ";
+		}
+	
+		if(isEmptyString($username)){
+			$username = $this->getUsername();
+		}
+		
+		// list of reserved usernames
+		$reservednames = getInvalidSubdomains();
+		$reservednames = array_combine($reservednames, $reservednames);
+		if(!isArrayKeyAnEmptyString($username, $reservednames)){
+			return true;
+		}
+		
+		$query = "SELECT id FROM company WHERE username = '".$username."' AND status = '1' AND username <> '' ".$id_check;
+		// debugMessage($query);
+		$result = $conn->fetchOne($query);
+		// debugMessage('>'.$result);
+		if(isEmptyString($result)){
+			return false;
+		}
+		return true;
+	}
+
+	function findByUsername($username) {
+		$conn = Doctrine_Manager::connection();
+		$query = "SELECT id FROM company WHERE username = '".$username."' AND status = '1' ";
+		// debugMessage($query);
+		$result = $conn->fetchOne($query);
+		return $result;
+	}
+	
+	# determine if sub domain is renderable
+	function isRenderable($username){
+		return !isEmptyString($this->findByUsername($username)) ? true : false;
+	}
+	
 }
 
 ?>

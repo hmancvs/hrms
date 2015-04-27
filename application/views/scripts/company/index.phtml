@@ -125,6 +125,11 @@ $(document).ready(function() {
 				required: true, 
 				maxlength: <?php echo DEFAULT_APPNAME_CHARS; ?>
 			},
+			username: {
+				required: true, 
+				minlength: 3,
+				maxlength: 15
+			},
 			email: {
 				required: true, 
 				email: true
@@ -137,6 +142,11 @@ $(document).ready(function() {
 			appname: {
 				required: "Enter name of Application", 
 				maxlength: "Maximum <?php echo DEFAULT_APPNAME_CHARS; ?> Characters allowed"
+			},
+			username: {
+				required: "Please enter Username", 
+				minlength: "Minimum allowed is 3 characters",
+				maxlength: "Maximum allowed is 15 characters"
 			},
 			email: {
 				"required": "<?php echo $this->translate("profile_email_error"); ?>", 
@@ -159,6 +169,41 @@ $(document).ready(function() {
 	});
 	
 	$(".chosen-container.chosen-container-single").css({'width':'auto'});
+	
+	//when button is clicked  
+	$('#check_username_availability').click(function(){ 
+		check_user_availability();  
+	});
+	$('#username').change(function(){ 
+		check_user_availability();  
+	});  
+	$('#username').keyup(function(){
+		this.value = this.value.toLowerCase();
+	});
+	
+	//function to check username availability  
+	function check_user_availability(){  
+		//get the username
+		var checking_html = 'Checking availability...';   
+		var username = $('#username').val();  
+		if(!isEmptyString(username) && username.length >= 3 && username.length <= 15 && isAlpha(username)){
+			// alert('passed');
+			$('#username_availability_result').html(checking_html); 
+			//use ajax to run the check  
+			$.post("<?php echo $this->baseUrl('signup/checkcompanyusername'); ?>", { username: username},  
+				function(result){  
+					//if the result is 1  
+					// alert(result); // return false;
+					if(result == 'exists'){  
+						//show that the username is available
+						$('#username_availability_result').html(username + ' is NOT available!').addClass('alert').addClass('alert-danger').removeClass('alert-success'); 
+					} else {  
+						//show that the username is NOT available  
+						$('#username_availability_result').html(username + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-danger');
+					}  
+			});   
+		}
+	}
 });
 </script>
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
@@ -200,7 +245,7 @@ $(document).ready(function() {
                             <div class="tab-content padding col-sm-9 col-xs-12">
                             	<div class="form-actions testborder" style="margin-top: -10px;">
                                     <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
-                                    <button class="btn btn-primary btn-green xchangesuccessurl savebutton" type="submit" successurl="<?php //echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                                    <button class="btn btn-green xchangesuccessurl savebutton" type="submit" successurl="<?php //echo encode($successurl); ?>"><?php echo $button_title; ?></button>
                                 </div>
                             	<div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
                                 	<?php require APPLICATION_PATH."/views/scripts/company/overview_index.phtml"; ?>
@@ -210,7 +255,7 @@ $(document).ready(function() {
                                 </div>
                                 <div class="form-actions testborder">
                                     <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
-                                    <button class="btn btn-primary btn-green savebutton" type="submit"><?php echo $button_title; ?></button>
+                                    <button class="btn btn-green savebutton" type="submit"><?php echo $button_title; ?></button>
                                 </div>
                             </div>
                         <?php } ?>	

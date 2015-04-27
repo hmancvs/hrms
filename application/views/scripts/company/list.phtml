@@ -23,6 +23,10 @@
 	
 	# define the letter to be clicked to ease navigation 
 	$where_query = " WHERE c.id <> '' ";
+	// $myquery = "";
+	if($loggedinuser->getID() != 81){
+		$where_query .= " AND c.createdby <> '81' ";
+	}
 	
 	# date filtering
 	$startdate = $request->startdate;

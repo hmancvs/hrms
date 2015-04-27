@@ -44,14 +44,20 @@
 		$controller = $request->getControllerName();
 		$action = $request->getActionName();
 
-		$session = SessionWrapper::getInstance();		
-		$companyid = isEmptyString($session->getVar('companyid')) ? DEFAULT_COMPANYID :  $session->getVar("companyid");
+		$session = SessionWrapper::getInstance();
+		$nosessionid = !isEmptyString($session->getVar('cid')) ? $session->getVar('cid') : DEFAULT_COMPANYID;
+		$companyid = isEmptyString($session->getVar('companyid')) ? $nosessionid :  $session->getVar("companyid");
 		
 		$bodyclasses = "";
 		$fulltemplate = true;
-		if($controller == 'user' && $action == 'login'){
+		if(($controller == 'user' && $action == 'login') || ($controller == 'index' && $action == 'error')){
 			$fulltemplate = false;
-			$bodyclasses .= "login ";
+			if($controller == 'user' && $action == 'login'){
+				$bodyclasses .= " app login ";
+			}
+			if($controller == 'index' && $action == 'error'){
+				$bodyclasses .= " error ";
+			}
 		}
 		$isprint = false;
 		if($request->print == '1' || $request->fullscreen == '1'){
@@ -59,7 +65,7 @@
 			$bodyclasses .= "print ";
 		}
 		
-		$default_theme_data = getDefaultThemeOptions(DEFAULT_COMPANYID); // debugMessage($default_theme_data);
+		$default_theme_data = getDefaultThemeOptions($nosessionid); // debugMessage($default_theme_data);
 		$current_theme_data = getDefaultThemeOptions($companyid, $default_theme_data); // debugMessage($current_theme_data);
 		// theme layout options
 		$layout_options = array(1=>'fluid', 2=>'fixed'); $layout = $current_theme_data['layout'];
@@ -93,7 +99,7 @@
 			$session->setVar('colortheme', $request->colortheme);
 		}
 		if(!isEmptyString($colortheme)){
-			$bodyclasses .= "theme-".$colortheme." ";
+			$bodyclasses .= " theme-".$colortheme." ";
 			$attr = ' data-theme="theme-'.$colortheme.'"';
 		}
 	?>
@@ -122,10 +128,12 @@
 	<?php if($fulltemplate){ ?>
 		<?php require_once APPLICATION_PATH.'/views/scripts/index/header.phtml'; ?> <!-- Include header -->
         <div class="<?php echo $layout == 1 ? 'container-fluid' : 'container'; ?> <?php echo $topbar == 2 ? 'nav-fixed' : ''; ?>" id="content">
-            <div id="left" class="<?php echo $sidebar == 2 ? 'sidebar-fixed hasScrol ' : ' '; ?> <?php echo $showsidebar == 0 ? 'forced-hide ' : ' '; ?>" style="display:<?php echo $showsidebar == 0 ? 'none;' : 'block'; ?>">
-                <?php require_once APPLICATION_PATH.'/views/scripts/index/leftcolumn.phtml'; ?>
-            </div>
-            <div id="main" style="margin-left:<?php echo $showsidebar == 0 ? '0;' : '200px;'; ?>">
+        	<?php if($isloggedin){ ?>
+                <div id="left" class="<?php echo $sidebar == 2 ? 'sidebar-fixed hasScrol ' : ' '; ?> <?php echo $showsidebar == 0 ? 'forced-hide ' : ' '; ?>" style="display:<?php echo $showsidebar == 0 ? 'none;' : 'block'; ?>">
+                    <?php require_once APPLICATION_PATH.'/views/scripts/index/leftcolumn.phtml'; ?>
+                </div>
+            <?php } ?>
+            <div id="main" style="margin-left:<?php echo $showsidebar == 0 || !$isloggedin ? '0;' : '200px;'; ?>">
                 <div class="container-fluid">
                     <?php require_once APPLICATION_PATH.'/views/scripts/index/breadcrumb.phtml'; ?> <!-- Breadcrumbs line -->
                     <?php echo $this->layout()->content; ?>

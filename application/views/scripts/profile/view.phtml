@@ -59,6 +59,51 @@
 		$formid = "indexform";
 		$multipart = ' enctype="multipart/form-data"';
 	}
+	if($tab == "contact"){
+		$ismail = true;
+		if(isEmptyString($request->section)){
+			$section = "mail";
+			$issms = false;
+		}
+		if($section == 'sms'){
+			$ismail = false;
+			$issms = true;
+		}
+		
+		$formid = 'indexform';
+		$formmethod = 'post';
+		$posturl = $this->baseUrl("notifications/processnotification");
+		$successurl = encode($this->viewurl);
+		$failureurl =  encode($this->viewurl);
+		
+		$message = new Message();
+		$type = $request->type;
+		$ismail = true; $issms = false;
+		if(isEmptyString($type)){
+			$type = 1;
+		}
+		if($type == 2){
+			$issms = true; $ismail = false;
+		}
+		
+		if($ismail){
+			$subtitle = "Compose Message";
+			$button_title = "Send Message";
+		}
+		if($issms){
+			$subtitle = "Compose SMS";
+			$button_title = "Send SMS";
+		}
+		
+		$subject = ''; $message = '';
+		if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+			$formvalues = $session->getVar(FORM_VALUES);		
+			$subject = isArrayKeyAnEmptyString('subject', $formvalues) ? '' : $formvalues['subject'];
+			$message = isArrayKeyAnEmptyString('message', $formvalues) ? '' : $formvalues['message'];
+		}
+	}
+	
+	$allstatus = getUserStatus();
 	
 	$allowedit = false;
 	if($acl->checkPermission($resourcename, ACTION_EDIT)){
@@ -71,8 +116,18 @@
 	}
 	
 	$showfullscreen = false;
-	if($request->fullscreen == 1 || $request->pgc == 'true'){
+	if($request->fullscreen == 1){
 		$showfullscreen = true;
+	}
+	
+	$showpayslip = false;
+	if($request->payslipview == 1){
+		$showpayslip = true;
+	}
+	
+	$ispdf = false;
+	if($request->pdf == 1){
+		$ispdf = true;
 	}
 	
 	$pageid = "profile_view";
@@ -91,9 +146,6 @@
     });
     </script>
 <?php } ?>
-<style>
-
-</style>    
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
 <?php if(!isEmptyString($user->hasPendingActivation()) && $acl->checkPermission($resourcename, ACTION_CREATE) && $tab == 'account') { ?>
     <div class="alert alert-warning fade in">Activation pending from user</div>
@@ -101,17 +153,18 @@
 <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && $user->isDeactivated()) { ?>
     <div class="alert alert-warning fade in">User profile was de-activated</div>
 <?php } ?>
-<?php if(!$showfullscreen){ ?>
+<?php if(isEmptyString($request->pgc)){ ?>
     <div id="<?php echo $pageid; ?>">
         <form id="<?php echo $formid; ?>" class="form-horizontal" method="<?php echo $formmethod; ?>" action="<?php echo $posturl; ?>" <?php echo $multipart; ?>>
             <div class="box box-bordered box-color">
                 <div class="box-title hideonprint">
                     <h3><i class="fa fa-user"></i> <?php echo $pagetitle; ?></h3>
                     <div class="actions">
-                        <a class="btn btn-primary" href="<?php echo stripUrl($viewurl).'/fullscreen/1/pgc/true'; ?>" title="Preview Profile in Fullscreen" rel="tooltip" target="_blank"><i class="fa fa-print"></i> Print Preview</a> 
-                        <?php if($allowedit) { ?>
-                            <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i> Edit</a> 
+                    	<?php if($allowedit) { ?>
+                            <a class="btn btn-primary" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i> Update Profile</a> 
                         <?php } ?>
+                        <a class="btn btn-primary" href="<?php echo stripUrl($viewurl).'/fullscreen/1/pgc/true'; ?>" title="Preview Profile in Fullscreen" rel="tooltip" target="_blank"><i class="fa fa-print"></i> Print Preview</a> 
+                        <a class="btn btn-primary" href="<?php echo stripUrl($viewurl).'/fullscreen/1/pgc/true/pdf/1'; ?>" title="Export to PDF" rel="tooltip" target="_blank"><i class="fa fa-file"></i> PDF</a> 
                         <?php if($acl->checkPermission($resourcename, ACTION_DELETE) && !$user->isUserActive() && !$isme && false){ ?>
                             <a class="deleteline btn btn-primary" action="<?php echo $this->baseUrl('profile/delete/id/'.encode($user->getID())."/entityname/UserAccount/successurl/".encode($listurl)); ?>" message="<?php echo $user->isUserActive() ? 'Delete on this Profile is  disabled. Contact Super Admin' : $this->translate('global_delete_confirm_message'); ?>" title="Remove Entry" rel="tooltip"><i class="fa fa-trash"></i></a> 
                         <?php } ?>
@@ -120,8 +173,8 @@
                         <?php } ?>
                     </div>
                 </div>
-                <div class="box-content nopadding clearfix <?php echo $request->print == 1 || $request->pgc == 'true' ? 'printscreen' : ''; ?>" style="min-height:500px; height:auto;">
-                    <div class="tabs-container col-sm-3 col-xs-12 padding0  hideonprint">
+                <div class="box-content nopadding clearfix" style="min-height:500px; height:auto;">
+                    <div class="tabs-container col-sm-3 col-xs-12 padding0 clearfix hideonprint">
                         <ul class="tabs tabs-inline tabs-left">
                             <li class="<?php echo $tab == 'overview' ? 'active' : ''; ?>"><a data-toggle="tab" href="#overview"><i class="fa fa-file"></i>About</a></li>
                             <li class="<?php echo $tab == 'employment' ? 'active' : ''; ?>"><a data-toggle="tab" href="#employment"><i class="fa fa-briefcase"></i>Employment Details</a></li>
@@ -138,9 +191,35 @@
                                     <div class="divider10"></div>
                                 <?php } ?>
                             </li>
+                            <li class="noround nobg" style="padding:1px; background-color:#fff;">
+                            	<div class="divider5"></div>
+                                <div class="box box-condensed">
+                                    <div class="box-title">
+                                        <h3><i class="glyphicon-check" style="margin-top:-5px;"></i> Profile Status</h3>
+                                    </div>
+                                    <div class="box-content">
+                                    	<?php 
+											$profilecheckindetails = getCheckInEntry($user->getID());
+										?>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Contract Startdate:</span><span class="inline" style="margin-left:10px;"><?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Contract Status:</span><span class="inline" style="margin-left:10px;"><?php echo $user->getEmploymentStatus() == 1 ? 'Active' : 'Discontinued'; ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">User Type:</span><span class="inline" style="margin-left:10px; font-size:12px;"><?php echo getUserType($user->getType()); ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Login Status:</span><span class="inline" style="margin-left:10px;"><?php echo isArrayKeyAnEmptyString($user->getStatus(), $allstatus) ? '' : $allstatus[$user->getStatus()]; ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Last Checkin Date:</span><span class="inline" style="margin-left:10px;"><?php echo changeMySQLDateToPageFormat($profilecheckindetails['datein']); ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Time In:</span><span class="inline" style="margin-left:10px;"><?php echo isEmptyString($profilecheckindetails['timein']) ? '--' : formatTimeCustom($profilecheckindetails['timein']); ?></span>
+                                        <div class="divider10"></div>
+                                        <span class="label label-default width110 lineblocked leftalign padding5">Time Out:</span><span class="inline" style="margin-left:10px;"><?php echo isEmptyString($profilecheckindetails['timein']) ? '--' : formatTimeCustom($profilecheckindetails['timein']); ?></span>
+                                    </div>
+                                </div>
+                            </li>
                         </ul>
                     </div>
-                    <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0 <?php echo $request->print == 1 || $request->pgc == 'true' ? 'printscreen' : ''; ?>" <?php echo $request->print == 1 || $request->pgc == 'true' ? 'style="width:100%; margin:0 auto;"' : ''; ?>>
+                    <div class="tab-content padding xtab-content-inline col-sm-9 col-xs-12 padding0" <?php echo $request->print == 1 || $request->pgc == 'true' ? 'style="width:100%; margin:0 auto;"' : ''; ?>>
                         <div id="overview" class="tab-pane <?php echo $tab == 'overview' ? 'active' : ''; ?>">
                             <?php require APPLICATION_PATH."/views/scripts/profile/overview_view.phtml"; ?>
                         </div>
@@ -166,12 +245,19 @@
     </div>    
 <?php } else { ?>
     <div style="width:800px; margin:0 auto !important; font-family: Arial, Verdana, sans-serif;">
-        <h3 style="font-weight:bold; color:#333333 !important; font-size:20px; margin-left:-15px; font-family: Arial, Verdana, sans-serif;"><?php echo $user->getName(); ?></h3>
-        <form id="<?php echo $formid; ?>" class="form-horizontal">
-            <div class="" id="summarydetails">
-            <?php require APPLICATION_PATH."/views/scripts/profile/overview_view.phtml"; ?>
-            <?php require APPLICATION_PATH."/views/scripts/profile/employment_view.phtml"; ?>
-            <?php require APPLICATION_PATH."/views/scripts/profile/benefits_view.phtml"; ?>
+    	<?php if($showfullscreen){ ?>
+        	<h3 style="font-weight:bold; color:#333333 !important; font-size:20px; font-family: Arial, Verdana, sans-serif;"><?php echo $user->getName(); ?></h3>
+       	<?php } ?>
+        <form id="<?php echo $formid; ?>" class="form-horizontal" action="<?php echo $posturl; ?>">
+            <div id="summarydetails">
+            	<?php if($showfullscreen){ ?>
+					<?php require APPLICATION_PATH."/views/scripts/profile/overview_view.phtml"; ?>
+                    <?php require APPLICATION_PATH."/views/scripts/profile/employment_view.phtml"; ?>
+                    <?php require APPLICATION_PATH."/views/scripts/profile/benefits_view.phtml"; ?>
+                <?php } ?>
+                <?php if($showpayslip){ ?>
+                	<?php require APPLICATION_PATH."/views/scripts/profile/payments.phtml"; ?>
+                <?php } ?>
             </div>
         </form>
     </div>

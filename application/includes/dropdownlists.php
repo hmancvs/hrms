@@ -701,7 +701,7 @@
 		return $array;
 	}
 	function getSystemUsers($value = ''){
-		$query = "SELECT u.id as optionvalue, concat(u.firstname,' ',u.lastname) as optiontext FROM useraccount as u Left Join aclusergroup AS g ON u.id = g.userid WHERE g.groupid != '8' AND u.isactive = 1 ORDER BY optiontext ";
+		$query = "SELECT u.id as optionvalue, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as optiontext FROM useraccount as u Left Join aclusergroup AS g ON u.id = g.userid WHERE g.groupid != '8' AND u.isactive = 1 ORDER BY optiontext ";
 		$array = getOptionValuesFromDatabaseQuery($query);
 		if(!isEmptyString($value)){
 			if(!isArrayKeyAnEmptyString($value, $array)){
@@ -793,11 +793,7 @@
 		if($hasphone){
 			$custom_query .= " AND u.phone <> '' ";
 		}
-		if($companyid == DEFAULT_COMPANYID){
-			$custom_query .= " AND (u.companyid = '".$companyid."' OR u.companyid is null) ";
-		} else {
-			$custom_query .= " AND u.companyid = '".$companyid."' ";
-		}
+		$custom_query .= " AND u.companyid = '".$companyid."' ";
 		
 		$limit_query = '';
 		if(!isEmptyString($limit)){
@@ -805,6 +801,20 @@
 		}
 		$valuesquery = "SELECT u.id AS optionvalue, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as optiontext FROM useraccount u WHERE u.id <> '' ".$custom_query." GROUP BY u.id ORDER BY optiontext ASC ".$limit_query;
 		// debugMessage($valuesquery);
+		return getOptionValuesFromDatabaseQuery($valuesquery);
+	}
+	# fetch all members with an email
+	function getUsersWithEmail(){
+		$companyid = getCompanyID();
+		$custom_query = " AND u.companyid = '".$companyid."' ";
+		$valuesquery = "SELECT u.id AS optionvalue, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname,' [',u.email,']'), concat(u.firstname,' ',u.lastname,' ',u.othername,' <',u.email,'>')) as optiontext FROM useraccount u WHERE u.email <> '' ".$custom_query." ORDER BY optiontext ASC ";
+		return getOptionValuesFromDatabaseQuery($valuesquery);
+	}
+	# fetch all members with a phone
+	function getUsersWithPhone(){
+		$companyid = getCompanyID();
+		$custom_query = " AND u.companyid = '".$companyid."' ";
+		$valuesquery = "SELECT u.id AS optionvalue, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname,' [',u.phone,']'), concat(u.firstname,' ',u.lastname,' ',u.othername,' <',u.phone,'>')) as optiontext FROM useraccount u WHERE u.phone <> '' ".$custom_query." ORDER BY optiontext ASC ";
 		return getOptionValuesFromDatabaseQuery($valuesquery);
 	}
 	function getUserDetails($type = '', $limit = '', $status = 1, $user ='', $start = '', $end ='', $emails=''){
@@ -928,19 +938,39 @@
 	}
 	# determine if user has checked in today
 	function isCheckedIn($userid, $date){
-		$conn = Doctrine_Manager::connection();
-		$query = "SELECT id FROM timesheet AS t where t.`userid` = '".$userid."' AND TO_DAYS(t.datein) = TO_DAYS('".$date."') AND t.timein <> '' AND t.timeout is null "; // debugMessage($query);
-		$result = $conn->fetchOne($query); // debugMessage($result);
-		if(!isEmptyString($result)){
+		$result = getCheckInEntry($userid, $date);
+		if(!isEmptyString($result['timein']) && isEmptyString($result['timeout'])){
 			return true;
 		}
 		return false;
 	}
 	# determine if user has checked in today
-	function getCheckInEntry($userid, $date){
+	function getCheckInEntry($userid, $date = ''){
+		$where_query = "";
+		if(!isEmptyString($date)){
+			$where_query = " AND TO_DAYS(t.datein) = TO_DAYS('".$date."') ";
+		}
 		$conn = Doctrine_Manager::connection();
-		$query = "SELECT * FROM timesheet AS t where t.`userid` = '".$userid."' AND TO_DAYS(t.datein) = TO_DAYS('".$date."') AND t.timein <> '' AND t.timeout is null "; // debugMessage($query);
-		$result = $conn->fetchRow($query); // debugMessage($result);
+		$query = "SELECT * FROM timesheet AS t where t.`userid` = '".$userid."' order by t.timesheetdate desc, t.id desc limit 1 ";  // debugMessage($query);
+		$result = $conn->fetchRow($query); 
+		if(!$result){
+			$timesheet = new Timesheet();
+			$result = $timesheet->toArray();
+		}
+		// debugMessage($result);
+		return $result;
+	}
+	# determine payroll for month and year
+	function getPayrolls($start, $end){
+		$companyid = getCompanyID();
+		$conn = Doctrine_Manager::connection();
+		$query = "SELECT * FROM payroll AS p where p.`companyid` = '".$companyid."' AND MONTH(p.startdate) = MONTH('".$start."') ";  // debugMessage($query);
+		$result = $conn->fetchRow($query); 
+		if(!$result){
+			$payroll = new Payroll();
+			$result = $payroll->toArray();
+		}
+		// debugMessage($result);
 		return $result;
 	}
 	function getWeekTimesheetsForUser($userid, $startdate, $enddate){
@@ -1115,11 +1145,16 @@
 		return $array;
 	}
 	function getCompanies($status ='1'){
+		$session = SessionWrapper::getInstance();
 		$custom_query = "";
 		if(!isEmptyString($status)){
 			$custom_query .= " AND c.status = '".$status."' ";
 		}
-		$query = "SELECT c.id as optionvalue, c.name as optiontext FROM company c where c.id <> '' ".$custom_query." order by optiontext ";
+		$myquery = "";
+		if($session->getVar('userid') != 81){
+			$myquery = " AND c.createdby <> 81 ";
+		}
+		$query = "SELECT c.id as optionvalue, c.name as optiontext FROM company c where (c.id <> '' ".$myquery.") ".$custom_query." order by optiontext ";
 		$array = getOptionValuesFromDatabaseQuery($query);
 		return $array;
 	}
@@ -1760,5 +1795,18 @@
 			'emailon_directmessage_recieved' => 'Send me an Email when any user sends me a Direct Message'
 		);
 		return $preferrances;
+	}
+	# determine if user has checked in today
+	function getSessionEntry($userid){
+		$conn = Doctrine_Manager::connection();
+		$query = "SELECT * FROM shiftschedule AS d where d.`userid` = '".$userid."' AND d.status = 1 order by d.startdate desc, d.id desc limit 1 ";  // debugMessage($query);
+		$result = $conn->fetchRow($query); 
+		
+		if(!$result){
+			$shift = new ShiftSchedule();
+			$result = $shift->toArray();
+		}
+		// debugMessage($query);
+		return $result;
 	}
 ?>

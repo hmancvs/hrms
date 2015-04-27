@@ -49,12 +49,122 @@ class TimesheetsController extends SecureController  {
 		$session = SessionWrapper::getInstance();
     	$config = Zend_Registry::get("config");
     	$this->_translate = Zend_Registry::get("translate");
+    	$validshift = false;
     	
-    	$formvalues = $this->_getAllParams(); // debugMessage($formvalues);
+    	$formvalues = $this->_getAllParams();
+    	/* $formvalues = array(
+    	 "id" => "",
+    			"successmessage" => "Check-In Successfull",
+    			"datein" => "Apr 24, 2015",
+    			"timein" => "8:40 PM",
+    			"inremarks" => "",
+    			"status" => "",
+    			"userid" => "93"
+    	); */
+    	// debugMessage($formvalues);  //  exit;
     	$id =  decode($formvalues['id']);
     	$formvalues['id'] = $id;
-    	 
+    	
     	$timesheet = new Timesheet();
+    	$user = new UserAccount();
+    	$user->populate($formvalues['userid']);
+    	
+    	# no shift available at all on profile
+    	// validate that user is checking into right shift
+    	if(isEmptyString($id)){
+    		$checkindate = date('Y-m-d', strtotime($formvalues['datein']));
+    		$checkintime = date('H:i:s', strtotime($formvalues['timein']));
+    		$checkinfulldate = $checkindate.' '.$checkintime; debugMessage('checkin: '.$checkinfulldate);
+    		// if user is already checkin, throw exception
+    		if(isCheckedIn($formvalues['userid'], $checkindate)){
+    			$message = "Check-In failed. Active session already exists";
+    			$session->setVar(ERROR_MESSAGE, $message);
+    			exit();
+    		}
+    		$hasshift = false;
+    		$scheduleentry = getSessionEntry($user->getID()); // debugMessage($scheduleentry);
+    		if(!isEmptyString($scheduleentry['id']) && !isEmptyString($user->getShift()) && $scheduleentry['status'] == 1){
+    			$hasshift = true;
+    		}
+    		
+    		if($hasshift){
+    			$shift = new ShiftSchedule();
+    			$shift->populate($scheduleentry['id']); // debugMessage($shift->toArray());
+    			 
+    			$validstartdate = $checkindate;
+    			$validstarttime = !isEmptyString($shift->getStartTime()) ? $shift->getStartTime() : $shift->getSession()->getStartTime();
+    			$validfullstartdate = $validstartdate.' '.$validstarttime; debugMessage('startin: '.$validfullstartdate);
+    			 
+    			# compute end date and time
+    			$endtime = !isEmptyString($shift->getEndTime()) ? $shift->getEndTime() : $shift->getSession()->getEndTime();
+    			$endday = $checkindate;
+    			$starthr = date('H', strtotime($validstarttime)); //debugMessage($starthr);
+    			$endhr = date('H', strtotime($endtime)); //debugMessage($endhr);
+    			if($endhr < $starthr){
+	    			$nxtday = date('Y-m-d', strtotime($checkindate." + 1 day"));
+	    			$endday = $nxtday;
+    			}
+    			 
+    			$validenddate = $endday;
+    			$validendtime = $endtime;
+    			$validfullenddate = $validenddate.' '.$validendtime; debugMessage('ending: '.$validfullenddate);
+    			 
+    			// validate start and end dates for each session
+    			$rangevalid = false;
+    			if(strtotime($checkinfulldate) >= strtotime($shift->getStartDate().' 00:00:00')){
+    				$rangevalid = true;
+    				if(!isEmptyString($shift->getEndDate())){
+    					$rangevalid = false;
+    					if(strtotime($checkinfulldate) <= strtotime($shift->getEndDate().' 23:00:00')){
+    						$rangevalid = true;
+    					}
+    				}
+    			}
+    			// also check if the days of the week are in the valid range
+    			if($rangevalid){
+	    			$todaywkno = date('w', strtotime($checkinfulldate)); // debugMessage($todaywkno);
+	    			$wkdaysprofiled = $user->getDaysOfWeekArray(); // debugMessage($wkdaysprofiled);
+    				if(!isEmptyString($scheduleentry['workingdays'])){
+    					$wkdaysprofiled = explode(',',preg_replace('!\s+!', '', trim($scheduleentry['workingdays'])));  // debugMessage($wkdaysprofiled);
+    				}
+    				if(count($wkdaysprofiled) > 0){
+    					if(!in_array($todaywkno, $wkdaysprofiled)){
+    						$rangevalid = false;
+    					}
+    				}
+    			}
+    			 
+    			// now validate the time within the session
+    			if($rangevalid){
+	    			if(strtotime($checkinfulldate) >= strtotime($validfullstartdate) && strtotime($checkinfulldate) < strtotime($validfullenddate)){
+	    				$validshift = true;
+	    				$browser = new Browser();
+	    				$audit_values = $browser_session = array(
+    						"browserdetails" => $browser->getBrowserDetailsForAudit(),
+    						"browser"=>$browser->getBrowser(),
+    						"version"=>$browser->getVersion(),
+    						"useragent"=>$browser->getUserAgent(),
+    						"os"=>$browser->getPlatform(),
+    						"ismobile"=>$browser->isMobile() ? '1' : 0,
+    						"ipaddress"=>$browser->getIPAddress()
+	    				);
+	    				
+	    				$formvalues['sessionid'] = $scheduleentry['sessionid'];
+	    				$formvalues['ipaddress'] = $audit_values['ipaddress'];
+	    				$formvalues['browser_details'] = json_encode($audit_values);
+	    			}
+    			}
+    		}
+    	}
+    	
+    	/* if(!$validshift){
+    		 debugMessage('shift fail');
+    	} else {
+    		debugMessage('shift passed');
+    	}
+    	debugMessage($formvalues);
+    	exit; */
+    		 
     	if(isEmptyString($id)){
     		$formvalues['createdby'] = $session->getVar('userid');
     		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
@@ -67,36 +177,46 @@ class TimesheetsController extends SecureController  {
     				$formvalues['status'] = 2;
     			}
     		}
-    	} else {
+    	}
+    		 
+    	if(!isEmptyString($id)){
     		$timesheet->populate($id);
     		$formvalues['lastupdatedby'] = $session->getVar('userid');
     		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
-    			/* $formvalues['status'] = 1;
-	    		if(!isArrayKeyAnEmptyString('timein', $formvalues) && !isArrayKeyAnEmptyString('timeout', $formvalues)){
-	    			$formvalues['status'] = 1;
-	    		} */
-	    		if(isEmptyString($timesheet->getHours())){
-	    			$timesheet->setHours($timesheet->getComputedHours());
-	    		}
-	    		$formvalues['isrequest'] = 0;
+    			if(isEmptyString($timesheet->getHours())){
+    				$timesheet->setHours($timesheet->getComputedHours());
+    			}
+    			$formvalues['isrequest'] = 0;
     		} else {
     			$formvalues['isrequest'] = 1;
     		}
+    		$validshift = true;
     	}
     	
-    	$timesheet->processPost($formvalues);
-    	/* debugMessage($timesheet->toArray());
-    	debugMessage('error '.$timesheet->getErrorStackAsString()); exit(); */
+    	if($validshift){
+    		$timesheet->processPost($formvalues);
+    		/* debugMessage($timesheet->toArray());
+    		 debugMessage('error '.$timesheet->getErrorStackAsString()); exit(); */
     	
-    	if($timesheet->hasError()){
-    		$session->setVar(ERROR_MESSAGE, $timesheet->getErrorStackAsString());
-    	} else { 
-	    	try {
-	    		$timesheet->save();
-	    		$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($this->_getParam(SUCCESS_MESSAGE)));
-	    	} catch (Exception $e) {
-	    		$session->setVar(ERROR_MESSAGE, $e->getMessage());
-	    	}
+    		if($timesheet->hasError()){
+    			$session->setVar(ERROR_MESSAGE, $timesheet->getErrorStackAsString());
+    		} else {
+    			try {
+    				$timesheet->save();
+    				$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($this->_getParam(SUCCESS_MESSAGE)));
+    			} catch (Exception $e) {
+    				$session->setVar(ERROR_MESSAGE, $e->getMessage());
+    			}
+    		}
+    	} else {
+    		$message = "Check-In failed. Invalid shift or session time detected. <br/> Contact admin for resolution.";
+    		$session->setVar('contactadmin', 1);
+    		if(isAdmin() || isCompanyAdmin()){
+    			$session->setVar('contactadmin', '');
+    			$url = $this->view->baseUrl('config/shifts/tab/schedules/userid/'.$user->getID());
+    			$message = 'Check-In failed. Invalid shift or session time detected. <br/> <a href="'.$url.'">Click here</a> to update schedule for '.$user->getName();
+    		}
+    		$session->setVar(ERROR_MESSAGE, $message);
     	}
 	}
 	

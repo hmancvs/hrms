@@ -1,166 +1,209 @@
+<?php if($ispdf){ ?>
+	<pagebreak />
+<?php } ?>
 <div class="row makerelative">
     <div class="col-sm-12 paddingleft0">
     	<div class="makeabsolute" style="right:25px; top:25px; z-index:1000;">
 			<?php if($allowedit && !$showfullscreen) { ?>
-                <a class="btn btn-primary btn-xs blockanchor hideonprint" style="z-index:1000;" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update</a>
+                <a class="btn btn-primary btn-xs blockanchor hideonprint" style="z-index:1000;" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/employment'); ?>">Update</a>
             <?php } ?>
         </div>
         <fieldset class="fieldsetcontainer" style="margin-bottom:0;">
-            <legend>Employment Profile</legend>
+            <legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> Employment Profile</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid">
-                    <div class="col-sm-6">
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_position_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo getDatavariables('EMPLOYEE_POSITIONS', $user->getPosition(), true); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_empstatus_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo getDatavariables('EMPLOYEE_STATUS', $user->getEmpStatus(), true); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_employmentstatus_label'); ?>:</label>
-                            <div class="col-sm-8">
-                            	<p class="form-control-static nullifempty view"><?php echo $user->getEmploymentStatus() == 1 ? 'Active' : 'Discontinued'; ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_department_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo getDepartments($user->getDepartmentID(), true); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_manager_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view">
-									<?php if($showfullscreen){ ?> 
-										<?php echo isEmptyString($user->getManagerID()) ? '' : $user->getManager()->getName(); ?>
-                                    <?php } else { ?>
-                                    	<?php echo isEmptyString($user->getManagerID()) ? '' : '<a href="'.$this->baseUrl('profile/view/id/'.encode($user->getManagerID())).'" class="block">'.$user->getManager()->getName().'</a>'; ?>
-                                    <?php } ?>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">	
-                        <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_empidno_label'); ?>:</label>
-                            <div class="col-sm-7">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getIDNo(); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_nationalid_label'); ?>:</label>
-                            <div class="col-sm-7">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getNationalID(); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_startdate_label'); ?>:</label>
-                            <div class="col-sm-7">
-                                <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_probationdate_label'); ?>:</label>
-                            <div class="col-sm-7">
-                                <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getProbationEnd()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_enddate_label'); ?>:</label>
-                            <div class="col-sm-7">
-                                <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getEndDate()); ?></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="divider20 separator" style="padding:0; border:1px solid #f4f4f4;"></div>
-                <div class="divider10"></div>
-                <div class="row-fluid">
-                    <div class="col-sm-10">
-                        <div class="form-group">
-                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_jobdescription_label'); ?>:</label>
-                            <div class="col-sm-12">
-                                <p class="form-control-static nullifempty view"><?php echo nl2br($user->getJobDescription()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_qualification_label'); ?>:</label>
-                            <div class="col-sm-12">
-                                <p class="form-control-static nullifempty view"><?php echo nl2br($user->getQualifications()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_skills_label'); ?>:</label>
-                            <div class="col-sm-12">
-                                <p class="form-control-static nullifempty view"><?php echo nl2br($user->getSkills()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_education_label'); ?>:</label>
-                            <div class="col-sm-12">
-                                <p class="form-control-static nullifempty view"><?php echo nl2br($user->getEducation()); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-12 control-label"><?php echo $this->translate('profile_workexperience_label'); ?>:</label>
-                            <div class="col-sm-12">
-                                <p class="form-control-static nullifempty view"><?php echo nl2br($user->getExperience()); ?></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </fieldset>
-    </div>
-</div>
-<div class="row">
-    <div class="col-sm-12 paddingleft0">
-        <fieldset class="fieldsetcontainer">
-            <legend>Attendance Configuration</legend>
-            <div class="panel-body well-sm">
-                <div class="row-fluid">
-                    <div class="col-sm-10">
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_workingdays_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getAttendanceDaysOfWeek(); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_shift_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo getWorkShifts($user->getShift(), true); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getMaxHoursPerDay(); ?></p>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getMaxHoursPerWeek(); ?></p>
-                            </div>
-                        </div>
-                        <?php if(!$isme){ ?>
-                        	<div class="form-group">
-                                <label class="col-sm-4 control-label">Attendance Configuration:</label>
+                <?php if($ispdf){ ?>
+                	<table class="items">
+                    	<tr>
+                        	<td width="50%">
+                            	<table class="dataitems">
+                                	<tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_position_label'); ?>:</td>
+                                        <td class="data"><?php echo getDatavariables('EMPLOYEE_POSITIONS', $user->getPosition(), true); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_empstatus_label'); ?>:</td>
+                                        <td class="data"><?php echo getDatavariables('EMPLOYEE_STATUS', $user->getEmpStatus(), true); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_employmentstatus_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getEmploymentStatus() == 1 ? 'Active' : 'Discontinued'; ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_department_label'); ?>:</td>
+                                        <td class="data"><?php echo getDepartments($user->getDepartmentID(), true); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_manager_label'); ?>:</td>
+                                        <td class="data"><?php echo isEmptyString($user->getManagerID()) ? '' : $user->getManager()->getName(); ?></td>
+                                    </tr>
+                                </table>
+                           	</td>
+                            <td>
+                            	<table class="dataitems">
+                                	<tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_empidno_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getIDNo(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_nationalid_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getNationalID(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_startdate_label'); ?>:</td>
+                                        <td class="data"><?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_probationdate_label'); ?>:</td>
+                                        <td class="data"><?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_enddate_label'); ?>:</td>
+                                        <td class="data"><?php echo changeMySQLDateToPageFormat($user->getEndDate()); ?></td>
+                                    </tr>
+                                </table>
+                            </td>
+                      	</tr>
+                  	</table>
+                    <div style="height:20px"></div>
+                    <table class="items">
+                        <tr>
+                        	<td width="80%">
+                            	<table class="dataitems">
+                                	<tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_jobdescription_label'); ?>:</td>
+                                        <td class="data"><?php echo nl2br($user->getJobDescription()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_qualification_label'); ?>:</td>
+                                        <td class="data"><?php echo nl2br($user->getQualifications()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_skills_label'); ?>:</td>
+                                        <td class="data"><?php echo nl2br($user->getSkills()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_education_label'); ?>:</td>
+                                        <td class="data"><?php echo nl2br($user->getEducation()); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_workexperience_label'); ?>:</td>
+                                        <td class="data"><?php echo nl2br($user->getExperience()); ?></td>
+                                    </tr>
+                               	</table>
+                            </td>
+                            <td></td>
+                        </tr>
+                  	</table>
+                <?php } else { ?>
+                    <div class="row-fluid">
+                        <div class="col-sm-6">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_position_label'); ?>:</label>
                                 <div class="col-sm-8">
-                                    <?php echo getAttendanceTypes($user->getistimesheetuser()); ?>
+                                    <p class="form-control-static nullifempty view"><?php echo getDatavariables('EMPLOYEE_POSITIONS', $user->getPosition(), true); ?></p>
                                 </div>
                             </div>
-                        <?php } ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_empstatus_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo getDatavariables('EMPLOYEE_STATUS', $user->getEmpStatus(), true); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_employmentstatus_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getEmploymentStatus() == 1 ? 'Active' : 'Discontinued'; ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_department_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo getDepartments($user->getDepartmentID(), true); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_manager_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view">
+                                        <?php if($showfullscreen){ ?> 
+                                            <?php echo isEmptyString($user->getManagerID()) ? '' : $user->getManager()->getName(); ?>
+                                        <?php } else { ?>
+                                            <?php echo isEmptyString($user->getManagerID()) ? '' : '<a href="'.$this->baseUrl('profile/view/id/'.encode($user->getManagerID())).'" class="block">'.$user->getManager()->getName().'</a>'; ?>
+                                        <?php } ?>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">	
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label"><?php echo $this->translate('profile_empidno_label'); ?>:</label>
+                                <div class="col-sm-7">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getIDNo(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label"><?php echo $this->translate('profile_nationalid_label'); ?>:</label>
+                                <div class="col-sm-7">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getNationalID(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label"><?php echo $this->translate('profile_startdate_label'); ?>:</label>
+                                <div class="col-sm-7">
+                                    <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getStartDate()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label"><?php echo $this->translate('profile_probationdate_label'); ?>:</label>
+                                <div class="col-sm-7">
+                                    <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getProbationEnd()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label"><?php echo $this->translate('profile_enddate_label'); ?>:</label>
+                                <div class="col-sm-7">
+                                    <p class="form-control-static nullifempty view"><?php echo changeMySQLDateToPageFormat($user->getEndDate()); ?></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    <div class="divider20 separator" style="padding:0; border:1px solid #f4f4f4;"></div>
+                    <div class="divider10"></div>
+                    <div class="row-fluid">
+                        <div class="col-sm-10">
+                            <div class="form-group">
+                                <label class="col-sm-12 control-label"><?php echo $this->translate('profile_jobdescription_label'); ?>:</label>
+                                <div class="col-sm-12">
+                                    <p class="form-control-static nullifempty view"><?php echo nl2br($user->getJobDescription()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-12 control-label"><?php echo $this->translate('profile_qualification_label'); ?>:</label>
+                                <div class="col-sm-12">
+                                    <p class="form-control-static nullifempty view"><?php echo nl2br($user->getQualifications()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-12 control-label"><?php echo $this->translate('profile_skills_label'); ?>:</label>
+                                <div class="col-sm-12">
+                                    <p class="form-control-static nullifempty view"><?php echo nl2br($user->getSkills()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-12 control-label"><?php echo $this->translate('profile_education_label'); ?>:</label>
+                                <div class="col-sm-12">
+                                    <p class="form-control-static nullifempty view"><?php echo nl2br($user->getEducation()); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-12 control-label"><?php echo $this->translate('profile_workexperience_label'); ?>:</label>
+                                <div class="col-sm-12">
+                                    <p class="form-control-static nullifempty view"><?php echo nl2br($user->getExperience()); ?></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+             	<?php } ?>
             </div>
         </fieldset>
     </div>
@@ -168,48 +211,159 @@
 <div class="row">
     <div class="col-sm-12 paddingleft0">
         <fieldset class="fieldsetcontainer">
-            <legend>Banking and Taxing Information</legend>
+            <legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> Attendance Configuration</legend>
             <div class="panel-body well-sm">
-                <div class="row-fluid">
-                    <div class="col-sm-10">
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_bankname_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getBankName(); ?></p>
+            	<?php if($ispdf){ ?>
+                	<table class="items">
+                    	<tr>
+                        	<td width="80%">
+                            	<table class="dataitems">
+                                	<tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_workingdays_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getAttendanceDaysOfWeek(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_shift_label'); ?>:</td>
+                                        <td class="data"><?php echo getWorkShifts($user->getShift(), true); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getMaxHoursPerDay(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getMaxHoursPerWeek(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('Attendance Configuration'); ?>:</td>
+                                        <td class="data"><?php echo isEmptyString($user->getistimesheetuser()) ? '' : getAttendanceTypes($user->getistimesheetuser()); ?></td>
+                                    </tr>
+                                </table>
+                           	</td>
+                            <td></td>
+                      	</tr>
+                  	</table>
+                <?php } else { ?>
+                    <div class="row-fluid">
+                        <div class="col-sm-10">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_workingdays_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getAttendanceDaysOfWeek(); ?></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_branch_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getBranchName(); ?></p>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_shift_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo getWorkShifts($user->getShift(), true); ?></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_accname_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getAccName(); ?></p>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_maxdayhrs_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getMaxHoursPerDay(); ?></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_accno_label'); ?>:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getAccNo(); ?></p>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_minweekhrs_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getMaxHoursPerWeek(); ?></p>
+                                </div>
                             </div>
+                            <?php if(!$isme){ ?>
+                                <div class="form-group">
+                                    <label class="col-sm-4 control-label">Attendance Configuration:</label>
+                                    <div class="col-sm-8"><?php echo isEmptyString($user->getistimesheetuser()) ? '' : getAttendanceTypes($user->getistimesheetuser()); ?></div>
+                                </div>
+                            <?php } ?>
                         </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label">NSSF ID No#:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getNssfID(); ?></p>
+                    </div>
+               	<?php } ?>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 paddingleft0">
+        <fieldset class="fieldsetcontainer">
+            <legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> Banking and Taxing Information</legend>
+            <div class="panel-body well-sm">
+            	<?php if($ispdf){ ?>
+                	<table class="items">
+                    	<tr>
+                        	<td width="60%">
+                            	<table class="dataitems">
+                                	<tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_bankname_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getBankName(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_branch_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getBranchName(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_accname_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getAccName(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_accno_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getAccNo(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_nssfid_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getNssfID(); ?></td>
+                                    </tr>
+                                    <tr>
+                                    	<td class="firsttd"><?php echo $this->translate('profile_uraid_label'); ?>:</td>
+                                        <td class="data"><?php echo $user->getUraTin(); ?></td>
+                                    </tr>
+                                </table>
+                           	</td>
+                            <td></td>
+                      	</tr>
+                  	</table>
+                <?php } else { ?>
+                    <div class="row-fluid">
+                        <div class="col-sm-10">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_bankname_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getBankName(); ?></p>
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label">URA TIN No#:</label>
-                            <div class="col-sm-8">
-                                <p class="form-control-static nullifempty view"><?php echo $user->getUraTin(); ?></p>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_branch_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getBranchName(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_accname_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getAccName(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_accno_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getAccNo(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_nssfid_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getNssfID(); ?></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label"><?php echo $this->translate('profile_uraid_label'); ?>:</label>
+                                <div class="col-sm-8">
+                                    <p class="form-control-static nullifempty view"><?php echo $user->getUraTin(); ?></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+               	<?php } ?>
             </div>
         </fieldset>
     </div>

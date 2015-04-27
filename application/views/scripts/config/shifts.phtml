@@ -4,50 +4,196 @@
 	# Page title
 	$title = "Work Shifts";
 	
-	$style = '2';
-	if(!isEmptyString($request->style)){
-		$style = $request->style;
-		$session->setVar('style', $request->style);
+	$tab = $request->tab;
+	if(isEmptyString($tab)){
+		$tab = "schedules";
 	}
-	if(isEmptyString($request->style) && !isEmptyString($session->getVar('style'))){
-		$style = $session->getVar('style');
-	}
-	
-	# Create an instance of the class to handle the pagination
-	$paginate = new Pagination();	
-	$paginate->setView($this);
-	# set the search columns to be used on this list
-	$paginate->setSearchColumns(array("s.name"));
-	$paginate->setDefaultSortBy("s.name");	
-	$paginate->setItemCountPerPage("ALL");
-	
-	# define the letter to be clicked to ease navigation 
-	$where_query = " WHERE s.id <> '' ";
-	$allowclear = false;
-	
-	if(!isEmptyString($request->searchterm)){
-		$allowclear = true;
+	$section = $request->section;
+	if(isEmptyString($section)){
+		$section = "list";
 	}
 	
-	$paginate->processPost($request->getParams());
-	$all_results_query = "select s.id as id, s.name, s.starttime, s.endtime, s.overduestarttime, s.breakhours, s.hours from shift s WHERE s.name <> '' ".$paginate->getSearchAndFilterSQL()." GROUP BY s.id ".$paginate->getSortSQL();
+	if($tab == "schedules"){
+		if($section == "list"){
+			# Create an instance of the class to handle the pagination
+			$paginate = new Pagination();	
+			$paginate->setView($this);
+			# set the search columns to be used on this list
+			$paginate->setSearchColumns(array(""));
+			// $paginate->setDefaultSortBy("");	
+			$paginate->setItemCountPerPage("10");
+			
+			# define the letter to be clicked to ease navigation 
+			$where_query = " WHERE s.id <> '' AND u.companyid = '".getCompanyID()."' ";
+			$having_query = "";
+			$allowclear = false;
+			
+			$userid = $request->userid;
+			if(!isEmptyString($userid)){
+				$where_query .= " AND s.`userid` = '".$userid."' ";
+				$allowclear = true;
+			}
+			
+			$sessionid = $request->sessionid;
+			if(!isEmptyString($sessionid)){
+				$where_query .= " AND s.`sessionid` = '".$sessionid."' ";
+				$allowclear = true;
+			}
+			
+			$status = trim($request->status);
+			if(!isEmptyString($status)){
+				$having_query = " having status = '".$status."' ";
+				$allowclear = true;
+			}
+			
+			$startdate = $request->startdate;
+			$enddate = $request->enddate;
+			if(!isEmptyString($startdate)){
+				$startdate = changeDateFromPageToMySQLFormat($startdate);
+				$allowclear = true;
+			}
+			$enddate = $request->getParam('enddate');
+			if(!isEmptyString($enddate)){
+				$enddate = changeDateFromPageToMySQLFormat($enddate);
+				$allowclear = true;
+			}
+			
+			if(!isEmptyString($startdate)){
+				$where_query .= " AND (TO_DAYS(s.startdate) >= TO_DAYS('".$startdate."')) ";
+				$allowclear = true;
+			}
+			if(!isEmptyString($enddate)){
+				$where_query .= " AND (TO_DAYS(s.startdate) <= TO_DAYS('".$enddate."')) ";
+				$allowclear = true;
+			}
+			
+			$order = trim($request->order);
+			$order_query = " ORDER BY s.dateadded DESC, s.id desc ";
 	
-	# debugMessage($all_results_query);
-	$paginate->setItemCountFromSQLQuery($all_results_query);
+			$paginate->processPost($request->getParams());
+			$all_results_query = "select s.id, s.userid, IF(isnull(u.othername), concat(u.firstname,' ',u.lastname), concat(u.firstname,' ',u.lastname,' ',u.othername)) as user, s.startdate, s.enddate, s.starttime, s.endtime, s.dateadded, s.addedbyid, concat(t.name,' <br>(', TIME_FORMAT(t.starttime, '%H%iHRS'), ' - ', TIME_FORMAT(t.endtime, '%H%iHRS'),')') as session, t.hours, IF(s.sessionid = u.shift AND s.status = 1, '1', '0') as status
+			from shiftschedule as s 
+			inner join shift t on s.sessionid = t.id 
+			inner join useraccount u on s.userid = u.id
+			".$where_query." ".$paginate->getSearchAndFilterSQL()." ".$having_query." ".$order_query." ";
+			
+			// debugMessage($all_results_query);
+			$paginate->setItemCountFromSQLQuery($all_results_query);
+			
+			$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+			//echo $current_results_query;
+			$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+			$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+			
+			$conn = Doctrine_Manager::connection(); 
+			$result = $conn->fetchAll($current_results_query);
+			$has_no_data = (count($result) == 0) ? true : false; 
+			
+			$listurl = $this->baseUrl('config/shifts/tab/schedules');
+			$addurl = $this->baseUrl('config/shifts/tab/schedules/section/add');
+			$moduleitem = "Schedule";
+		}
+		
+		if($section == "add"){
+			
+			$shift = new ShiftSchedule();
+			$id = decode($request->id);
+			
+			if(isEmptyString($request->id)){
+				$pagetitle = 'New Schedule';
+				$button_title = $this->translate('global_button_save'); 
+				$successmessage = $this->translate('global_save_success'); 
+				$posturl = $this->baseUrl("config/schedulecreate");
+			} else {
+				$shift->populate(decode($request->id)); 
+				$pagetitle = 'Update Schedule';
+				$button_title = $this->translate('global_button_save_changes'); 
+				$successmessage = $this->translate('global_update_success'); 
+				$posturl = $this->baseUrl("config/schedulecreate");
+			}
+			
+			$successurl = $this->baseUrl('config/shifts/tab/schedules');
+			if(!isEmptyString($request->successurl)){
+				$successurl = decode($request->successurl);
+			}
+			$addnewsuccessurl = $this->baseUrl("config/shifts/tab/schedules/section/add");
+			$failureurl = $this->viewurl;
+			
+			if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+				$shift->processPost($session->getVar(FORM_VALUES));	
+			}
+		}
+	}
+	if($tab == "sessions"){
+		if($section == "list"){
+			# Create an instance of the class to handle the pagination
+			$paginate = new Pagination();	
+			$paginate->setView($this);
+			# set the search columns to be used on this list
+			$paginate->setSearchColumns(array("s.name"));
+			$paginate->setDefaultSortBy("s.name");	
+			$paginate->setItemCountPerPage("ALL");
+			
+			# define the letter to be clicked to ease navigation 
+			$where_query = " WHERE s.id <> '' ";
+			$allowclear = false;
+			
+			if(!isEmptyString($request->searchterm)){
+				$allowclear = true;
+			}
+			
+			$paginate->processPost($request->getParams());
+			$all_results_query = "select s.* from shift s WHERE s.name <> '' ".$paginate->getSearchAndFilterSQL()." GROUP BY s.id ".$paginate->getSortSQL();
+			
+			// debugMessage($all_results_query);
+			$paginate->setItemCountFromSQLQuery($all_results_query);
+			
+			$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
+			//echo $current_results_query;
+			$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
+			$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
+			
+			$conn = Doctrine_Manager::connection(); 
+			$result = $conn->fetchAll($current_results_query);
+			$has_no_data = (count($result) == 0) ? true : false; 
+			
+			$listurl = $this->baseUrl('config/shifts/tab/sessions');
+			$addurl = $this->baseUrl('config/shifts/tab/sessions/section/add');
+			$moduleitem = "Session";
+		}
+		
+		if($section == "add"){
+			
+			$shift = new Shift();
+			$id = decode($request->id);
+			
+			if(isEmptyString($request->id)){
+				$pagetitle = 'New Shift Session';
+				$button_title = $this->translate('global_button_save'); 
+				$successmessage = $this->translate('global_save_success'); 
+				$posturl = $this->baseUrl("config/shiftscreate");
+				$shift->setcompanyid($companyid);
+			} else {
+				$shift->populate(decode($request->id)); 
+				$pagetitle = 'Update Shift';
+				$button_title = $this->translate('global_button_save_changes'); 
+				$successmessage = $this->translate('global_update_success'); 
+				$posturl = $this->baseUrl("config/shiftscreate");
+			}
+			
+			$successurl = $this->baseUrl('config/shifts/tab/sessions');
+			if(!isEmptyString($request->successurl)){
+				$successurl = decode($request->successurl);
+			}
+			$addnewsuccessurl = $this->baseUrl("config/shifts/tab/sessions/section/add");
+			$failureurl = $this->viewurl;
+			
+			if(!isEmptyString($session->getVar(ERROR_MESSAGE))){ 
+				$shift->processPost($session->getVar(FORM_VALUES));	
+			}
+		}
+	}
 	
-	$current_results_query = $all_results_query." ".$paginate->getSQLLimit();
-	//echo $current_results_query;
-	$session->setVar(ALL_RESULTS_QUERY, $all_results_query);
-	$session->setVar(CURRENT_RESULTS_QUERY, $current_results_query);
-	
-	$conn = Doctrine_Manager::connection(); 
-	$result = $conn->fetchAll($current_results_query);
-	$has_no_data = (count($result) == 0) ? true : false; 
-	$isdatatable = false;
-	
-	$listurl = $this->baseUrl('config/shifts');
-	$addurl = $this->baseUrl('config/shiftsindex');
-	$moduleitem = "Work Shift";
 	$resource = "System Config"; // $resource = "Department";
 	$icon = "glyphicon glyphicon-cog";
 	
@@ -55,91 +201,573 @@
 	$this->headTitle($title.$browserappend);
 ?>
 <script>
-	$(document).ready(function() {
-		$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
-		$('.titlelabel').html('<?php echo $title; ?>');
-		$('.desclabel').html('<?php echo $description; ?>');
-		$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+$(document).ready(function() {
+	$('.titlebreadcrumb').html('<?php echo $homedir.$title; ?>');
+	$('.titlelabel').html('<?php echo $title; ?>');
+	$('.desclabel').html('<?php echo $description; ?>');
+	$('.pageicon').html('<span class="<?php echo $icon; ?>"></span>');
+	
+	<?php if($tab == "schedules" && $section == "add"){ ?>
+		$("#indexform").validate({		
+			// define the validation rules one field at a time
+			rules: {
+				userid: "required",
+				sessionid: "required",
+				startdate: "required",
+				starttime: "required",
+				enddate: {
+					enddateafterstartdate: true
+				},
+				status: "required"
+			}, 
+			// the messages for each of the fields being validated
+			messages: {		
+				userid: "Please select Employee",
+				sessionid: "Please select Session",
+				startdate: "Please select Start Date",
+				starttime: "Please select Start Time",
+				status: "Please select Status"
+			},
+			// custom error positions
+			errorPlacement: function(error, element) {
+				switch(element.attr("name")){					
+					default:
+						error.appendTo("#"+element.attr("name")+"_error")
+						break;
+				}			
+			}
+		});
+
+		<?php if(isEmptyString($shift->getStartTime())){ ?>
+			$('#starttime').val('');
+		<?php } ?>
+		<?php if(isEmptyString($shift->getEndTime())){ ?>
+			$('#endtime').val('');
+		<?php } ?>
 		
-	});
+		$("#starttime_option_0").click(function(){
+			disableContainerByID('start_section');
+		});
+		$("#starttime_option_1").click(function(){
+			enableContainerByID('start_section');
+		});
+		<?php if(isEmptyString($shift->getStartTime())){ ?>
+			$("#starttime_option_0").trigger('click');
+		<?php } ?>
+		<?php if(!isEmptyString($shift->getStartTime())){ ?>
+			$("#starttime_option_1").trigger('click');
+		<?php } ?>
+		
+		$("#endtime_option_0").click(function(){
+			disableContainerByID('end_section');
+		});
+		$("#endtime_option_1").click(function(){
+			enableContainerByID('end_section');
+		});
+		<?php if(isEmptyString($shift->getEndTime())){ ?>
+			$("#endtime_option_0").trigger('click');
+		<?php } ?>
+		<?php if(!isEmptyString($shift->getEndTime())){ ?>
+			$("#endtime_option_1").trigger('click');
+		<?php } ?>
+		
+		$("#workdays_option_0").click(function(){
+			disableContainerByID('workdays_section');
+		});
+		$("#workdays_option_1").click(function(){
+			enableContainerByID('workdays_section');
+		});
+		<?php if(isEmptyString($shift->getWorkingDays())){ ?>
+			$("#workdays_option_0").trigger('click');
+		<?php } ?>
+		<?php if(!isEmptyString($shift->getWorkingDays())){ ?>
+			$("#workdays_option_1").trigger('click');
+		<?php } ?>
+	<?php } ?>
+	
+	<?php if($tab == "sessions" && $section == "add"){ ?>
+		$("#indexform").validate({		
+			// define the validation rules one field at a time
+			rules: {
+				name: "required",
+				starttime: "required",
+				endtime: "required",
+				hours: {
+					required: true
+				}
+			}, 
+			// the messages for each of the fields being validated
+			messages: {		
+				name: "<?php echo $this->translate("global_name_error"); ?>",
+				starttime: "Please select Start Time",
+				endtime: "Please select End Time",
+				hours: {
+					required: "Please specify Hours"
+				}
+			}
+		});
+		
+		<?php if(isEmptyString($shift->getStartTime())){ ?>
+			$('#starttime').val('');
+		<?php } ?>
+		<?php if(isEmptyString($shift->getEndTime())){ ?>
+			$('#endtime').val('');
+		<?php } ?>
+		<?php if(isEmptyString($shift->getoverduestarttime())){ ?>
+			$('#overduestarttime').val('');
+		<?php } ?>
+	<?php } ?>
+});
 </script>
-<style>
-</style>
 <?php require_once APPLICATION_PATH.'/views/scripts/index/messages.phtml'; ?>
 <div class="row">
 	<div class="col-sm-12">
-		<div class="box box box-color box-bordered">
-			<div class="box-title noheader">
-                <h3></h3>
-            </div>
-            <div class="box-content nopadding">
-                <div class="divider5"></div>
-                <div class="row">
-                    <div class="col-sm-12">
-                        <div class="col-sm-8">
-                            <ul class="resetlist listactions">
-                                <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
-                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $this->baseUrl('config/shiftsindex'); ?>"> New <?php echo $moduleitem; ?></a></li>
-                                <?php //} ?>
-                            </ul>
+    	<ul class="nav nav-tabs">
+            <li class="<?php echo $tab == 'schedules' ? 'active gonowhere' : ''; ?>" ><a href="<?php echo $this->baseUrl('config/shifts/tab/schedules'); ?>">Staff Schedule</a></li>
+            <li class="<?php echo $tab == 'sessions' ? 'active gonowhere' : ''; ?>"><a href="<?php echo $this->baseUrl('config/shifts/tab/sessions'); ?>">Shift Sessions</a></li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane <?php echo $tab == 'schedules' ? 'active' : ''; ?>" id="schedules">
+            	<?php if($tab == "schedules"){ ?>
+                    <div class="box box box-color box-bordered">
+                        <div class="box-title noheader">
+                            <h3></h3>
                         </div>
-                        <div class="col-sm-3"></div>
-                    </div>
-                </div>
-                <div class="divider5"></div>
-                <table class="table table-nomargin table-bordered table-striped table-hover" id="datatable">
-					<thead>
-                        <tr>
-                            <th style="vertical-align:top;">Session Name</th>
-                            <th style="width:20%; vertical-align:top;">Start Time</th>
-                            <th style="width:20%; vertical-align:top;">End Time</th>
-                            <th style="width:20%; vertical-align:top;">Checkout Overdue Time</th>
-<!--                            <th style="width:15%; vertical-align:top;">Break Duration (Hrs)</th>
-                            <th style="width:15%; vertical-align:top;">Actual Duration (Hrs)</th>
--->                            <th style="width:100px; vertical-align:top;"></th>
-                        </tr>
-					</thead>
-                    <tbody>
-                    	<?php if($has_no_data){ ?>
-                        	<tr><td colspan="20"><div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div></td></tr>
-                        <?php } ?>
-						<?php
-                            foreach($result as $line){
-                                $indexurl = $this->baseUrl('config/shiftsindex/id/'.encode($line['id']));
-                        ?>
-                            <tr>
-                                <td class="nullifempty"><?php echo $line['name']; ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['starttime']); ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['endtime']); ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['overduestarttime']); ?></td>
-                                <!--<td class="nullifempty centeralign"><?php echo formatNumber($line['breakhours']); ?></td>
-                                <td class="nullifempty centeralign"><?php echo formatNumber($line['hours']); ?></td>-->
-                                <td>
-                                    <?php //if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
-                                        <a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
-                                    <?php //} ?>
-                                    <?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
-                                        <a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/Shift/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
-                                    <?php //} ?>
-                                </td>
-                            </tr>
-                        <?php } ?>
-                    </tbody>
-               	</table>
-                <?php if(!$isdatatable){ ?>
-                    <div class="row">
-                        <div class="col-sm-12">
-                            <div class="form-actions">
-                                <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
-                                <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
-                                <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
-                            </div>
+                        <div class="box-content" style="padding:10px;">
+                            <?php if($section == "list"){ ?>
+                            	<form class="form margin0 listform makerelative" action="<?php echo $this->baseUrl("config/shiftslistsearch/tab/schedules/"); ?>" method="get" id="listform">
+                                    <div class="divider5"></div>
+                                    <div class="row">
+                                        <div class="col-sm-12">
+                                            <div class="col-sm-12 paddingleft0">
+                                                <ul class="resetlist listactions">
+                                                    <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                                                        <li><a class="btn btn-primary btn-sm" href="<?php echo $addurl.'/successurl/'.encode($this->viewurl); ?>"> New <?php echo $moduleitem; ?></a></li>
+                                                    <?php //} ?>
+                                                    <li>
+                                                        <?php
+                                                            $values = getUsers();
+                                                            $dropdown = new Zend_Form_Element_Select('userid',
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Users'), $values),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array("xautofilter", "form-control",'width200', 'input-sm','chosen-select')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($request->getParam('userid')); 
+                                                            echo $dropdown->render();
+                                                        ?>
+                                                    </li>
+                                                    <li>
+                                                        <?php
+                                                            $allvalues = getWorkShifts();
+                                                            $dropdown = new Zend_Form_Element_Select('sessionid',
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Sessions'), $allvalues),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array("xautofilter", "form-control",'width150', 'input-sm')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($request->getParam('sessionid')); 
+                                                            echo $dropdown->render();
+                                                        ?>
+                                                    </li>
+                                                    <li><input type="text" name="startdate" id="startdate" class="form-control input-sm datefield ordinary readonly width100" value="<?php echo $request->startdate; ?>" placeholder="From:" /></li>
+                    								<li><input name="enddate" id="enddate" type="text" class="form-control input-sm datefield ordinary readonly width100" placeholder="To:" value="<?php echo $request->enddate; ?>" /></li>
+                                                    <li>
+                                                        <?php
+                                                            $allvalues = array('0'=>'Inactive','1'=>'Active');
+                                                            $dropdown = new Zend_Form_Element_Select('status',
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => 'All Statuses'), $allvalues),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array("xautofilter", "form-control",'width125', 'input-sm')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($request->getParam('status')); 
+                                                            echo $dropdown->render();
+                                                        ?>
+                                                    </li>
+                                                    <li>
+                                                        <button type="submit" class="btn btn-primary btn-sm blockanchor" id="filter"><i class="fa fa-filter"></i> Filter</button>
+                                                        <input type="hidden" name="tab" id="tab" value="<?php echo $tab; ?>" />
+                                                        <input type="hidden" name="section" id="section" value="<?php echo $section; ?>" />
+                                                    </li>
+                                                    <?php if($allowclear){ ?>
+                                                    	<li><a href="<?php echo $listurl; ?>" title="Reset Filters" rel="tooltip">Reset</a> &nbsp;</li>
+                                                    <?php } ?>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="divider5"></div>
+                                    <table class="table table-nomargin table-bordered table-striped table-hover" id="datatable">
+                                        <thead>
+                                            <tr>
+                                                <th style="vertical-align:top;">Employee</th>
+                                                <th style="width:18%; vertical-align:top;">Session</th>
+                                                <th style="width:18%; vertical-align:top;">Start Date / Time</th>
+                                                <th style="width:18%; vertical-align:top;">End Date / Time</th>
+                                                <th style="width:12%; vertical-align:top;">Status</th>
+                                                <th style="width:150px; vertical-align:top;">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php if($has_no_data){ ?>
+                                                <tr><td colspan="20"><div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div></td></tr>
+                                            <?php } ?>
+                                            <?php
+                                                foreach($result as $line){
+                                                    $indexurl = $this->baseUrl('config/shifts/tab/schedules/section/add/id/'.encode($line['id']).'/successurl/'.encode($this->viewurl));
+													$starttime = "";
+													if(!isEmptyString($line['starttime'])){
+														$starttime = ' '.formatTimeCustom($line['starttime']);
+													}
+													$endtime = "";
+													if(!isEmptyString($line['endtime'])){
+														$endtime = ' '.formatTimeCustom($line['endtime']);
+													}
+                                            ?>
+                                                <tr>
+                                                    <td class="nullifempty"><a href="<?php echo $this->baseUrl('profile/view/id/'.encode($line['userid'])); ?>"><?php echo $line['user']; ?></a></td>
+                                                    <td class="nullifempty"><?php echo $line['session']; ?></td>
+                                                    <td class="nullifempty"><?php echo changeMySQLDateToPageFormat($line['startdate']).$starttime; ?></td>
+                                                    <td class="nullifempty"><?php echo isEmptyString($line['enddate']) ? 'Indefinate' : changeMySQLDateToPageFormat($line['enddate']).$endtime; ?></td>
+                                                    <td class="nullifempty"><?php echo $line['status'] == '1' ? 'Active' : 'Inactive'; ?></td>
+                                                    <td>
+                                                        <?php //if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                                            <a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
+                                                        <?php //} ?>
+                                                        <?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                                            <a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/ShiftSchedule/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
+                                                        <?php //} ?>
+                                                    </td>
+                                                </tr>
+                                            <?php } ?>
+                                        </tbody>
+                                    </table>
+                                    <div class="row">
+                                        <div class="col-sm-12">
+                                            <div class="form-actions">
+                                                <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                                                <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                                                <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="divider5"></div>
+                                </form>
+                         	<?php } ?>
+                            <?php if($section == "add"){ ?>
+                                <div class="box box-color box-bordered box-condensed">
+                                    <div class="box-title">
+                                        <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
+                                    </div>
+                                    <div class="box-content nopadding">
+                                        <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
+                                            <input name="entityname" id="entityname" type="hidden" value="ShiftSchedule" />
+                                            <input type="hidden" id="id" name="id" value="<?php echo encode($shift->getID()); ?>" />
+                                            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                                            <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                                            <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
+                                            <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" /> 
+                                            <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                                            <input type="hidden" id="enddate_old" name="enddate_old" value="<?php echo $shift->getEndDate(); ?>" />
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Employee: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                	<?php if(isEmptyString($shift->getID())){ ?>
+														<?php
+                                                            $allvalues = getUsers();
+                                                            $dropdown = new Zend_Form_Element_Select('userid',
+                                                                                array(
+                                                                                    'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                                    'view' => new Zend_View(),
+                                                                                    'decorators' => array('ViewHelper'),
+                                                                                    'class' => array('form-control','input-sm','width200','chosen-select')
+                                                                                )
+                                                            );  
+                                                            $dropdown->setValue($shift->getUserID()); 
+                                                            echo $dropdown->render();
+                                                        ?><div id="userid_error"></div>
+                                                  	<?php } else { ?>
+                                                    	<?php echo $shift->getUser()->getName(); ?>
+                                                    	<input type="hidden" id="userid" name="userid" value="<?php echo $shift->getUserID(); ?>" />
+                                                    <?php } ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Session: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                    <?php
+														$allvalues = getWorkShifts();
+														$dropdown = new Zend_Form_Element_Select('sessionid',
+																			array(
+																				'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+																				'view' => new Zend_View(),
+																				'decorators' => array('ViewHelper'),
+																				'class' => array('form-control','input-sm','width250')
+																			)
+														);  
+														$dropdown->setValue($shift->getSessionID()); 
+														echo $dropdown->render();
+													?><div id="sessionid_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Start Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" class="form-control input-sm datefield datepick width100 ordinary addclear startdate" name="startdate" id="startdate" value="<?php echo isEmptyString($shift->getStartDate()) ? '' : date('m/d/Y', strtotime($shift->getStartDate())); ?>" />
+                                                    <div id="startdate_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Start Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                	<label class="radio radio-inline">
+                                                    	<input type="radio" name="starttime_option" id="starttime_option_0" value="0" <?php echo isEmptyString($shift->getStartTime()) ? 'checked="checked"' : ''; ?> /> Use Session Default Time
+                                                    </label>
+                                                    <label class="radio radio-inline">
+                                                        <input type="radio" name="starttime_option" id="starttime_option_1" value="1" <?php echo !isEmptyString($shift->getStartTime()) ? 'checked="checked"' : ''; ?> /> Override Session Start
+                                                    </label>
+                                                    <div id="start_section">
+                                                        <div class="divider5"></div>
+                                                        <input type="text" name="starttime" id="starttime" class="form-control input-sm timepicker timepick inline width100" value="<?php echo date("h:i A", strtotime($shift->getStartTime())); ?>" /><div id="starttime_error"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">End Date: <span class="pagedescription notitalic blocked">Leave empty if Indefinate</span></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" class="form-control input-sm datefield datepick width100 ordinary" name="enddate" id="enddate" value="<?php echo  isEmptyString($shift->getEndDate()) ? '' : date('m/d/Y', strtotime($shift->getEndDate())); ?>" />
+                                                    <div id="enddate_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">End Time:</label>
+                                                <div class="col-sm-9">
+                                                    <label class="radio radio-inline">
+                                                    	<input type="radio" name="endtime_option" id="endtime_option_0" value="0" <?php echo isEmptyString($shift->getEndTime()) ? 'checked="checked"' : ''; ?> /> Use Session Default Time
+                                                    </label>
+                                                    <label class="radio radio-inline">
+                                                        <input type="radio" name="endtime_option" id="endtime_option_1" value="1" <?php echo !isEmptyString($shift->getEndTime()) ? 'checked="checked"' : ''; ?> /> Override Session Start
+                                                    </label>
+                                                    <div id="end_section">
+                                                        <div class="divider5"></div>
+                                                        <input type="text" name="endtime" id="endtime" class="form-control input-sm timepicker timepick inline width100" value="<?php echo date("h:i A", strtotime($shift->getEndTime())); ?>" /><div id="endtime_error"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Valid Week Days:</label>
+                                                <div class="col-sm-9">
+                                                    <label class="radio radio-inline">
+                                                    	<input type="radio" name="workdays_option" id="workdays_option_0" value="0" <?php echo isEmptyString($shift->getWorkingDays()) ? 'checked="checked"' : ''; ?> /> Use Default
+                                                    </label>
+                                                    <label class="radio radio-inline">
+                                                        <input type="radio" name="workdays_option" id="workdays_option_1" value="1" <?php echo !isEmptyString($shift->getWorkingDays()) ? 'checked="checked"' : ''; ?> /> Override 
+                                                    </label>
+                                                    <div id="workdays_section">
+                                                        <div class="divider5"></div>
+                                                        <?php
+															$workshifts = getDaysOfWeek();
+															$existing_values = $shift->getDaysOfWeekArray();
+															foreach($workshifts as $key => $value){
+														?>
+															<label class="checkbox-inline notbolded">
+															  <input type="checkbox" id="workingdaysids_<?php echo $key; ?>" name="workingdaysids[]" class="disableoutsidesection" value="<?php echo $key; ?>" <?php echo in_array($key, $existing_values) ? 'checked data-waschecked="true"' : 1; ?>> <?php echo $value; ?>
+															</label>
+														<?php } ?>
+														<input type="hidden" name="workingdays_old" id="workingdays_old" value="<?php echo $shift->getWorkingDays(); ?>" />
+														<div id="workingdays_error"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Status: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                	<input type="hidden" id="shift_old" name="shift_old" value="<?php echo $shift->getUser()->getShift(); ?>" />
+                                                    <?php
+                                                        $allvalues = array('0'=>'Inactive','1'=>'Active');
+                                                        $dropdown = new Zend_Form_Element_Select('status',
+                                                                            array(
+                                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                                'view' => new Zend_View(),
+                                                                                'decorators' => array('ViewHelper'),
+                                                                                'class' => array('form-control','input-sm','width100')
+                                                                            )
+                                                        );  
+                                                        $dropdown->setValue($shift->getCurrentStatus()); 
+                                                        echo $dropdown->render();
+                                                    ?><div id="status_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-actions">
+                                                <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                                                <button class="btn btn-primary btn-green changesuccessurl savebutton" type="submit" successurl="<?php echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                                            </div>
+                                      	</form>
+                                   	</div>
+                                </div>
+                          	<?php } ?>
                         </div>
                     </div>
-                    <div class="divider5"></div>
                 <?php } ?>
-        	</div>
-       	</div>
+            </div>
+            <div class="tab-pane <?php echo $tab == 'sessions' ? 'active' : ''; ?>" id="sessions">
+            	<?php if($tab == "sessions"){ ?>
+                    <div class="box box box-color box-bordered">
+                        <div class="box-title noheader">
+                            <h3></h3>
+                        </div>
+                        <div class="box-content" style="padding:10px;">
+                            <?php if($section == "list"){ ?>
+                                <div class="divider5"></div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="col-sm-8 paddingleft0">
+                                            <ul class="resetlist listactions">
+                                                <?php //if ($acl->checkPermission($resource, ACTION_CREATE)) { ?>
+                                                    <li><a class="btn btn-primary btn-sm" href="<?php echo $addurl; ?>"> New <?php echo $moduleitem; ?></a></li>
+                                                <?php //} ?>
+                                            </ul>
+                                        </div>
+                                        <div class="col-sm-3 paddingleft0"></div>
+                                    </div>
+                                </div>
+                                <div class="divider5"></div>
+                                <table class="table table-nomargin table-bordered table-striped table-hover" id="datatable">
+                                    <thead>
+                                        <tr>
+                                            <th style="vertical-align:top;">Session Name</th>
+                                            <th style="width:10%; vertical-align:top;">Code</th>
+                                            <th style="width:15%; vertical-align:top;">Start Time</th>
+                                            <th style="width:15%; vertical-align:top;">End Time</th>
+                                            <th style="width:17%; vertical-align:top;">Checkout Overdue Time</th>
+                                            <th style="width:15%; vertical-align:top;">Duration (Hrs)</th>
+                                            <th style="width:100px; vertical-align:top;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if($has_no_data){ ?>
+                                            <tr><td colspan="20"><div class="alert alert-warning"><?php echo $this->translate("global_list_noentries"); ?></div></td></tr>
+                                        <?php } ?>
+                                        <?php
+                                            foreach($result as $line){
+                                                $indexurl = $this->baseUrl('config/shifts/tab/sessions/section/add/id/'.encode($line['id']).'/successurl/'.encode($this->viewurl));
+                                        ?>
+                                            <tr>
+                                                <td class="nullifempty"><?php echo $line['name']; ?></td>
+                                                <td class="nullifempty"><?php echo $line['refno']; ?></td>
+                                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['starttime']); ?></td>
+                                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['endtime']); ?></td>
+                                                <td class="nullifempty centeralign"><?php echo formatTimeCustom($line['overduestarttime']); ?></td>
+                                                <td class="nullifempty centeralign"><?php echo formatNumber($line['hours']); ?></td>
+                                                <td>
+                                                    <?php //if ($acl->checkPermission($resource, ACTION_EDIT)) { ?>
+                                                        <a class="btn inline blockanchor" href="<?php echo $indexurl; ?>" title="Update" rel="tooltip"><i class="fa fa-edit"></i></a> &nbsp;
+                                                    <?php //} ?>
+                                                    <?php //if ($acl->checkPermission($resource, ACTION_DELETE)) { ?>
+                                                        <a class="btn deleteline" action="<?php echo $this->baseUrl('config/delete/id/'.encode($line['id'])."/entityname/Shift/successurl/".encode($this->viewurl)); ?>" message="<?php echo $this->translate('global_delete_confirm_message'); ?>" title="Delete" rel="tooltip"><i class="fa fa-times"></i></a>
+                                                    <?php //} ?>
+                                                </td>
+                                            </tr>
+                                        <?php } ?>
+                                    </tbody>
+                                </table>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-actions">
+                                            <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                                            <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                                            <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="divider5"></div>
+                            <?php } ?>
+                            <?php if($section == "add"){ ?>
+                                <div class="box box-color box-bordered box-condensed">
+                                    <div class="box-title">
+                                        <h3><i class="fa fa-th-list"></i> <?php echo $pagetitle; ?></h3>
+                                    </div>
+                                    <div class="box-content nopadding">
+                                        <form class="form-horizontal xform-validate form-bordered" action="<?php echo $posturl; ?>" method="post" id="indexform">
+                                            <input name="entityname" id="entityname" type="hidden" value="Shift" />
+                                            <input type="hidden" id="id" name="id" value="<?php echo encode($shift->getID()); ?>" />
+                                            <input type="hidden" id="companyid" name="companyid" value="<?php echo $shift->getCompanyID(); ?>" />
+                                            <input name="successmessage" id="successmessage" type="hidden" value="<?php echo $successmessage; ?>" />  
+                                            <input type="hidden" id="<?php echo SUCCESS_MESSAGE; ?>" name="<?php echo SUCCESS_MESSAGE; ?>" value="<?php echo $successmessage; ?>" /> 
+                                            <input type="hidden" id="<?php echo URL_SUCCESS; ?>" name="<?php echo URL_SUCCESS; ?>" value="<?php echo encode($successurl); ?>" /> 
+                                            <input type="hidden" id="nosuccessid" name="nosuccessid" value="1" /> 
+                                            <input type="hidden" id="<?php echo URL_FAILURE; ?>" name="<?php echo URL_FAILURE; ?>" value="<?php echo encode($failureurl); ?>" /> 
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label"><?php echo $this->translate("global_name_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" class="form-control input-sm width300" id="name" name="name" value="<?php echo $shift->getName(); ?>" /><div id="name_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Code No#:</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" class="form-control input-sm width100" id="refno" name="refno" value="<?php echo $shift->getRefNo(); ?>" /><div id="refno_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Description:</label>
+                                                <div class="col-sm-6">
+                                                    <textarea class="form-control expanding" id="description" name="description"><?php echo $shift->getDescription(); ?></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Shift Start Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" name="starttime" id="starttime" class="form-control input-sm timepicker timepick inline width100" value="<?php echo date("h:i A", strtotime($shift->getStartTime())); ?>" /><div id="starttime_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Shift End Time: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" name="endtime" id="endtime" class="form-control input-sm timepicker timepick inline width100" value="<?php echo date("h:i A", strtotime($shift->getEndTime())); ?>" /><div id="endtime_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Overdue Checkout <span class="blocked">Start Time <?php echo $this->translate("global_required_field_marker"); ?>:</span></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" name="overduestarttime" id="overduestarttime" class="form-control input-sm timepicker timepick inline width100" value="<?php echo date("h:i A", strtotime($shift->getoverduestarttime())); ?>" /><div id="overduestarttime_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Break Duration: <span class="blocked notbolded">(Hrs)</span></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" name="breakhours" id="breakhours" class="form-control input-sm width100 isdecimal centeralign" value="<?php echo $shift->getbreakhours(); ?>" /><div id="breakhours_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="col-sm-3 control-label">Actual Duration: <?php echo $this->translate("global_required_field_marker"); ?><span class="blocked notbolded">(Hrs)</span></label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" name="hours" id="hours" class="form-control input-sm width100 isdecimal centeralign" value="<?php echo $shift->getHours(); ?>" /><div id="hours_error"></div>
+                                                </div>
+                                            </div>
+                                            <div class="form-actions">
+                                                <a class="btn cancel gonowhere" type="button"><?php echo $this->translate('global_button_cancel'); ?></a>
+                                                <?php if(isEmptyString($request->id)){ ?>
+                                                    <button class="btn btn-primary btn-green changesuccessurl savebutton" successurl="<?php echo encode($addnewsuccessurl); ?>" type="submit">Save and Add New</button>
+                                                <?php } ?>
+                                                <button class="btn btn-primary btn-green changesuccessurl savebutton" type="submit" successurl="<?php echo encode($successurl); ?>"><?php echo $button_title; ?></button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                <?php } ?>
+            </div>
+        </div>
    	</div>
 </div>    
 <?php

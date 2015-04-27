@@ -51,7 +51,7 @@ class PayrollDetail extends BaseRecord  {
 							array('local' => 'userid',
 									'foreign' => 'id'
 							)
-						);	
+						);
 	}
 	
    /**
@@ -146,5 +146,104 @@ class PayrollDetail extends BaseRecord  {
 			unset($formvalues['totalbenefits']);
 		}
 		parent::processPost($formvalues);
+	}
+	# determine filename of pdf
+	function getPDFName(){
+		return strtolower('payslip_'.str_replace(' ', '_', trim($this->getUser()->getName())).'_'.date('F_Y', strtotime($this->getPayroll()->getStartDate())));
+	}
+	function getPDFPath(){
+		return BASE_PATH.DIRECTORY_SEPARATOR."temp".DIRECTORY_SEPARATOR.$this->getPDFName().'.pdf';
+	}
+	function afterPayslipGeneration(){
+		$this->sendPayslipNotification();
+		
+		return true;
+	}
+	# Send notification to inform user
+	function sendPayslipNotification() {
+		$template = new EmailTemplate();
+		# create mail object
+		$mail = getMailInstance();
+		$view = new Zend_View();
+		$session = SessionWrapper::getInstance();
+	
+		// assign values
+		$template->assign('firstname', $this->getUser()->getFirstName());
+	
+		$subject = "Payslip ".date('F Y', strtotime($this->getPayroll()->getStartDate()));
+	
+		$save_toinbox = true;
+		$type = "payroll";
+		$subtype = "payslip_generated";
+		$viewurl = $template->serverUrl($template->baseUrl('temp/'.$this->getPDFName().'.pdf'));
+	
+		$message_contents = "<p>This is to confirm that your Payslip for <b>".date('F Y', strtotime($this->getPayroll()->getStartDate()))."</b> has been completed and attached.</p>
+		<p>You can also view it online <a href='".$viewurl."'>click here<a></p>
+		<br />
+		<p>".$this->getPayroll()->getCreator()->getName()."<br />
+		".getAppName()."</p>
+		";
+		$template->assign('contents', $message_contents);
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+	
+		// configure base stuff
+		$mail->addTo($this->getUser()->getEmail(), $this->getUser()->getName());
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getDefaultAdminName());
+		$mail->setSubject($subject);
+		
+		// add attachment
+		$content = file_get_contents($this->getPDFPath()); // e.g. ("attachment/abc.pdf")
+		$attachment = new Zend_Mime_Part($content);
+		$attachment->type = 'application/pdf';
+		$attachment->disposition = Zend_Mime::DISPOSITION_ATTACHMENT;
+		$attachment->encoding = Zend_Mime::ENCODING_BASE64;
+		$attachment->filename = $this->getPDFName(); // name of file
+		$mail->addAttachment($attachment);
+			
+		// render the view as the body of the email
+		$html = $template->render('default.phtml');
+		$mail->setBodyHtml($html);
+		// debugMessage($html); // exit();
+	
+		if($this->getUser()->allowEmailForPayslip() && !isEmptyString($this->getUser()->getEmail())){
+			try {
+				$mail->send();
+				// $session->setVar("custommessage1", "Email sent to ".$this->getUser()->getEmail());
+			} catch (Exception $e) {
+				debugMessage('Email notification not sent! '.$e->getMessage());
+				$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			}
+		}
+	
+		$mail->clearRecipients();
+		$mail->clearSubject();
+		$mail->setBodyHtml('');
+		$mail->clearFrom();
+	
+		if($save_toinbox){
+			# save copy of message to user's application inbox
+			$message_dataarray = array(
+					"senderid" => DEFAULT_ID,
+					"subject" => $subject,
+					"contents" => $message_contents,
+					"html" => $html,
+					"type" => $type,
+					"subtype" => $subtype,
+					"refid" => $this->getID(),
+					"recipients" => array(
+							md5(1) => array("recipientid" => $this->getUserID())
+					)
+			); // debugMessage($message_dataarray);
+			// process message data
+			$message = new Message();
+			$message->processPost($message_dataarray);
+			$message->save();
+		}
+	
+		return true;
 	}
 }

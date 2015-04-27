@@ -18,10 +18,10 @@ class ConfigController extends SecureController   {
 	 */
 	function getActionforACL() {
 		$action = strtolower($this->getRequest()->getActionName()); 
-		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add" || $action = "leave" || $action = "leavecreate" || $action = "leaveindex" || $action = "shifts" || $action = "shiftscreate" || $action = "shiftsindex"){
+		if($action == "processvariables" || $action == "processglobalconfig" || $action == "add" || $action = "leave" || $action = "leavecreate" || $action = "leaveindex" || $action = "shifts" || $action = "shiftscreate" || $action = "schedulecreate"){
 			return ACTION_EDIT;
 		}
-		if($action == "variables" || $action == "globalconfig" || $action = "leavelistsearch") {
+		if($action == "variables" || $action == "globalconfig" || $action = "leavelistsearch" || $action = "shiftslistsearch") {
 			return ACTION_LIST; 
 			// return ACTION_VIEW;
 		}
@@ -396,6 +396,7 @@ class ConfigController extends SecureController   {
 		$shift->processPost($formvalues); debugMessage($shift->toArray());
 		if($shift->hasError()){
 			// debugMessage('errors are '.$shift->getErrorStackAsString()); exit();
+			$session->setVar(ERROR_MESSAGE, $shift->getErrorStackAsString());
 			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
 		}
 		// exit;
@@ -416,6 +417,74 @@ class ConfigController extends SecureController   {
 		$this->_helper->redirector->gotoSimple("shifts", "config",
 				$this->getRequest()->getModuleName(),
 				array_remove_empty(array_merge_maintain_keys($this->_getAllParams(), $this->getRequest()->getQuery())));
+	}
+	
+	function schedulecreateAction(){
+		$session = SessionWrapper::getInstance();
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+	
+		// parent::createAction();
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit();
+		$formvalues['id'] = $id = decode($formvalues['id']);
+		$status = $formvalues['status'];
+		$old_shift = $formvalues['shift_old'];
+			
+		$isactive = false;
+		$shift = new ShiftSchedule();
+		if(!isArrayKeyAnEmptyString('id', $formvalues)){
+			$shift->populate($id);
+			$isactive = $shift->isActive();
+		} else {
+			$formvalues['addedbyid'] = $session->getVar('userid');
+			$formvalues['dateadded'] = DEFAULT_DATETIME;
+		}
+			
+		$shift->processPost($formvalues);
+		if($shift->hasError()){
+			debugMessage('errors are '.$shift->getErrorStackAsString()); exit();
+			$session->setVar(ERROR_MESSAGE, $shift->getErrorStackAsString());
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
+			exit;
+		}
+		
+		// exit;
+		try {
+			$updateshift = false;
+			if($status == 1){
+				if($old_shift != $shift->getSessionID()){
+					$shift->getUser()->setShift($shift->getSessionID());
+					$updateshift = true;
+				}
+			} else {
+				if(!isEmptyString($old_shift) && $isactive){
+					$shift->getUser()->setShift(NULL);
+					$updateshift = true;
+				}
+			}
+			// debugMessage($shift->toArray()); exit;
+			$shift->save();
+			
+			# update any previous shifts that could still be active when setting a new active session
+			if($status == 1){
+				$updateableshifts = $shift->getCurrentActiveShiftsForUser($shift->getUserID());
+				// debugMessage($updateableshifts->toArray());
+				if($updateableshifts->count() > 0){
+					foreach($updateableshifts as $ashift){
+						$ashift->setStatus(0);
+						$ashift->save();
+					}
+				}
+			}
+			
+			
+			$session->setVar(SUCCESS_MESSAGE, $this->_getParam('successmessage'));
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, $e->getMessage());
+			//debugMessage('save error '.$e->getMessage());
+			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
+		}
 	}
 }
 

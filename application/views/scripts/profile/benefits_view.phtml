@@ -1,28 +1,46 @@
+<?php if($ispdf){ ?>
+	<pagebreak />
+<?php } ?>
 <div class="row">
 	<div class="makeabsolute" style="right:35px; top:11px; z-index:1000;">
 		<?php if($allowedit && !$showfullscreen) { ?>
-            <a class="btn btn-primary btn-xs blockanchor xnoround hideonprint" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/benefits'); ?>"><i class="glyphicon glyphicon-pencil"></i>&nbsp; Update Recurring Benefits</a>
+            <a class="btn btn-primary btn-xs blockanchor xnoround hideonprint" href="<?php echo $this->baseUrl('profile/index/id/'.encode($user->getID()).'/tab/benefits'); ?>">Update Recurring Benefits</a>
         <?php } ?>
     </div>
     <div class="col-sm-12 paddingleft0">
     	<div class="tabbable tabbable-custom tabbable-full-width">
-            <ul class="nav nav-tabs hideonprint">
-                <li class="<?php echo $section == 'view' ? 'active gonowhere' : ''; ?>" ><a href="#view">Recurring Benefits</a></li>
-                <li class="<?php echo $section == 'list' ? 'active gonowhere' : 'blockanchor'; ?>"><a href="<?php echo $this->baseUrl('ledger/list/userid/'.$user->getID()); ?>">One Time Benefits</a></li>
-            </ul>
+        	<?php if(!$showfullscreen && !$ispdf) { ?>
+                <ul class="nav nav-tabs hideonprint">
+                    <li class="<?php echo $section == 'view' ? 'active gonowhere' : ''; ?>" ><a href="#view">Recurring Benefits</a></li>
+                    <li class="<?php echo $section == 'list' ? 'active gonowhere' : 'blockanchor'; ?>"><a href="<?php echo $this->baseUrl('ledger/list/userid/'.$user->getID()); ?>">One Time Benefits</a></li>
+                </ul>
+            <?php } ?>
             <div class="tab-content">
 				<div class="tab-pane active" id="view">
                     <fieldset class="fieldsetcontainer minheight200">
-                        <legend style="font-size:12px;">Recurring Monetary Benefits</legend>
+                        <legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> Monetary Benefits</legend>
                         <div class="panel-body well-sm">
                             <div class="divider10"></div>
-                            <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
-                                <thead class="paginationheader">
-                                    <th>Benefit Type</th>
-                                    <th style="width:30%;">Rate (<?php echo getCountryCurrencyCode(); ?>) / Frequency</th>
-                                    <th>Payroll Terms</th>
-                                    <th style="width:20%;">Taxable</th>
-                                </thead>
+                            	<table class="<?php echo $ispdf ? 'items isbordered' : 'table list table-bordered table-striped'; ?>" <?php echo $ispdf ? ' cellpadding="8"' : 'style="width:96%; margin-left:15px;"'; ?>>
+                                <?php if($ispdf){ ?>
+                                	<thead>
+                                    	<tr>
+                                            <td class="isbordered">Benefit Type</td>
+                                            <td class="isbordered">Rate (<?php echo getCountryCurrencyCode(); ?>) / Frequency</td>
+                                            <td class="isbordered">Payroll Terms</td>
+                                            <td class="isbordered">Taxable</td>
+                                       	</tr>
+                                    </thead>
+                                <?php } else { ?>
+                                    <thead class="paginationheader">
+                                    	<tr>
+                                            <th class="isbordered">Benefit Type</th>
+                                            <th class="isbordered" style="width:30%;">Rate (<?php echo getCountryCurrencyCode(); ?>) / Frequency</th>
+                                            <th class="isbordered">Payment Terms</th>
+                                            <th class="isbordered" style="width:20%;">Taxable</th>
+                                       	</tr>
+                                    </thead>
+                                <?php } ?>
                                 <tbody>
                                     <?php 
                                         $ratetypes = getDatavariables('EMPLOYEE_RATE_TYPES');
@@ -35,14 +53,14 @@
                                         $hoursdaysoptions = getHoursDaysDropdown();
                                         $yearmonthvalues = getYearMonthDropdown();
                                     ?>
-                                    <tr style="font-size:12px;">
-                                        <td><?php echo $benefits[1]; ?></td>
-                                        <td>
-                                            <?php echo isTimesheetEmployee() ? '' : formatMoneyOnly($user->getRate()); ?> 
-                                            <?php echo isArrayKeyAnEmptyString($user->getRateType(), $ratetypes) ? '--' : $ratetypes[$user->getRateType()]; ?></td>
-                                        <td><?php echo isArrayKeyAnEmptyString($user->getPayrollType(), $payrolltypes) ? '--' : $payrolltypes[$user->getPayrollType()]; ?></td>
-                                        <td></td>
-                                    </tr>
+                                         <tr <?php echo $ispdf ? '' : 'style="font-size:12px;"'; ?>>
+                                            <td class="borderedtd"><?php echo $benefits[1]; ?></td>
+                                            <td class="borderedtd">
+                                                <?php echo isTimesheetEmployee() ? '' : formatMoneyOnly($user->getRate()); ?> 
+                                                <?php echo isArrayKeyAnEmptyString($user->getRateType(), $ratetypes) ? '--' : $ratetypes[$user->getRateType()]; ?></td>
+                                            <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($user->getPayrollType(), $payrolltypes) ? '--' : $payrolltypes[$user->getPayrollType()]; ?></td>
+                                            <td class="borderedtd"></td>
+                                        </tr>
                                     <?php
                                         foreach($usercashbenefits as $key => $abenefit){ 
                                             // debugMessage($abenefit);
@@ -60,11 +78,11 @@
 												$amountlabel = 'auto';
 											}
                                     ?>
-                                        <tr style="font-size:12px;">
-                                            <td><?php echo isArrayKeyAnEmptyString($id, $benefits) ? '--' : $benefits[$id]; ?></td>
-                                            <td><?php echo $amountlabel; ?></td>
-                                            <td><?php echo isArrayKeyAnEmptyString($terms, $allterms) ? '--' : $allterms[$terms]; ?></td>
-                                            <td><?php echo $istaxable == 1 ? 'Yes' : 'No'; ?></td>
+                                        <tr <?php echo $ispdf ? '' : 'style="font-size:12px;"'; ?>>
+                                            <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($id, $benefits) ? '--' : $benefits[$id]; ?></td>
+                                            <td class="borderedtd"><?php echo $amountlabel; ?></td>
+                                            <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($terms, $allterms) ? '--' : $allterms[$terms]; ?></td>
+                                            <td class="borderedtd"><?php echo $istaxable == 1 ? 'Yes' : 'No'; ?></td>
                                         </tr>
                                     <?php } ?>
                                 </tbody>
@@ -72,19 +90,29 @@
                         </div>
                     </fieldset>
                     <fieldset class="fieldsetcontainer minheight200">
-                        <legend style="font-size:12px;">Recurring Leave Benefits</legend>
+                        <legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> Leave Benefits</legend>
                         <div class="panel-body well-sm">
                             <div class="divider10"></div>
-                            <table class="table list table-bordered table-striped data-table" style="width:96%; margin-left:15px;">
-                                <thead class="paginationheader">
-                                    <th>Leave Type</th>
-                                    <!--<th style="width:25%;">Accrue As</th>-->
-                                    <th style="width:75%;">Duration Assigned</th>
-                                </thead>
+                            <table class="<?php echo $ispdf ? 'items isbordered' : 'table list table-bordered table-striped'; ?>" <?php echo $ispdf ? ' cellpadding="8"' : 'style="width:96%; margin-left:15px;"'; ?>>
+                                <?php if($ispdf){ ?>
+                                	<thead>
+                                    	<tr>
+                                            <td class="isbordered">Leave Type</td>
+                                            <td class="isbordered" style="width:75%;">Duration</td>
+                                       	</tr>
+                                    </thead>
+                                <?php } else { ?>
+                                    <thead class="paginationheader">
+                                    	<tr>
+                                            <th>Leave Type</th>
+                                    		<th style="width:75%;">Duration Assigned</th>
+                                       	</tr>
+                                    </thead>
+                                <?php } ?>
                                 <tbody>
                                     <?php if(count($usertimebenefits) == 0){ ?>
                                         <tr>
-                                            <td colspan="2"><span class="pagedescription">None available</span></td>
+                                            <td colspan="2" class="borderedtd"><span class="pagedescription">None available</span></td>
                                         </tr>
                                     <?php } else { ?>
                                         <?php
@@ -95,12 +123,11 @@
                                                 $accrualfrequency = $abenefit['accrualfrequency'];
                                                 $accrualvalue = $abenefit['accrualvalue'];
                                         ?>
-                                            <tr style="font-size:12px;">
-                                                <td><?php echo isArrayKeyAnEmptyString($id, $leaves) ? '--' : $leaves[$id]; ?></td>
-                                                <!--<td><?php //echo isArrayKeyAnEmptyString($accrualtype, $hoursdaysoptions) ? '--' : $hoursdaysoptions[$accrualtype]; ?></td>-->
-                                                <td><?php echo $accrualtype == '1' ? 'Assign 1 Day or '.getHoursInDay().' Hours for every '.$accrualvalue.' Hours Approved ' : ''; ?>
+                                            <tr <?php echo $ispdf ? '' : 'style="font-size:12px;"'; ?>>
+                                                <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($id, $leaves) ? '--' : $leaves[$id]; ?></td>
+                                                <td class="borderedtd"><?php echo $accrualtype == '1' ? 'Assign 1 Day or '.getHoursInDay().' Hours for every '.$accrualvalue.' Hours Approved ' : ''; ?>
                                                     <?php echo $accrualtype == '2' ? formatNumber($accrualvalue,0).' Days '.$yearmonthvalues[$accrualfrequency] : ''; ?>
-                                                    <?php // echo; ?></td>
+                                                </td>
                                             </tr>
                                         <?php } ?>
                                     <?php } ?>                            

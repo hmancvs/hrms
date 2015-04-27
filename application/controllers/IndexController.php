@@ -27,7 +27,7 @@ class IndexController extends Zend_Controller_Action  {
 	 */
 	protected $_eventdispatcher; 
 	
-	public function init()    {
+	public function init(){
         // Initialize logger and translate actions
 		$this->_logger = Zend_Registry::get("logger"); 
 		$this->_translate = Zend_Registry::get("translate");
@@ -41,8 +41,57 @@ class IndexController extends Zend_Controller_Action  {
 		
 		$this->view->referer = $this->getRequest()->getHeader('referer');
 		$this->view->viewurl = $_SERVER['REQUEST_URI'];
-		/*debugMessage($_SERVER['REQUEST_URI']);
-		debugMessage($this->getRequest()); exit();*/
+		// debugMessage($this->view->viewurl);
+		// debugMessage($this->getRequest()); 
+		$isvalid = false;
+		$host = giveHost($this->view->serverUrl()); // debugMessage($host);
+		$this->view->domain = str_replace('http://','',strtolower($host));
+		$subdomain = getSubdomain($this->view->serverUrl());
+		$this->view->subdomain = strtolower($subdomain);
+		
+		if($subdomain == "www"){
+			$this->_helper->redirector->gotoUrl('http://'.$host);
+			exit;
+		}
+		// debugMessage('subdomain '.$subdomain);
+		if(!isEmptyString($subdomain) && strtolower($host) == "hrmagic.ug"){
+			$session = SessionWrapper::getInstance();
+			$session->setVar('companyid', '');
+			
+			$company = new Company();
+			if($company->isRenderable($subdomain)){
+				$isvalid = true; // debugMessage('valid');
+			} else { 
+				// debugMessage('invalid');
+			}
+			
+			if($isvalid){
+				// if valid subdomain, set id to session
+				$companyid = $company->findByUsername($subdomain);
+				$session->setVar('cid', $companyid);
+			} else {
+				// subdomain not found. redirect to 404 page.
+				$domain = str_replace($subdomain.'.', '', $this->view->serverUrl());
+				// debugMessage('d is '.$domain);
+				$this->_helper->redirector->gotoUrl(stripUrl($domain).'/index/error');
+			}
+		}
+		
+		$url = array(
+		    'http://www.domain.com', // www
+		    'http://domain.com', // --nothing--
+		    'https://domain.com', // --nothing--
+		    'www.domain.com', // www
+		    'domain.com', // --nothing--
+		    'www.domain.com/some/path', // www
+		    'http://sub.domain.com/domain.com', // sub
+		    'http://sub-domain.domain.net/domain.net', // sub-domain
+		    'sub-domain.third-Level_DomaIN.domain.uk.co/domain.net' // sub-domain
+		);
+		/* foreach ($url as $u) {
+		    debugMessage(getSubdomain($u));
+		} */
+		// exit();
 		
 		# set default timezone based on company in session
 		# date_default_timezone_set(getTimeZine());
@@ -162,7 +211,7 @@ class IndexController extends Zend_Controller_Action  {
 				default :
 					break;
     		}
-    		// exit();
+    		# exit();
     		// add a success message, if any, to the session for display
     		if (!isEmptyString($this->_getParam(SUCCESS_MESSAGE))) {
     			$session->setVar(SUCCESS_MESSAGE, $this->_translate->translate($this->_getParam(SUCCESS_MESSAGE)));
@@ -594,7 +643,76 @@ class IndexController extends Zend_Controller_Action  {
 		$company->populate($this->_getParam('companyid'));
 		$companyname = $company->getName();
 		$session->setVar(SUCCESS_MESSAGE, "Successfully switched default Company to ".$companyname.".");
-		$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_SUCCESS)));
+		$url = decode($this->_getParam(URL_SUCCESS));
+		/* if($url == "hrmagic.ug" && !isEmptyString($company->getUsername())){
+			$url = "http://".$company->getUsername().".".$url;
+		} */
+		$this->_helper->redirector->gotoUrl($url);
+	}
+
+	// generate payslip, save to user's inbox and send emails
+	public function issuepayslipsAction(){
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(TRUE);
+		$session = SessionWrapper::getInstance();
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
+		$config = Zend_Registry::get("config");
+	
+		// generate the payslips silently via ajax
+		$payroll = new Payroll();
+		$payroll->populate($this->_getParam('id'));
+	
+		$employees = $payroll->getdetails(); // debugMessage($employees->toArray());
+		foreach ($employees as $employee){
+			if(/* $employee->getUserID() == 15 &&  */$employee->getIsIgnored() != 1 && $employee->getNetPay() > 0){ // ignore users who are skipped on payroll or have 0 netpay
+				$payrolldetailid = $employee->getID();
+				$path = $employee->getPDFPath();
+				$pdfurl = $this->view->serverUrl($this->view->baseUrl('user/view/id/'.encode($employee->getUserID()).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1/payslipview/1/pdf/1/source/payroll'));
+				// debugMessage($pdfurl);
+				$pdfresult = trim(file_get_contents($pdfurl));
+				$html = decode($pdfresult); // debugMessage($html); // exit;
+	
+				if(!isEmptyString($html)){
+					try {
+						$mpdfpath = BASE_PATH.DIRECTORY_SEPARATOR.'application'.DIRECTORY_SEPARATOR.'includes'.DIRECTORY_SEPARATOR.'mpdf'.DIRECTORY_SEPARATOR.'mpdf.php'; // debugMessage('pdf '.$mpdfpath);
+						ini_set('memory_limit','128M');
+							
+						require_once($mpdfpath);
+						// ob_get_clean();
+						$mpdf = new mPDF('win-1252','A4','','',20,15,40,20,10,10);
+						$mpdf->useOnlyCoreFonts = true;    // false is default
+						$mpdf->SetProtection(array('print'));
+						$mpdf->SetTitle("Payslip - ".$employee->getUser()->Name());
+						$mpdf->SetAuthor(getAppName());
+						$mpdf->SetWatermarkText(getCompanyName());
+						$mpdf->showWatermarkText = true;
+						$mpdf->watermark_font = 'DejaVuSansCondensed';
+						$mpdf->watermarkTextAlpha = 0.1;
+						$mpdf->SetDisplayMode('fullpage');
+						$mpdf->WriteHTML($html);
+						$mpdf->Output($path);
+						// $mpdf->Output($employee->getPDFName().'.pdf', 'I');
+	
+					} catch (Exception $e) {
+						debugMessage('error '.$e->getMessage());
+					}
+	
+					if(file_exists($path)){
+						debugMessage('pdf '.$employee->getPDFName().' created ');
+						// $employee->afterPayslipGeneration();
+					} else {
+						debugMessage('pdf missing');
+					}
+				}
+			}
+		}
+		$session->setVar("issuepayslips", '0'); // reset flag for determining if payslips are sent
 	}
 	
+	public function errorAction(){
+		//$this->_helper->layout->disableLayout();
+		// $this->_helper->viewRenderer->setNoRender(TRUE);
+		$session = SessionWrapper::getInstance();
+	
+	}
 }

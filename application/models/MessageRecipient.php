@@ -128,7 +128,7 @@ class MessageRecipient extends BaseRecord  {
 			$sendername = $fromname;
 		}
 		# sender email
-		$senderemail = getEmailMessageSender();
+		$senderemail = getDefaultAdminEmail();
 		if(!isEmptyString($fromemail)){
 			$senderemail = $fromemail;
 		}
@@ -144,44 +144,48 @@ class MessageRecipient extends BaseRecord  {
 			$receiveremail = $toemail;
 		}
 		# email subject
-		$msgsubject = sprintf($this->translate->_('message_private_email_subject'), $subject);
+		$msgsubject = sprintf($this->translate->_('message_private_email_subject'), getAppName(), $subject);
 		
 		# email content
-		$msgcontent = $this->getMessage()->getContents();
+		$intro = "<p><i><b>".$sendername."</b> sent you a private message via <b>".getAppName()."</b> </i></p>";
+		$msgcontent = '<p>"'.$this->getMessage()->getContents().'"</p>';
 		if(!isEmptyString($content)){
-			$msgcontent = $content;
+			$msgcontent = '<p>"'.$content.'"</p>';
 		}
 		
 		$viewurl = $template->serverUrl($template->baseUrl('message/view/id/'.encode($this->getID())));
 		if(isEmptyString($this->getID())){
 			$viewurl = '';
 		}
+		$msgcontent .= '<p><a href="'.$viewurl.'">Click here</a> to view this message online</p>';
 		// debugMessage($this->getRecipients()->toArray());
 		// the message reciever's first name
-		$template->assign('firstname', isEmptyString($toname) ? 'Member' : $toname);
+		$template->assign('firstname', isEmptyString($toname) ? 'User' : $receivername);
 		// the message sender's name
 		$template->assign('emailsender', $sendername);
 		// message subject
 		$template->assign('subject', $msgsubject);
 		$mail->setSubject($msgsubject);
-		// message introduction
-		$template->assign('emailintro', sprintf($this->translate->_('message_private_email_subject'), $sendername));
+		// add the recipient emails TODO if sent to many users, add all their emails
+		$mail->addTo($toemail, $receivername);
+		// set the send of the email address
+		$mail->setFrom(getDefaultAdminEmail(), getAppName()." on behalf of ".$fromname);
+		
 		// message contents
-		$template->assign('emailcontent', nl2br($msgcontent));
+		$template->assign('emailcontent', $intro.nl2br($msgcontent));
 		// the actual url will be built in the view
 		$template->assign('emaillink', $viewurl);
 		// message html file
 		$mail->setBodyHtml($template->render('messagenotification.phtml'));
 		// debugMessage($template->render('messagenotification.phtml'));
 
-		// add the recipient emails TODO if sent to many users, add all their emails
-		$mail->addTo($toemail);
-		// $mail->addCc('hman@devmail.infomacorp.com');
-		// set the send of the email address
-		$mail->setFrom($senderemail, $sendername);
 		// send the message
-
-		$mail->send();
+		try {
+			$mail->send();
+		} catch (Exception $e) {
+			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+		}
+	
 		$mail->clearRecipients();
 		$mail->clearSubject();
 		$mail->setBodyHtml('');

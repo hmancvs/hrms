@@ -1,26 +1,28 @@
-<?php 
-if($request->pdf == '1'){
-	ob_start();
-}
-?>
-<!doctype html>
-<html>
+<?php if($request->pdf != '1'){ ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-	<!-- Apple devices fullscreen -->
-	<meta name="apple-mobile-web-app-capable" content="yes" />
-	<!-- Apple devices fullscreen -->
-	<meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/bootstrap.min.css')); ?>" rel="stylesheet" type="text/css" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/bootstrap-theme.min.css')); ?>" rel="stylesheet" type="text/css" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/style.css')); ?>" rel="stylesheet" type="text/css" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/themes.css')); ?>" rel="stylesheet" type="text/css" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/custom.css')); ?>" rel="stylesheet" type="text/css" />
-    <link href="<?php echo $this->serverUrl($this->baseUrl('stylesheets/app.css')); ?>" rel="stylesheet" type="text/css" />
     <title><?php echo $controller == 'profile' && $action ==  'view' ? $pagetitle.$browserappend : $title.$browserappend; ?></title>
-<body class="print DTTT_Print">
-	<style>
+    <?php 
+		$baseurl_bootstrap = $this->serverUrl($this->baseUrl('stylesheets/bootstrap.min.css'));
+		$baseurl_bootstrap_code = file_get_contents($baseurl_bootstrap);
+		
+		$baseurl_btheme = $this->serverUrl($this->baseUrl('stylesheets/bootstrap-theme.min.css'));
+		$baseurl_btheme_code = file_get_contents($baseurl_btheme);
+		
+		$baseurl_style = $this->serverUrl($this->baseUrl('stylesheets/style.css'));
+		$baseurl_style_code = file_get_contents($baseurl_style);
+		
+		$baseurl_custom = $this->serverUrl($this->baseUrl('stylesheets/custom.css'));
+		$baseurl_custom_code = file_get_contents($baseurl_custom);
+		
+		$baseurl_app = $this->serverUrl($this->baseUrl('stylesheets/app.css'));
+		$baseurl_app_code = file_get_contents($baseurl_app);
+		// debugMessage($baseurl_bootstrap_code);
+	?>
+    <style type="text/css">
+		<?php echo $baseurl_bootstrap_code.$baseurl_btheme_code.$baseurl_style_code.$baseurl_custom_code.$baseurl_app_code; ?>
+		
 		.edit, .requiredmark, .save_trigger, .cancel_trigger {
 			display:none;
 		}
@@ -40,7 +42,7 @@ if($request->pdf == '1'){
 		/* Based on The MailChimp Reset INLINE: Yes. */  
 		/* Client-specific Styles */
 		#outlook a {padding:0;} /* Force Outlook to provide a "view in browser" menu link. */
-		body{width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; margin:0; padding:0;} 
+		body{width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; margin:0; padding:0; font-size: 12px !important;} 
 		/* Prevent Webkit and Windows Mobile platforms from changing default font sizes.*/ 
 		.ExternalClass {width:100%;} /* Force Hotmail to display emails at full width */  
 		.ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {line-height: 100%;}
@@ -81,70 +83,32 @@ if($request->pdf == '1'){
 
 		/* Remove spacing around Outlook 07, 10 tables
 		Bring inline: Yes */
-		table { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+		table { border-collapse:collapse; }
 
-
-		/***************************************************
-		****************************************************
-		MOBILE TARGETING
-		****************************************************
-		***************************************************/
-		@media only screen and (max-device-width: 480px) {
-			/* Part one of controlling phone number linking for mobile. */
-			a[href^="tel"], a[href^="sms"] {
-						text-decoration: none;
-						color: blue; /* or whatever your want */
-						pointer-events: none;
-						cursor: default;
-					}
-
-			.mobile_link a[href^="tel"], .mobile_link a[href^="sms"] {
-						text-decoration: default;
-						color: orange !important;
-						pointer-events: auto;
-						cursor: default;
-					}
-
-		}
-
-		/* More Specific Targeting */
-
-		@media only screen and (min-device-width: 768px) and (max-device-width: 1024px) {
-		/* You guessed it, ipad (tablets, smaller screens, etc) */
-			/* repeating for the ipad */
-			a[href^="tel"], a[href^="sms"] {
-						text-decoration: none;
-						color: blue; /* or whatever your want */
-						pointer-events: none;
-						cursor: default;
-					}
-
-			.mobile_link a[href^="tel"], .mobile_link a[href^="sms"] {
-						text-decoration: default;
-						color: orange !important;
-						pointer-events: auto;
-						cursor: default;
-					}
-		}
-		
 		.tab-content.printscreen, .box.box-bordered.box-color .box-content.printscreen {
 			border:none;
 			font-family: Arial, Verdana, sans-serif;
 		}
+		
     </style>
+</head>    
+<body class="print DTTT_Print">
     <div id="container-fluid" style="max-width:800px; margin:0 auto !important;">
         <div id="contentcontainer" class="container-fluid">
             <div id="centercolumn" class="container-fluid padding0">
-            <div class="showonprint centeralign">
-                <span id="reportactions">			
-                    <div id="print_page_action_buttons">
-                        <a title="Close Window" onClick="window.close()" href="javascript: void(0)"><i class="fa fa-times"></i> Close</a> &nbsp;
-                        <?php if($request->print == '1' || $request->fullscreen == '1'){ ?>
-                            <a title="Print" onClick="window.print()" href="javascript: void(0)" class="print" ><i class="fa fa-print"></i> Print</a> &nbsp; 
-                            <?php if($request->fullscreen == '1' && false){ ?>
-                            	<a title="PDF" href="<?php echo $viewurl.'/fullscreen/1/pgc/true/pdf/1'; ?>" class="pdf"><i class="fa fa-file"></i> PDF</a> &nbsp; 
-                            <?php } ?>
-                        <?php } ?>
-                    </div>
-                </span>
-            </div>
+                <div id="print_page_action_buttons" class="showonprint centeralign">
+					<?php if($request->pdf != 1){ ?>
+                        <a title="Close Window" onClick="window.close()" href="javascript: void(0)">Close</a> &nbsp;
+                        <a title="Print" onClick="window.print()" href="javascript: void(0)" class="print" >Print</a> &nbsp; 
+                    <?php } ?>
+                    <?php if($request->pdf != 1){ ?>
+                        <a title="PDF" href="<?php echo stripUrl($this->viewurl).'/pdf/1'; ?>" target="_blank" class="pdf">PDF</a> &nbsp; 
+                    <?php } ?>
+                </div>
+                <?php } ?>
+                <?php 
+					if($request->pdf == '1'){
+						ob_start();
+					}
+				?>
+            	

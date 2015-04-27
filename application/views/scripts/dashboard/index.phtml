@@ -39,12 +39,6 @@
 		// no of positions
 		$posquery = "select count(l.lookuptypeid) from lookuptypevalue l where l.lookuptypeid = 7 and l.companyid = '".$companyid."' ";
 		$poscount_result = $conn->fetchOne($posquery);
-	} else {
-		// no of hours accrues
-		$totalhrs = getHoursAccrued($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
-		$hoursavailable = getHoursAvailable($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
-		$daysavailable = $hoursavailable == 0 ? 0 : formatNumber($hoursavailable/8);
-		$takenhrs = getHoursTaken($loggedinuser->getID(), 1, getYearStart(), getYearEnd());
 	}
 	
 	$custom_query = "";
@@ -264,20 +258,20 @@ $(document).ready(function() {
                             <div class="col-sm-12">
                                 <ul class="tiles">
                                 	<?php if ($acl->checkPermission('Attendance', ACTION_LIST)) { ?>
-                                    	<li class="orange"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>"><span><i class="fa fa-calendar"></i></span><span class='name'>My Attendance</span></a></li>
+                                    	<li class="grey"><a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>"><span><i class="fa fa-calendar"></i></span><span class='name'>My Attendance</span></a></li>
                                     <?php } ?>
 									<?php if($istimesheetuser) { ?>
-                                        <li class="brown">
+                                        <li class="lightgrey">
                                             <a href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>" class="blockanchor"><span><i class="fa fa-gift"></i></span><span class="name">My Benefits</span></a>
                                         </li>
                                     <?php } ?>
                                     <?php if ($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
-                                        <li class="teal">
+                                        <li class="grey">
                                             <a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>"><span><i class="fa fa-calendar"></i></span><span class="name">Request Leave</span> </a>
                                         </li>
                                     <?php } ?>
                                     <?php if($istimesheetuser) { ?>
-                                        <li class="blue">
+                                        <li class="lightgrey">
                                             <a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request"><span><i class="fa fa-gift"></i></span><span class="name">Request Benefits</span></a>
                                         </li>
                                     <?php } ?>
@@ -290,20 +284,20 @@ $(document).ready(function() {
                             <div class="col-sm-12">
                                 <ul class="tiles">
                                 	<?php if ($acl->checkPermission('User Account', ACTION_LIST)) { ?>
-                                    	<li class="orange"><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>"><span><i class="fa fa-user"></i></span><span class='name'>Employees</span></a>
+                                    	<li class="grey"><a class="blockanchor" href="<?php echo $this->baseUrl('profile/list'); ?>"><span><i class="fa fa-user"></i></span><span class='name'>Employees</span></a>
                                     </li>
                                     <?php } ?>
                                     <?php if ($acl->checkPermission('User Account', ACTION_CREATE)) { ?>
-                                    	<li class="brown"><a href="<?php echo $this->baseUrl('profile'); ?>" class="blockanchor"><span class='count'><i class="glyphicon glyphicon-user_add"></i></span><span class='name'>Add Employee</span></a></li>
+                                    	<li class="lightgrey"><a href="<?php echo $this->baseUrl('profile'); ?>" class="blockanchor"><span class='count'><i class="glyphicon glyphicon-user_add"></i></span><span class='name'>Add Employee</span></a></li>
                                     <?php } ?>
-                                    <?php if($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
-                                        <li class="teal">
-                                            <a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list'); ?>"><span class='count'><i class="fa fa-gift"></i></span><span class='name'>Manage Benefits</span></a>
+                                    <?php if($acl->checkPermission('Timesheets', ACTION_LIST)) { ?>
+                                        <li class="grey">
+                                            <a class="blockanchor" href="<?php echo $this->baseUrl('timesheets/attendance'); ?>"><span class='count'><i class="fa fa-calendar"></i></span><span class='name'>Attendance</span></a>
                                         </li>
                                     <?php } ?>   
-                                    <?php if($acl->checkPermission('Benefits', ACTION_CREATE)) { ?>
-                                        <li class="blue">
-                                            <a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>"><span class='count'><i class="fa fa-gift"></i></span><span class='name'>Add Benefits</span></a>
+                                    <?php if($acl->checkPermission('Payroll', ACTION_CREATE)) { ?>
+                                        <li class="lightgrey">
+                                            <a href="<?php echo $this->baseUrl('payroll/list'); ?>" title="Payroll"><span class='count'><i class="fa fa-money"></i></span><span class='name'>Payroll</span></a>
                                         </li>
                                     <?php } ?> 
                                	</ul>
@@ -599,7 +593,7 @@ $(document).ready(function() {
 																<span class="label label-default noround approvalsummary"><?php echo changeMySQLDateToPageFormat($line['startdate']); ?> - <?php echo changeMySQLDateToPageFormat($line['enddate']); ?></span>
 															</a>
 														<?php } ?>
-														<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="btn btn-default btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon glyphicon-arrow-right"></i></a>
+														<a href="<?php echo $this->baseUrl('leave/list/whoisoff/1'); ?>" class="btn btn-default btn-xs viewall blockanchor">View Full Schedule <i class="glyphicon-right_arrow"></i></a>
 													<?php } ?>
 												</div>
 											</td>

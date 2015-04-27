@@ -133,7 +133,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_phone_label'); ?>: <?php //echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
                                 <input type="text" name="phone" id="phone" class="form-control width150 isnumber inline" value="<?php echo $user->getPhone(); ?>" placeholder="e.g <?php echo getDefaultPhoneCode(); ?>782123456" maxlength="<?php echo getMaxPhoneLength(); ?>" /> 
                                 <div id="phone_error"></div>
@@ -143,6 +143,12 @@
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_altphone_label'); ?>:</label>
                             <div class="col-sm-8">
                                 <input type="text" name="phone2" id="phone2" class="form-control input-width-medium isnumber width150" value="<?php echo $user->getPhone2(); ?>" placeholder="e.g <?php echo getDefaultPhoneCode(); ?>414123456" maxlength="<?php echo getMaxPhoneLength(); ?>" /><div id="phone2_error"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label"><?php echo $this->translate('profile_ext_label'); ?>:</label>
+                            <div class="col-sm-8">
+                                <input type="text" name="ext" id="ext" class="form-control input-width-medium isnumber width100" title="Work Phone Extension" rel="tooltip" value="<?php echo $user->getExt(); ?>" placeholder="e.g 146" /><div id="ext_error"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -173,9 +179,9 @@
                         <div class="form-group">
                             <label class="col-sm-4 control-label"><?php echo $this->translate('profile_address_label'); ?>:</label>
                             <div class="col-sm-8">
-                                <textarea name="address1" id="address1" class="form-control expanding" style="height:35px;"><?php echo $user->getAddress1(); ?></textarea>
+                                <textarea name="address1" id="address1" class="form-control expanding" placeholder="address line 1" style="height:35px;"><?php echo $user->getAddress1(); ?></textarea>
                                 <div class="divider5"></div>
-                                <textarea name="address2" id="address2" class="form-control expanding" style="height:35px;"><?php echo $user->getAddress2(); ?></textarea>
+                                <textarea name="address2" id="address2" class="form-control expanding" placeholder="address line 2" style="height:35px;"><?php echo $user->getAddress2(); ?></textarea>
                             </div>
                         </div>
                         <div class="form-group">

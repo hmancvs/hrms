@@ -39,7 +39,6 @@
                         <div class="form-group">
                             <label class="col-sm-2 control-label">Account Login Status:</label>
                             <div class="col-sm-10">
-                                <?php $allstatus = getUserStatus(); ?> 
                                 <p class="form-control-static nullifempty view"><?php echo isArrayKeyAnEmptyString($user->getStatus(), $allstatus) ? '' : $allstatus[$user->getStatus()]; ?></p>
                             </div>
                         </div>
@@ -74,7 +73,7 @@
                                             <a class="addpopup btn btn-xs btn-default pull-right floatright" rel="Change Password" href="<?php echo $this->baseUrl('profile/changepassword/pgc/true/id/'.encode($user->getID())); ?>" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("profile/processchangepassword"); ?>" submittext="Change Password">Change Password</a>
                                         <?php } ?>
                                         <?php if($acl->checkPermission('User Account', ACTION_DELETE) && $user->isUserActive() && !$isme){ ?>
-                                            <a class="btn btn-default btn-xs confirm-dialog pull-right floatright" action="<?php echo $this->baseUrl('profile/resetpassword/id/'.encode($user->getID()).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to reset <?php echo $user->getName() ?>'s Password?">Reset Password</a>
+                                            <a class="btn btn-default btn-xs confirm-dialog pull-right floatright" action="<?php echo $this->baseUrl('profile/resetpassword/id/'.encode($user->getID()).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to reset <?php echo $user->getName(); ?>'s Password?">Reset Password</a>
                                         <?php } ?>
                                     </p>
                                 </div>

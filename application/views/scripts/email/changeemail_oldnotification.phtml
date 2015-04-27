@@ -1,14 +1,14 @@
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailheader.phtml'); ?>
 
-Dear <?php echo $this->firstname; ?>,<br /><br />
+<p>Dear <?php echo $this->firstname; ?>,</p>
 
-You recently requested to change your <?php echo $this->appname; ?> Email Address to '<?php echo $this->toemail; ?>'.<br /><br />
+<p>You recently requested to change your <?php echo $this->appname; ?> Email Address to <b><?php echo $this->toemail; ?></b>.</p>
 
-To confirm this request, please follow the instructions sent to the above address.<br /><br />
+<p>To confirm this request, please follow the instructions sent to the above address.</p>
 
-On confirmation, you will no longer be able to login using '<?php echo $this->fromemail; ?>'.<br />
+<p>On confirmation, you will no longer be able to login using <b><?php echo $this->fromemail; ?></b>.</p>
 
-If you need any further assistance or have any question, please feel free to <a href="<?php echo $this->serverUrl($this->baseUrl('contactus')); ?>" title="Contact us">Contact us</a><br /><br />
+<p>If you need any further assistance or have any question, please feel free to <a href="<?php echo $this->serverUrl($this->baseUrl('contactus')); ?>" title="Contact us">Contact us</a></p>
 
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailfooter.phtml'); ?>
             

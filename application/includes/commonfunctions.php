@@ -100,19 +100,29 @@ function getDefaultTopBar($id = '1'){
 	return 2;
 }
 function getDefaultSideBar($id = '1'){
-	return 2;
+	return 1;
 }
 function getDefaultTheme($id = '1'){
 	return 'blue';
 }
 function getDefaultShowSideBar($id = '1'){
-	return 0;
+	return 1;
 }
-function getAppName(){
+function getDefaultAppName(){
+	$session = SessionWrapper::getInstance();
+	$config = Zend_Registry::get("config"); 
+	return $config->system->appname;
+}
+function getAppName($id = ''){
 	$session = SessionWrapper::getInstance();
 	$config = Zend_Registry::get("config"); 
 	$currentcompany = $session->getVar('currentcompany');
 	$defaultcompany = $session->getVar('defaultcompany');
+	if(!isEmptyString($id) && isEmptyString($session->getVar('userid'))){
+		$company = new Company();
+		$company->populate($id);
+		return isEmptyString($company->getAppname()) ? getDefaultAppName() : $company->getAppname();
+	}
 	return !isEmptyString($currentcompany['appname']) ? $currentcompany['appname'] : (!isEmptyString($defaultcompany['appname']) ? $defaultcompany['appname'] : $config->system->appname);
 }
 function getAppFullName(){
@@ -1490,6 +1500,64 @@ function getClientUrl (Zend_Http_Client $client){
     }
     return $client->getUri (true) . $string;
 }
+/**
+ * Get a web file (HTML, XHTML, XML, image, etc.) from a URL.  Return an
+ * array containing the HTTP server response header fields and content.
+ */
+function getPageHtml( $url )
+{
+    $options = array(
+        CURLOPT_RETURNTRANSFER => true,     // return web page
+        CURLOPT_HEADER         => false,    // don't return headers
+        CURLOPT_FOLLOWLOCATION => true,     // follow redirects
+        CURLOPT_ENCODING       => "",       // handle all encodings
+        CURLOPT_USERAGENT      => "spider", // who am i
+        CURLOPT_AUTOREFERER    => true,     // set referer on redirect
+        CURLOPT_CONNECTTIMEOUT => 120,      // timeout on connect
+        CURLOPT_TIMEOUT        => 120,      // timeout on response
+        CURLOPT_MAXREDIRS      => 10,       // stop after 10 redirects
+    );
+
+    $ch      = curl_init( $url );
+    curl_setopt_array( $ch, $options );
+    $content = curl_exec( $ch );
+    $err     = curl_errno( $ch );
+    $errmsg  = curl_error( $ch );
+    $header  = curl_getinfo( $ch );
+    curl_close( $ch );
+
+    $header['errno']   = $err;
+    $header['errmsg']  = $errmsg;
+    $header['content'] = $content;
+    return $header;
+}
+function get_web_page($url) {
+	$options = array (CURLOPT_RETURNTRANSFER => true, // return web page
+			CURLOPT_HEADER => false, // don't return headers
+			CURLOPT_FOLLOWLOCATION => false, // follow redirects
+			//CURLOPT_ENCODING => "", // handle compressed
+			//CURLOPT_USERAGENT => "test", // who am i
+			//CURLOPT_AUTOREFERER => true, // set referer on redirect
+			//CURLOPT_CONNECTTIMEOUT => 120, // timeout on connect
+			//CURLOPT_TIMEOUT => 120, // timeout on response
+			//CURLOPT_MAXREDIRS => 10 
+			); // stop after 10 redirects
+
+	$ch = curl_init ( $url );
+	curl_setopt_array ( $ch, $options );
+	$content = curl_exec ( $ch );
+	$err = curl_errno ( $ch );
+	$errmsg = curl_error ( $ch );
+	$header = curl_getinfo ( $ch );
+	$httpCode = curl_getinfo ( $ch, CURLINFO_HTTP_CODE );
+
+	curl_close ( $ch );
+
+	$header ['errno'] = $err;
+	$header ['errmsg'] = $errmsg;
+	$header ['content'] = $content;
+	return $header;
+}
 function fileUploaded() {
 	if(empty($_FILES)) {
 		return false;
@@ -1660,5 +1728,18 @@ function getFilePath($filename, $userid) {
 		}
 	}
 	return $path;
+}
+function giveHost($host_with_subdomain) {
+    $array = explode(".", $host_with_subdomain);
+
+    return (array_key_exists(count($array) - 2, $array) ? $array[count($array) - 2] : "").".".$array[count($array) - 1];
+}
+function getSubdomain($url){
+	preg_match('/(?:http[s]*\:\/\/)*(.*?)\.(?=[^\/]*\..{2,5})/i', $url, $match);
+	$subdomain = isArrayKeyAnEmptyString(1, $match) ? '' : $match[1];
+	return $subdomain;
+}
+function getInvalidSubdomains(){
+	return array("www","cpanel","mail","ftp","ftps","http","https","webmail","pop3","imap","smtp");
 }
 ?>

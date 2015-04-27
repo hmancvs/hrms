@@ -45,6 +45,7 @@
 	if($tab == 'account'){
 		$indexurl = $this->baseUrl('company/index/id/'.encode($company->getID()).'/tab/account');
 	}
+	$categories = getDatavariables('INDUSTRY_CATEGORIES');
 	
 	$allowedit = false;
 	if($acl->checkPermission($resourcename, ACTION_EDIT)){
@@ -124,8 +125,12 @@
                                                     <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo $company->getDefaultName(); ?></p></div>
                                                 </div>
                                                 <div class="form-group">
+                                                    <label class="col-sm-3 control-label">Username/Url:</label>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo isEmptyString($company->getUserName()) ? '' : 'http://'.$company->getUserName().'.hrmagic.ug'; ?></p></div>
+                                                </div>
+                                                <div class="form-group">
                                                     <label class="col-sm-3 control-label">Industry Category:</label>
-                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo getDatavariables('INDUSTRY_CATEGORIES', $company->getindustrycode()); ?></p></div>
+                                                    <div class="col-sm-9"><p class="form-control-static nullifempty view"><?php echo isArrayKeyAnEmptyString($company->getindustrycode(), $categories) ? '' :  $categories[$company->getindustrycode()]; ?></p></div>
                                                 </div>
                                                 <div class="form-group">
                                                     <label class="col-sm-3 control-label">Business Description:</label>
@@ -153,7 +158,7 @@
                                                     <div class="col-sm-8">
                                                     	<p class="form-control-static nullifempty view"><?php echo $company->getEmail(); ?></p>
                                                         <?php if(!isEmptyString($company->getEmail()) && !isEmptyString($company->getDefaultUserID()) && $company->getDefaultUser()->isUserInActive()){ ?>
-                                                            <a class="btn btn-primary btn-sm confirm-dialog" message="Resend activation instructions to User's Email?" action="<?php echo $this->baseUrl('profile/inviteuser/id/'.$company->getDefaultUserID().'/successurl/'.encode($this->viewurl)); ?>">&nbsp; Resend Activation</a>
+                                                            <a class="btn btn-primary btn-sm confirm-dialog" message="Resend activation instructions to User's Email?" action="<?php echo $this->baseUrl('profile/inviteuser/id/'.$company->getDefaultUserID().'/iscompany/1/successurl/'.encode($this->viewurl)); ?>">&nbsp; <?php echo $company->getIsInvited() == 1 ? 'Resend' : 'Send'; ?> Activation</a>
                                                         <?php } ?>
                                                     </div>
                                                 </div>

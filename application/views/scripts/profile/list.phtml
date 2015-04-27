@@ -122,7 +122,7 @@
 		u.profilephoto, u.gender, u.dateofbirth, u.bio, 
 		u.datecreated as mdatecreated, u.createdby as mcreatedby, u.activationdate, u.startdate, u.enddate, u.probationend,
 		u.country, u.address1 as address1, u.town,
-		u.status as `status`, u.salutation, u.position,
+		u.status as `status`, u.salutation, u.position, u.isinvited,
 		u.dateofbirth, u.dateofbirth, u.position, u.empstatus, u.departmentid, u.managerid,
 		g.groupid as groupid, acg.name as `Group`
 		 FROM useraccount u
@@ -286,20 +286,26 @@
                                             ?>
                                                  <div class="col-xs-12 col-sm-6">
                                                     <div class="peoplewrapper makerelative">
-                                                        <div class="btn-group gridactions" style="z-index:1000;">
+                                                        <div class="btn-group gridactions" style="z-index:10;">
                                                             <button type="button" class="btn btn-default btn-xs dropdown-toggle noround" data-toggle="dropdown">Action <span class="caret"></span></button>
-                                                            <ul class="dropdown-menu" role="menu" style="left:-102px;">
+                                                            <ul class="dropdown-menu" role="menu" style="left:-160px; top:0;">
                                                                 <?php if ($acl->checkPermission("User Account", ACTION_VIEW)) { ?>
                                                                     <li><a class="blockanchor" href="<?php echo $viewurl; ?>">View Profile</a></li>
                                                                 <?php } ?>
                                                                 <?php if ($allowedit) { ?>
                                                                     <li><a class="blockanchor" href="<?php echo $indexurl; ?>">Update</a></li>
                                                                 <?php } ?>
-                                                                <?php if(!isEmptyString($line['email']) && $acl->checkPermission('Message', ACTION_CREATE) && false){ ?>
-                                                                    <li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/1'; ?>">Send Email</a></li>
+                                                                <?php if(!isEmptyString($line['email']) && $acl->checkPermission('Message', ACTION_CREATE)){ ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('notifications/index/userid/'.encode($line['uid']).'/type/1'); ?>">Send Mail</a></li>
                                                                 <?php }?>
-                                                                <?php if(!isEmptyString($line['phone']) && $acl->checkPermission('SMS', ACTION_CREATE) && false){ ?>
-                                                                    <li><a class="blockanchor" href="<?php echo $viewurl.'/tab/contact/type/2'; ?>">Send SMS</a></li>
+                                                                <?php if(!isEmptyString($line['phone']) && $acl->checkPermission('SMS', ACTION_CREATE)){ ?>
+                                                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('notifications/index/userid/'.encode($line['uid']).'/type/2'); ?>">Send SMS</a></li>
+                                                                <?php } ?>
+                                                                <?php if ($allowedit && $line['status'] == 0 ) { ?>
+                                                                    <li><a class="blockanchor confirm-dialog gonowhere" action="<?php echo $this->baseUrl('profile/inviteuser/id/'.$line['uid'].'/successurl/'.encode($this->viewurl)); ?>" message="Resend activation instructions to User's Email?"><?php echo $line['isinvited'] == 1 ? 'Resend' : 'Send'; ?> Activation</a></li>
+                                                                <?php } ?>
+                                                                <?php if($acl->checkPermission('User Account', ACTION_DELETE) && $line['status'] == 1){ ?>
+                                                                    <li><a class="blockanchor confirm-dialog gonowhere" action="<?php echo $this->baseUrl('profile/resetpassword/id/'.encode($line['uid']).'/successurl/'.encode($this->viewurl)); ?>" message="Are you sure you want to reset <?php echo $line['name']; ?>'s Password?">Reset Password</a></li>
                                                                 <?php } ?>
                                                             </ul>
                                                         </div>
@@ -314,7 +320,7 @@
                                                                         <li><span class="bolded">Position:</span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['position'], $positions) ? '' : $positions[$line['position']]; ?></span></li>
                                                                         <li><span class="bolded">Department: </span> <span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['departmentid'], $departments) ? '' : $departments[$line['departmentid']]; ?></span></li>
                                                                         <li><span class="bolded">Contract Status: </span><span class="nullifempty"><?php echo isArrayKeyAnEmptyString($line['empstatus'], $employeesstatuses) ? '':$employeesstatuses[$line['empstatus']]; ?></span></li>
-                                                                        <li><span class="bolded">Contract Start: </span> <span class="nullifempty"><?php echo formatDateAndTime($line['startdate'], false); ?></span></li>
+                                                                        <li><span class="bolded">Account Status: </span> <span class="nullifempty"><?php echo getUserStatus($line['status']); ?></span></li>
                                                                     </ul>
                                                                 </div>
                                                                 <div class="col-sm-5 padding0">

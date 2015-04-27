@@ -11,6 +11,9 @@ class PayrollController extends SecureController  {
 		if($action == "history" || $action = "historysearch" ||  $action = "changedays"  ||  $action = "complete") {
 			return ACTION_LIST;
 		}
+		if($action == "issuepayslips"){
+			
+		}
 		return parent::getActionforACL();
 	}
 	
@@ -147,7 +150,7 @@ class PayrollController extends SecureController  {
 		$this->_helper->layout->disableLayout();
 		$this->_helper->viewRenderer->setNoRender(TRUE);
 		$session = SessionWrapper::getInstance();
-		$formvalues = $this->_getAllParams(); debugMessage($formvalues); // exit;
+		$formvalues = $this->_getAllParams(); // debugMessage($formvalues); exit;
 		$config = Zend_Registry::get("config");
 		
 		$payroll = new Payroll();
@@ -362,7 +365,8 @@ class PayrollController extends SecureController  {
 				}
 			}
 		}
-		// debugMessage($ledger_collection->toArray()); exit;
+		// debugMessage('exiting here');
+		// exit;
 		
 		// save collection
 		try {
@@ -396,10 +400,11 @@ class PayrollController extends SecureController  {
 			// debugMessage('Error in completing payroll. '.$e->getMessage()); exit;
 		}
 		
-		$url = $this->view->baseUrl('payroll/list/id/'.encode($payroll->getID()));
+		$url = $this->view->baseUrl('payroll/list/id/'.encode($payroll->getID()).'/issuepayslips/1');
 		if(!isEmptyString($this->_getParam(URL_SUCCESS))){
 			$url = decode($this->_getParam(URL_SUCCESS));
 		}
+		$session->setVar("issuepayslips", '1');
 		
 		$this->_helper->redirector->gotoUrl($url);
 	}
@@ -438,4 +443,5 @@ class PayrollController extends SecureController  {
 		
 		$this->_helper->redirector->gotoUrl($successurl);
 	}
+	
 }

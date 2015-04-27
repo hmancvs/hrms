@@ -37,7 +37,9 @@ $(document).ready(function() {
 				required: true,
 				min:0.1
 			},
-			inremarks: "required"
+			inremarks: "required",
+			status: "required",
+			userid: "required"
 		}, 
 		// the messages for each of the fields being validated
 		messages: {				
@@ -46,7 +48,9 @@ $(document).ready(function() {
 				required: "Please enter Hours",
 				min: "Should be greater than zero"
 			},
-			inremarks: "Please specify Remarks"
+			inremarks: "Please specify Remarks",
+			status: "Please select Status",
+			userid: "Please select a User"
 		},
 		// custom error positions
 		errorPlacement: function(error, element) {
@@ -101,7 +105,7 @@ $(document).ready(function() {
                     	<div class="form-group">
                             <label class="col-sm-3 control-label">Date: <?php echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-8">
-                            	<input type="text" class="form-control input-sm datefield readonly width125 ordinary" name="timesheetdate" id="timesheetdate" value="<?php echo changeMySQLDateToPageFormat($timesheet->getTimesheetDate()); ?>" />
+                            	<input type="text" class="form-control input-sm datefield width125 ordinary" name="timesheetdate" id="timesheetdate" value="<?php echo changeMySQLDateToPageFormat($timesheet->getTimesheetDate()); ?>" />
                                 <div id="timesheetdate_error"></div>
                             </div>
                         </div>

@@ -78,7 +78,7 @@
 			$where_query .= " AND u.id = '".$empid."' ";
 		}
 		
-		$all_results_query = "SELECT p.*, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position, u.nssfid, u.uratin, u.contributiontype, u.bankname, u.accno, u.accname, u.branchname FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." GROUP BY p.userid ORDER BY name ASC ";
+		$all_results_query = "SELECT p.*, p.id as payrolldetailid, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position, u.nssfid, u.uratin, u.contributiontype, u.bankname, u.accno, u.accname, u.branchname FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." GROUP BY p.userid ORDER BY name ASC ";
 		// debugMessage($all_results_query); // exit;
 		
 		$conn = Doctrine_Manager::connection(); 
@@ -283,6 +283,10 @@ $(document).ready(function() {
                                                     foreach($result as $employee){
                                                         $userids [] = $employee['id'];
                                                         $employeeid = $employee['id'];
+														$payrolldetailid = '';
+														if(!isEmptyString($payrollid)){
+															$payrolldetailid = $employee['payrolldetailid'];
+														}
                                                         $rate_type = isArrayKeyAnEmptyString($employee['ratetype'], $ratetypes) ? '' : $ratetypes[$employee['ratetype']];
                                                         if(!isEmptyString($rate_type)){
                                                             preg_match_all('/\b\w/', $rate_type, $match);
@@ -403,15 +407,16 @@ $(document).ready(function() {
 															<?php if($type == 1 && isEmptyString($request->print)){ ?>
                                                                 <div id="payslip_<?php echo $employeeid; ?>" class="hidden hideonprint payslipdata alert_<?php echo $employeeid; ?>">
                                                                     <label class="blocked bolded">Payslip: <?php echo $employee['name']; ?> <?php echo $monthendlabel; ?></label>
-                                                                    <table class="table table-bordered" style="font-size:11px !important;">
+                                                                    <table class="table table-bordered" style="font-size:11px !important; margin-bottom:2px;">
                                                                         <thead>
                                                                             <tr>
-                                                                                <th>Item</th>
-                                                                                <th style="width:25%; text-align:center;">CR</th>
-                                                                                <th style="width:25%; text-align:center;">DR</th>
+                                                                                <th>Transaction</th>
+                                                                                <th style="width:25%; text-align:center;">Credit (<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                                                <th style="width:25%; text-align:center;">Debit (<?php echo getCountryCurrencyCode(); ?>)</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody>
+                                                                            
                                                                             <tr class="bolded">
                                                                                 <td>Basic Salary</td>
                                                                                 <td class="rightalign"><?php echo formatMoneyOnly($gross); ?></td>
@@ -478,7 +483,7 @@ $(document).ready(function() {
                                                                             </tr>
                                                                             <tr class="bolded">
                                                                                 <td>Net</td>
-                                                                                <td class="rightalign"><?php echo formatMoneyOnly($netpayout); ?></td>
+                                                                                <td class="rightalign"><?php echo formatMoneyOnly(($gross + $allbenefits) - ($paye + $nssf + $otherdeductions)); ?></td>
                                                                                 <td class="rightalign"></td>
                                                                             </tr>
                                                                             <tr>
@@ -488,6 +493,10 @@ $(document).ready(function() {
                                                                             </tr>
                                                                         </tbody>
                                                                     </table>
+                                                                    <div style="display:block; text-align:center;">
+                                                                        <a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1/payslipview/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">Print Preview</a>
+                                                                        <a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1/payslipview/1/pdf/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">PDF</a>
+                                                                    </div>
                                                                 </div>
                                                             <?php } ?>
                                                         </td>

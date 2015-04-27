@@ -1,9 +1,10 @@
 <div class="row">
     <div class="col-sm-12 paddingleft0">
         <fieldset class="fieldsetcontainer minheight200">
-            <legend class="hideonprint"><?php echo $isme ? 'My Transaction History' : 'Transaction History'; ?></legend>
-            <?php if($request->print == 1 || $request->pgc == 'true'){ ?>
-            	<legend><?php echo $user->getName().' - Payslip'; ?></legend>
+            <?php if($showpayslip){ ?>
+            	<legend><?php echo $ispdf ? ' &nbsp; ' : ''; ?> <?php echo $user->getName().' - Payslip'; ?></legend>
+            <?php } else { ?>
+            	<legend class="hideonprint"><?php echo $isme ? 'My Transaction History' : 'Transaction History'; ?></legend>
             <?php } ?>
             <div class="panel-body well-sm">
                 <div class="row-fluid">
@@ -26,23 +27,34 @@
 							$hasdata = count($result) > 0 ? true : false;
 							$countlabel = count($result) == 1 ? " Transaction" : " Transactions";
 						?>
-                        <?php if($hasdata){ ?>
+                        <?php if($hasdata && !$ispdf){ ?>
                             <div class="paginatecustom padding10 hideonprint" style="padding-bottom: 4px; padding-left:0; font-style:italic;"><?php echo "Viewing <b>".count($result)."</b> ".$countlabel." "; ?></div>
                         <?php } ?>
-                        <table class="table list table-bordered border-cells data-table" id="datatable">
-                            <thead>
-                                <tr style="font-size:12px; font-weight:normal;">
-                                    <th class="nowrapping" style="width:100px;"><label class="control-label">Transaction Date</label></th>
-                                    <th style="width:150px;"><label class="control-label">Payment Period</label></th>
-                                    <th style="width:100px;"><label class="control-label">Gross (<?php echo getCountryCurrencyCode(); ?>)</label></th>
-                                    <th style="width:100px;"><label class="control-label">Net (<?php echo getCountryCurrencyCode(); ?>)</label></th>
-                                    <th style="width:130px;" class="hideonprint"><label class="control-label">Actions</label></th>
-                                </tr>
-                            </thead>
+                        <table class="<?php echo $ispdf ? 'items isbordered' : 'table list table-bordered table-striped'; ?>" <?php echo $ispdf ? ' cellpadding="8"' : ''; ?>>
+                            <?php if($ispdf){ ?>
+                                <thead>
+                                    <tr>
+                                        <td class="isbordered">Transaction Date</td>
+                                        <td class="isbordered">Payment Period</td>
+                                        <td class="isbordered leftalign">Gross (<?php echo getCountryCurrencyCode(); ?>)</td>
+                                        <td class="isbordered leftalign">Net (<?php echo getCountryCurrencyCode(); ?>)</td>
+                                    </tr>
+                                </thead>
+                            <?php } else { ?>
+                                <thead>
+                                    <tr style="font-size:12px; font-weight:normal;">
+                                        <th class="isbordered nowrapping" style="width:100px;"><label class="control-label">Transaction Date</label></th>
+                                        <th class="isbordered" style="width:150px;"><label class="control-label">Payment Period</label></th>
+                                        <th class="isbordered" style="width:100px; text-align:right;"><label class="control-label">Gross (<?php echo getCountryCurrencyCode(); ?>)</label></th>
+                                        <th class="isbordered" style="width:100px; text-align:right;"><label class="control-label">Net (<?php echo getCountryCurrencyCode(); ?>)</label></th>
+                                        <th class="isbordered hideonprint" style="width:130px;"><label class="control-label">Actions</label></th>
+                                    </tr>
+                                </thead>
+                            <?php } ?>
                             <tbody>
                                 <?php if(!$hasdata){ ?>
                                     <tr>
-                                        <td colspan="5"><div style="clear:both;" class="alert alert-warning margin5">There are currently no transactions</div></td>
+                                        <td class="isbordered" colspan="5"><div style="clear:both;" class="alert alert-warning margin5">There are currently no transactions</div></td>
                                     </tr>
                                 <?php } else { ?>
                                     <?php foreach ($result as $line){ 
@@ -51,20 +63,23 @@
                                         $payroll = $payrolldetail->getPayroll();
                                         $period = date('jS', strtotime($payroll->getStartDate())).' - '.date('jS', strtotime($payroll->getPayrollDate())).' '.date('F Y', strtotime($payroll->getPayrollDate()));
                                     ?>
-                                        <tr style="font-size:12px; font-weight:normal;">
-                                            <td class="nowrapping"><?php echo changeMySQLDateToPageFormat($payroll->getPayrollDate()); ?></td>
-                                            <td><?php echo $period; ?></td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetEarning()); ?></td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetPay()); ?></td>
-                                            <td class="hideonprint">
-                                                <?php if($ref == 'list'){ ?>
-                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view'; ?>" class="btn btn-primary btn-xs blockanchor">Payslip Details</a> &nbsp;
-                                                <?php } ?>
-                                                <?php if($ref == 'view'){ ?>
-                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment'; ?>" class="btn btn-default btn-xs blockanchor hideonprint">Back</a> &nbsp;
-                                                    <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view/print/1/pgc/1'; ?>" target="_blank" class="btn btn-primary btn-xs hideonprint">Print</a>
-                                                <?php } ?>
-                                            </td>
+                                        <tr <?php echo $ispdf ? '' : 'style="font-size:12px;"'; ?>>
+                                            <td class="borderedtd nowrapping"><?php echo changeMySQLDateToPageFormat($payroll->getPayrollDate()); ?></td>
+                                            <td class="borderedtd nowrapping"><?php echo $period; ?></td>
+                                            <td class="borderedtd rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetEarning()); ?></td>
+                                            <td class="borderedtd rightalign"><?php echo formatMoneyOnly($payrolldetail->getNetPay()); ?></td>
+                                            <?php if(!$ispdf){ ?>
+                                                <td class="borderedtd hideonprint">
+                                                    <?php if($ref == 'list'){ ?>
+                                                        <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view'; ?>" class="btn btn-primary btn-xs blockanchor">Payslip Details</a> &nbsp;
+                                                    <?php } ?>
+                                                    <?php if($ref == 'view'){ ?>
+                                                        <a href="<?php echo stripUrl($viewbase).'/tab/payment'; ?>" class="btn btn-default btn-xs blockanchor hideonprint">Back</a> &nbsp;
+                                                        <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view/print/1/pgc/1/payslipview/1'; ?>" target="_blank" class="btn btn-primary btn-xs hideonprint">Print</a>
+                                                        <a href="<?php echo stripUrl($viewbase).'/tab/payment/payrollid/'.$payrolldetail->getID().'/ref/view/print/1/pgc/1/payslipview/1/pdf/1'; ?>" target="_blank" class="btn btn-primary btn-xs hideonprint">PDF</a>
+                                                    <?php } ?>
+                                                </td>
+                                            <?php } ?>
                                         </tr>
                                     <?php } ?>
                                 <?php } ?>
@@ -80,7 +95,10 @@
                             $nssf = $payrolldetail->getNssf();
                             $otherdeductions = $payrolldetail->getOtherDebit();
                             $netpay = $payrolldetail->getNetPay();
-                            
+                            $payslip_pdfname = $payrolldetail->getPDFName();
+							$payslip_path = BASE_PATH.DIRECTORY_SEPARATOR.'uploads'.DIRECTORY_SEPARATOR."users".DIRECTORY_SEPARATOR.'user_'.$user->getID().''.DIRECTORY_SEPARATOR.'documents'.DIRECTORY_SEPARATOR;
+							// debugMessage($payslip_pdfname);
+							
                             $results_credits_array = array();
                             if(decode($payrolldetail->getbenefitdetails()) != "[]" || $payrolldetail->getbenefitdetails() != "W10="){
                                 $results_credits_array = objectToArray(json_decode(decode($payrolldetail->getbenefitdetails())));
@@ -92,89 +110,99 @@
                         ?>
                             <div class="divider20"></div>
                             <div id="payslip_<?php echo $id; ?>" class="payslipdata alert_<?php echo $id; ?>">
-                                <label class="blocked bolded" style="font-size:13px !important; color:#4a6694; margin-left:10px;"><?php echo $showfullscreen ? '' : 'Payslip Details'; ?></label>
-                                <table class="table table-bordered border-cells" style="font-size:12px !important; width:auto; margin:5px;">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:267px;">Transactions</th>
-                                            <th style="width:100px; text-align:center;">Credit (<?php echo getCountryCurrencyCode(); ?>)</th>
-                                            <th style="width:100px; text-align:center;">Debit (<?php echo getCountryCurrencyCode(); ?>)</th>
-                                        </tr>
-                                    </thead>
+                                <label class="blocked bolded" style="font-size:13px !important; color:#4a6694; margin-left:10px;"><?php echo $request->payslipview == 1 ? '' : 'Payslip Details'; ?></label>
+                                <table class="<?php echo $ispdf ? 'items isbordered thinborder' : 'table table-bordered border-cells'; ?>" <?php echo $ispdf ? ' cellpadding="6" style="font-size:12px; width:70%;"' : 'style="font-size:12px !important; width:auto; margin:5px;"'; ?>>
+                                	<?php if($ispdf){ ?>
+                                        <thead>
+                                            <tr>
+                                                <td class="isbordered">Transactions</td>
+                                                <td class="isbordered leftalign">Credit (<?php echo getCountryCurrencyCode(); ?>)</td>
+                                                <td class="isbordered leftalign">Debit (<?php echo getCountryCurrencyCode(); ?>)</td>
+                                            </tr>
+                                        </thead>
+                                    <?php } else { ?>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:267px;">Transactions</th>
+                                                <th style="width:100px; text-align:center;">Credit (<?php echo getCountryCurrencyCode(); ?>)</th>
+                                                <th style="width:100px; text-align:center;">Debit (<?php echo getCountryCurrencyCode(); ?>)</th>
+                                            </tr>
+                                        </thead>
+                                    <?php } ?>                                    
                                     <tbody>
                                         <tr class="bolded">
-                                            <td>Basic Salary</td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($gross); ?></td>
-                                            <td class="rightalign"></td>
+                                            <td class="borderedtd">Basic Salary</td>
+                                            <td class="borderedtd rightalign"><?php echo formatMoneyOnly($gross); ?></td>
+                                            <td class="borderedtd rightalign"></td>
                                         </tr>
                                         <?php foreach($results_credits_array as $line){ ?>
                                             <tr>
-                                                <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
-                                                <td class="rightalign"><?php echo formatMoneyOnly($line['totalcr']); ?></td>
-                                                <td class="rightalign"></td>
+                                                <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                <td class="borderedtd rightalign"><?php echo formatMoneyOnly($line['totalcr']); ?></td>
+                                                <td class="borderedtd rightalign"></td>
                                             </tr>
                                         <?php } ?>
                                         <tr>
-                                            <td>Total Benefits</td>
-                                            <td class="rightalign bolded"><?php echo formatMoneyOnly($allbenefits); ?></td>
-                                            <td class="rightalign"></td>
+                                            <td class="borderedtd">Total Benefits</td>
+                                            <td class="rightalign borderedtd bolded"><?php echo formatMoneyOnly($allbenefits); ?></td>
+                                            <td class="rightalign borderedtd"></td>
                                         </tr>
                                         <tr>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd borderedtd" style="height:3px !important; padding:0;"></td>
                                         </tr>
                                         <tr class="bolded">
-                                            <td>Gross</td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($gross+$allbenefits); ?></td>
-                                            <td class="rightalign"></td>
+                                            <td class="borderedtd">Gross</td>
+                                            <td class="rightalign borderedtd"><?php echo formatMoneyOnly($gross+$allbenefits); ?></td>
+                                            <td class="rightalign borderedtd"></td>
                                         </tr>
                                         <tr>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
                                         </tr>
                                         <tr class="bolded">
-                                            <td>Deductions</td>
-                                            <td class="rightalign"></td>
-                                            <td class="rightalign"></td>
+                                            <td class="borderedtd">Deductions</td>
+                                            <td class="rightalign borderedtd"></td>
+                                            <td class="rightalign borderedtd"></td>
                                         </tr>
                                         <tr>
-                                            <td>PAYE</td>
-                                            <td class="rightalign"></td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($paye); ?></td>
+                                            <td class="borderedtd">PAYE</td>
+                                            <td class="rightalign borderedtd"></td>
+                                            <td class="rightalign borderedtd"><?php echo formatMoneyOnly($paye); ?></td>
                                         </tr>
                                         <tr>
-                                            <td>NSSF</td>
-                                            <td class="rightalign"></td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($nssf); ?></td>
+                                            <td class="borderedtd">NSSF</td>
+                                            <td class="rightalign borderedtd"></td>
+                                            <td class="rightalign borderedtd"><?php echo formatMoneyOnly($nssf); ?></td>
                                         </tr>
                                         <?php foreach($results_debits_array as $line){ ?>
                                             <tr>
-                                                <td><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
-                                                <td class="rightalign"></td>
-                                                <td class="rightalign"><?php echo formatMoneyOnly($line['totalbr']); ?></td>
+                                                <td class="borderedtd"><?php echo isArrayKeyAnEmptyString($line['benefitid'], $benefits) ? '--' : $benefits[$line['benefitid']]; ?></td>
+                                                <td class="rightalign borderedtd"></td>
+                                                <td class="rightalign borderedtd"><?php echo formatMoneyOnly($line['totalbr']); ?></td>
                                             </tr>
                                         <?php } ?>
                                         <tr class="bolded">
-                                            <td>Total Deductions</td>
-                                            <td class="rightalign"></td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($paye + $nssf + $otherdeductions); ?></td>
+                                            <td class="borderedtd">Total Deductions</td>
+                                            <td class="rightalign borderedtd"></td>
+                                            <td class="rightalign borderedtd"><?php echo formatMoneyOnly($paye + $nssf + $otherdeductions); ?></td>
                                         </tr>
                                         <tr>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
                                         </tr>
                                         <tr class="bolded">
-                                            <td>Net</td>
-                                            <td class="rightalign"><?php echo formatMoneyOnly($netpay); ?></td>
-                                            <td class="rightalign"></td>
+                                            <td class="borderedtd">Net</td>
+                                            <td class="rightalign borderedtd"><?php echo formatMoneyOnly($netpay); ?></td>
+                                            <td class="rightalign borderedtd"></td>
                                         </tr>
                                         <tr>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
-                                            <td style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
+                                            <td class="borderedtd" style="height:3px !important; padding:0;"></td>
                                         </tr>
                                     </tbody>
                                 </table>

@@ -2,6 +2,22 @@
 
 class SignupController extends IndexController {
 	
+	function indexAction() {
+		$session = SessionWrapper::getInstance();
+		$id = $this->_getParam('id');
+		if(!isEmptyString($id)){
+			$user = new UserAccount();
+			$user->populate(decode($id));
+			
+			if($user->isUserActive()){
+				$this->clearSession();
+				$session->setVar("warningmessage", "Account already activated. Login to continue");
+				$loginurl = $this->view->baseUrl("user/login");
+				$this->_helper->redirector->gotoUrl($loginurl);
+			}
+		}
+	}
+	
 	function createAction() {
 		$session = SessionWrapper::getInstance();
 		$formvalues = $this->_getAllParams(); // debugMessage($formvalues);
@@ -203,7 +219,6 @@ class SignupController extends IndexController {
 		} else {
 			echo '0';
 		}
-		
 	}
 	
 	function checkemailAction(){
@@ -239,6 +254,21 @@ class SignupController extends IndexController {
 			echo '1';
 		} else {
 			echo '0';
+		}
+	}
+	
+	function checkcompanyusernameAction(){
+		$this->_helper->layout->disableLayout();
+		$this->_helper->viewRenderer->setNoRender(true);
+		 
+		$formvalues = $this->_getAllParams();
+		$username = trim($formvalues['username']);
+		// debugMessage($formvalues);
+		$company = new Company();
+		if($company->usernameExists($username)){
+			echo 'exists';
+		} else {
+			echo 'available';
 		}
 	}
 }

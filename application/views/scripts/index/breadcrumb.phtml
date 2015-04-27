@@ -13,6 +13,11 @@
                         <?php
                             // debugMessage('current '.$companyid);
                             $companies = getCompanies();
+							$gotourl = $this->viewurl;
+							/*if($this->domain == "hrmagic.ug"){
+								$gotourl = $this->domain;
+							}*/
+
                             $dropdown = new Zend_Form_Element_Select('companyid',
                                                 array(
                                                     'multiOptions' => $companies,
@@ -20,7 +25,7 @@
                                                     'decorators' => array('ViewHelper'),
                                                     'class' => array('form-control','input-sm','width200'),
                                                     'id' => 'changecompany',
-                                                    'action' => $this->baseUrl('index/changecompany/successurl/'.encode($this->viewurl)),
+                                                    'action' => $this->baseUrl('index/changecompany/successurl/'.encode($gotourl)),
                                                     'style' => 'float:right'
                                                 )
                                             );
@@ -52,8 +57,9 @@
     </div>
 </div>
 <div class="breadcrumbs">
-    <ul>
+    <ul class="maxwidth">
         <li><span class="titlebreadcrumb"></span></li>
+        <li class="pull-right">Loggedin as <?php echo $loggedinuser->getName(); ?></li>
     </ul>
 </div>
 <div class="divider10"></div>

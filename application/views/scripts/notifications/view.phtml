@@ -48,7 +48,7 @@ $(document).ready(function() {
                         <div class="row-fluid marginleft5">
                             <div class="col-sm-2 centeralign">
                                 <div class="divider10"></div>
-                                <?php if($message->getMessage()->getSenderID() == 1){ ?>
+                                <?php if($message->getMessage()->getSenderID() == 1 && $message->getMessage()->getType() != 'notification'){ ?>
                                     <i class="fa fa-flag" style="font-size:80px; float:left; margin-left:5px;"></i>
                                 <?php } else { ?>
                                     <img style="width:120px;" class="imagecontainer" src="<?php echo $message->getMessage()->getSender()->getMediumPicturePath(); ?>" />

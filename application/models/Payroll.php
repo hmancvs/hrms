@@ -96,6 +96,14 @@ class Payroll extends BaseEntity  {
 		$result = $q->execute();
 		return $result;
 	}
+	# determine if payroll is completed
+	function isCompleted(){
+		return $this->getStatus() == 2 ? true : false; 
+	}
+	# determine if payroll is a draft
+	function isDraft(){
+		return $this->getStatus() == 1 ? true : false;
+	}
 }
 
 ?>

@@ -122,59 +122,20 @@ class NotificationsController extends IndexController  {
 	    $type = $formvalues['type'];
 	    if($type == 1){
 	    	$ismail = true; $issms = false;
+	    	$msgtype = "mail";
 	    }
 	    if($type == 2){
 	    	$issms = true; $ismail = false;
-	    }
-	    if(!isArrayKeyAnEmptyString('memberid', $formvalues)){
-	    	$formvalues['selecttype'] = 1;
+	    	$msgtype = "sms";
 	    }
 	    $custom_query = "";
 	    
-	    if($formvalues['selecttype'] == 1 || $formvalues['selecttype'] == 2){
-	    	if(!isArrayKeyAnEmptyString('memberids', $formvalues)){
-	    		$users = $formvalues['memberids'];
-	    	}
+	    if($formvalues['selecttype'] == 2){
 	    	if(!isArrayKeyAnEmptyString('userids', $formvalues)){
 	    		$users = $formvalues['userids'];
 	    	}
-	    	# check for other filters for members/users
-	    	if(isArrayKeyAnEmptyString('memberids', $formvalues) && isArrayKeyAnEmptyString('userids', $formvalues)){
-	    		if(!isArrayKeyAnEmptyString('committeeid', $formvalues)){
-	    			$custom_query .= " AND a.committeeid = '".$formvalues['committeeid']."' ";
-	    		}
-	    		if(!isArrayKeyAnEmptyString('positionid', $formvalues)){
-	    			$custom_query .= " AND a.positionid = '".$formvalues['positionid']."' ";
-	    		}
-	    		if(!isArrayKeyAnEmptyString('regionid', $formvalues)){
-	    			$custom_query .= " AND m.regionid = '".$formvalues['regionid']."' ";
-	    		}
-	    		if(!isArrayKeyAnEmptyString('provinceid', $formvalues)){
-	    			$custom_query .= " AND m.provinceid = '".$formvalues['provinceid']."' ";
-	    		}
-	    		if(!isArrayKeyAnEmptyString('districtid', $formvalues)){
-	    			$custom_query .= " AND m.districtid = '".$formvalues['districtid']."' ";
-	    		}
-	    		if(!isArrayKeyAnEmptyString('organisationid', $formvalues)){
-	    			$custom_query .= " AND m.organisationid = '".$formvalues['organisationid']."' ";
-	    		}
-	    		if(!isEmptyString(trim($custom_query))){
-	    			# debugMessage('query is '.$custom_query);
-	    			$emailopt = false; $phoneopt  = false;
-	    			if($ismail){
-	    				$emailopt = true;
-	    			}
-	    			if($issms){
-	    				$phoneopt = true;
-	    			}
-	    			$users = getUsers('', '', '', '', $custom_query, $emailopt, $phoneopt);
-	    		}
-	    	}
-	    	if(!isArrayKeyAnEmptyString('memberid', $formvalues)){
-	    		$users = array($formvalues['memberid']);
-	    	}
 	    }
-	    if($formvalues['selecttype'] == 3){
+	    if($formvalues['selecttype'] == 4){
 	    	if($ismail){
 	    		$users = getUsersWithEmail();
 	    	}
@@ -182,20 +143,13 @@ class NotificationsController extends IndexController  {
 	    		$users = getUsersWithPhone();
 	    	}
 	    }
-	    if($formvalues['selecttype'] == 4){
-	    	if($ismail){
-	    		$users = getUsersWithEmail(true);
-	    	}
-	    	if($issms){
-	    		$users = getUsersWithPhone(true);
-	    	}
-	    }
 	   	//debugMessage($users); exit;
 	    # if no receipients specified
 	    if(count($users) == 0){
 	    	$session->setVar(ERROR_MESSAGE, "Error: No Receipients specified!");
-	    	// $this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
+	    	$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
 	    	$execresult = array('result'=>'fail', 'msg'=>"Error: No Receipients specified!");
+	    	exit;
 	    }
 		
 	    $messages = array(); $sent = array(); $phones = array();
@@ -218,46 +172,48 @@ class NotificationsController extends IndexController  {
 		}
 		# process receipients depending on select type
 		foreach ($users as $key => $userid){
-			$memb = new UserAccount();
+			$user = new UserAccount();
 			$id = '';
-			if($formvalues['selecttype'] == 1 || $formvalues['selecttype'] == 2){
+			if($formvalues['selecttype'] == 2){
 				$id = $userid;
 			}
-			if($formvalues['selecttype'] == 3 || $formvalues['selecttype'] == 4 || !isEmptyString(trim($custom_query))){
+			if($formvalues['selecttype'] == 4){
 				$id = $key;
 			}
-			$memb->populate($id); // debugMessage($memb->toArray());
-			if($memb->isUser()){
-				$recipients_array[$id]['recipientid'] = $memb->getID();
-			}
-			$messagedata[$id]['id'] = $memb->getID();
-			$messagedata[$id]['name'] = $memb->getName();
-			$messagedata[$id]['email'] = $memb->getEmail();
-			$messagedata[$id]['phone'] = $memb->getPhone();
+			$user->populate($id); // debugMessage($memb->toArray());
+			$recipients_array[$id]['recipientid'] = $user->getID();
+			$messagedata[$id]['id'] = $user->getID();
+			$messagedata[$id]['name'] = $user->getName();
+			$messagedata[$id]['email'] = $user->getEmail();
+			$messagedata[$id]['phone'] = $user->getPhone();
+			$messagedata[$id]['sendemail'] = $user->allowEmailForPrivateMessage() ? 1 : 0;
 			if($ismail){
-				$sent[] = $memb->getName().' ('.$memb->getEmail().')';
+				$sent[] = $user->getName().' ('.$user->getEmail().')';
 			}
 			if($issms){
-				$sent[] = $memb->getName().' ('.$memb->getPhone().')';
-				$phones[] = $memb->getPhone();
+				$sent[] = $user->getName().' ('.$user->getPhone().')';
+				$phones[] = $user->getPhone();
 			}
 		}
 		$messages['recipients'] = $recipients_array;
 		$messages['membertotal'] = count($messagedata);
 		$messages['usertotal'] = count($recipients_array);
-		// debugMessage($sent); 
-		// debugMessage($messagedata); 
+		$messages['type'] = "notification";
+		$messages['subtype'] = "new_".$msgtype;
+		/* debugMessage($sent); 
+		debugMessage($messagedata);  */
 			
 		$msg = new Message();
 		$msg->processPost($messages);
-		// debugMessage($msg->toArray());
-		// debugMessage('error is '.$msg->getErrorStackAsString()); exit();
+		/* debugMessage($msg->toArray());
+		debugMessage('error is '.$msg->getErrorStackAsString()); exit(); */
 		// save the messages to system inbox
 		if($msg->hasError()){
 			$session->setVar(ERROR_MESSAGE, "Error: ".$msg->getErrorStackAsString());
 			$session->setVar(FORM_VALUES, $this->_getAllParams());
-			// $this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
-			$execresult = array('result'=>'fail', 'msg'=>"Error: ".$msg->getErrorStackAsString());
+			$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
+			$execresult = array('result'=>'fail', 'msg'=>"Error: ".$msg->getErrorStackAsString()); // debugMessage($execresult);
+			exit;
 		} else {
 			try {
 				$msg->save();
@@ -265,8 +221,7 @@ class NotificationsController extends IndexController  {
 				if(count($messagedata) > 0){
 					foreach($messagedata as $key => $receipient){
 						$msgdetail = new MessageRecipient();
-						if(!isArrayKeyAnEmptyString('email', $receipient)){
-							// debugMessage($formvalues['senderemail'].'-'.$formvalues['sendername'].'-'.$messages['subject'].'-'. $receipient['email'].'-'.$receipient['name'].'-'.$messages['contents']);
+						if(!isArrayKeyAnEmptyString('email', $receipient) && $receipient['sendemail'] == 1){
 							$msgdetail->sendInboxEmailNotification($formvalues['senderemail'], $formvalues['sendername'], $messages['subject'], $receipient['email'], $receipient['name'], $messages['contents']);
 						}
 					}
@@ -277,7 +232,7 @@ class NotificationsController extends IndexController  {
 					$messagechuncks = array_chunk($messagedata, 100, true);
 					if(count($messagedata) <= 100){
 						$phonelist = implode(',',$phones);
-						$result = sendSMSMessage($phonelist, $messages['contents'], '', $msg->getID());
+						//$result = sendSMSMessage($phonelist, $messages['contents'], '', $msg->getID());
 						// debugMessage($result); exit;
 					} else {
 						foreach ($messagechuncks as $key => $messagegrp){
@@ -286,7 +241,7 @@ class NotificationsController extends IndexController  {
 								$phones_temp_array[] = $messageline['phone'];
 							}
 							$phonelist = implode(',',$phones_temp_array);
-							$result = sendSMSMessage($phonelist, $messages['contents'], '', $msg->getID());
+							// $result = sendSMSMessage($phonelist, $messages['contents'], '', $msg->getID());
 							// debugMessage($result);
 						}
 					}
@@ -318,7 +273,7 @@ class NotificationsController extends IndexController  {
 			}
 		}
 	    // exit;
-	   	// $this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
+	   	$this->_helper->redirector->gotoUrl(decode($formvalues[URL_SUCCESS]));
 	   	echo json_encode($execresult);
     }
     

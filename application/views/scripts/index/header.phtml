@@ -8,43 +8,6 @@
 		$toggledclass = ' toggled';
 	}
 	
-	// query for user's lattest 3 messages
-	$q = new Doctrine_RawSql();
-	$q->select('{m.*}, {mr.*}');
-	$q->from('message m INNER JOIN messagerecipient mr ON (m.id = mr.messageid)');
-	$q->where("(mr.recipientid = '".$userid."') ORDER BY m.datecreated DESC LIMIT 3");
-	$q->addComponent('m', 'Message m');
-	$q->addComponent('mr', 'm.recipients mr');
-	$latestmsg = $q->execute();
-	// debugMessage($latestmsg->toArray());
-	
-	$c = new Doctrine_RawSql();
-	$c->select('{m.*}, {mr.*}');
-	$c->from('message m INNER JOIN messagerecipient mr ON (m.id = mr.messageid)');
-	$c->where("(mr.recipientid = '".$userid."' AND mr.isread = 0) ORDER BY m.datecreated");
-	$c->addComponent('m', 'Message m');
-	$c->addComponent('mr', 'm.recipients mr');
-	
-	$unread_messages = $c->execute()->count();
-	$unread_label = ' &nbsp;<span class="pagedescription" style="color:red; font-size:12px;">('.$unread_messages.' Unread)</span>';
-	$session->setVar('unread', $unread_messages);
-	
-	$ischeckin = false;
-	$istimesheetuser = false;
-	$mytext = "";
-	$isoverdue = false;
-	if(isTimesheetEmployee()){
-		$istimesheetuser = true;
-		$ischeckin = isCheckedIn($session->getVar('userid'), date('Y-m-d')) ? true : false; // debugMessage($ischeckin);
-		$mytext = "My ";
-	}
-	if($ischeckin){
-		$checkindetails = getCheckInEntry($loggedinuser->getID(), date('Y-m-d'));
-		if(!isEmptyString($checkindetails['datein']) && isEmptyString($checkindetails['dateout']) && (strtotime(date('Y-m-d')) > strtotime($checkindetails['datein']))) {
-			/* TODO: add function to check againist login and out time */
-			$isoverdue = true;
-		}
-	}
 ?>
 <div id="navigation" class="<?php echo $topbar == 2 ? 'navbar-fixed-top' : ''; ?>">
     <div class="<?php echo $layout == 1 ? 'container-fluid' : 'container'; ?>" <?php echo $logotype == 1 ? 'style="padding-left:0;"' : ''; ?>>
@@ -134,47 +97,66 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
             <?php } ?>
             <?php if($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
                 <li class="<?php echo $controller == 'ledger' ? 'active' : ''; ?>">
-                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Benefits</span><span class="caret"></span></a>
+                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Finance</span><span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         <?php if ($acl->checkPermission('Benefits', ACTION_LIST)) { ?>
-                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>"><?php echo $istimesheetuser ? 'Benefits History' : 'Manage Benefits'; ?></a></li>
+                        	<li class='dropdown-submenu'>
+                                <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Benefits</a>
+                                <ul class="dropdown-menu">
+                                	<li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/list/ledgertype/1'); ?>"><?php echo $istimesheetuser ? 'Benefits History' : 'Manage Benefits'; ?></a></li>
+                                    <?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
+                                        <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Benefit</a></li>
+                                        <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Deduction</a></li>
+                                    <?php } ?>
+                                    <?php if($istimesheetuser && !isCompanyAdmin()) { ?>
+                                        <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit">Request Benefit</a></li>
+                                    <?php } ?>
+                                    <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
+                                         <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
+                                    <?php } ?>
+                                    <li class='dropdown-submenu'>
+                                        <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Reports</a>
+                                        <ul class="dropdown-menu">
+                                            <?php if ($acl->checkPermission('Benefits Analysis Report', ACTION_VIEW)) { ?>  
+                                                <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/benefitstats'); ?>"><?php echo $mytext; ?>Benefits Analysis</a></li>
+                                            <?php } ?>
+                                            <?php if ($acl->checkPermission('Benefits Detailed Report', ACTION_VIEW)) { ?>  
+                                                <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/benefitdetails'); ?>"><?php echo $mytext; ?>Benefits Data Report</a></li>
+                                            <?php } ?>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
                         <?php } ?>
-						<?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Benefit</a></li>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Deduction</a></li>
+                        <?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
+                            <li class='dropdown-submenu'>
+                                <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Payroll</a>
+                                <ul class="dropdown-menu">
+									<?php if($acl->checkPermission('Payroll', ACTION_CREATE)) { ?>
+                                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('payroll/list'); ?>">Generate New Payroll</a></li>
+                                    <?php } ?>
+                                    <?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
+                                        <li><a class="blockanchor" href="<?php echo $this->baseUrl('payroll/history'); ?>">Payroll History</a></li>
+                                        <li><a class="blockanchor" href="<?php echo $currentmonthpayrollurl; ?>"><?php echo date('F Y', strtotime($firstdayofcurrentmonth)); ?> Payroll</a></li>
+                                        <li><a class="blockanchor" href="<?php echo $lastmonthpayrollurl; ?>"><?php echo date('F Y', strtotime($firstdayoflastmonth)); ?> Payroll</a></li>
+                                    <?php } ?>
+                                </ul>
+                            </li>
                         <?php } ?>
-                        <?php if($istimesheetuser && !isCompanyAdmin()) { ?>
-                            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit">Request Benefit</a></li>
+                        <?php if($acl->checkPermission('Payslips', ACTION_VIEW)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/payslips'); ?>">Payslips</a></li>
                         <?php } ?>
-                        <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
-                             <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
+                        <?php if($acl->checkPermission('Bank Credit Instructions', ACTION_VIEW)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/bankadvice'); ?>">Bank Credit Instructions</a></li>
+                        <?php } ?>    
+                        <?php if($acl->checkPermission('Tax Remittance', ACTION_VIEW)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/paye'); ?>">Tax Remittance</a></li>
                         <?php } ?>
-                        <li class='dropdown-submenu'>
-                            <a href="#" data-toggle="dropdown" class='dropdown-toggle'>Reports</a>
-                            <ul class="dropdown-menu">
-                                <?php if ($acl->checkPermission('Benefits Analysis Report', ACTION_VIEW)) { ?>  
-                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/benefitstats'); ?>"><?php echo $mytext; ?>Benefits Analysis</a></li>
-                                <?php } ?>
-                                <?php if ($acl->checkPermission('Benefits Detailed Report', ACTION_VIEW)) { ?>  
-                                    <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/benefitdetails'); ?>"><?php echo $mytext; ?>Benefits Data Report</a></li>
-                                <?php } ?>
-                            </ul>
-                        </li>
+                        <?php if($acl->checkPermission('Insurance Remittance', ACTION_VIEW)) { ?>
+                            <li><a class="blockanchor" href="<?php echo $this->baseUrl('report/nssf'); ?>">Insurance Remittance</a></li>
+                        <?php } ?>
                     </ul>
                 </li>
-            <?php } ?>
-            <?php if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
-                <!--<li class="<?php //echo $controller == 'payroll' ? 'active' : ''; ?>">
-                    <a href="#" data-toggle="dropdown" class='dropdown-toggle'><span>Payroll</span><span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                    	<?php //if($acl->checkPermission('Payroll', ACTION_CREATE)) { ?>
-                            <li><a class="blockanchor" href="<?php //echo $this->baseUrl('payroll/list'); ?>">Generate Payroll</a></li>
-                        <?php //} ?>
-                        <?php //if($acl->checkPermission('Payroll', ACTION_LIST)) { ?>
-                            <li><a class="blockanchor" href="<?php //echo $this->baseUrl('payroll/history'); ?>">Payroll History</a></li>
-                        <?php //} ?>
-                    </ul>
-              	</li>-->
             <?php } ?>
             <?php if($acl->checkPermission('Leave', ACTION_LIST)) { ?>
                 <li class="<?php echo $controller == 'leave' ? 'active' : ''; ?>">
@@ -368,7 +350,7 @@ text-decoration: none;"><i class="fa fa-bars"></i></a>
                     <li class='dropdown'>
                         <a href="#" class='dropdown-toggle' data-toggle="dropdown">
                             <i class="fa fa-envelope"></i>
-                            <span class="label label-lightred"><?php echo $unread_messages; ?></span>
+                            <span class="label <?php echo $unread_messages == 0 ? 'label-lightgrey' : 'label-lightred'; ?>"><?php echo $unread_messages; ?></span>
                         </a>
                         <ul class="dropdown-menu pull-right message-ul">
                             <?php if($latestmsg->count() == 0){ ?>

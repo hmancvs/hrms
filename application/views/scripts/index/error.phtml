@@ -1,0 +1,36 @@
+<?php
+	require_once APPLICATION_PATH.'/includes/header.php';
+	
+	$title = "404";
+	$this->headTitle($title.$browserappend);
+?>
+<style>
+/*.app.login {
+	background:none;
+	background: url("<?php // echo $this->baseUrl('images/loginbg.png'); ?>") repeat scroll 0 0 rgba(0, 0, 0, 0);
+}
+.login .wrapper .login-body {
+	margin-top:-20px;
+}*/
+</style>
+<body class='error'>
+<div class="wrapper">
+    <div class="code">
+        <span>404</span>
+        <i class="fa fa-warning"></i>
+    </div>
+    <div class="desc">Oops! Sorry, that page requested could'nt be found.</div>
+    <form class="form-horizontal" action="more-searchresults.html">
+        
+    </form>
+    <div class="buttons">
+        <div class="pull-left">
+            <a class="btn btn--icon" href="<?php echo $this->serverUrl($this->baseUrl()); ?>">
+                <i class="fa fa-arrow-left"></i>Back</a>
+        </div>
+    </div>
+</div>
+</body>
+<?php
+	require_once APPLICATION_PATH.'/includes/footer.php';
+?>

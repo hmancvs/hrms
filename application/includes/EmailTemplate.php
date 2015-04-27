@@ -20,6 +20,7 @@ class EmailTemplate extends Zend_View {
 		//$this->signoffemail = $default_sender['email'];  
 		$this->signoffname = getDefaultAdminName();
 		$this->signoffemail = getDefaultAdminEmail(); 
+		$this->contactusurl = $this->serverUrl($this->baseUrl('contactus'));
 		$this->logourl = $this->serverUrl($this->baseUrl('images/logo.jpg'));
 		$this->loginurl = $this->serverUrl($this->baseUrl('user/login'));
 		$this->baseurl = $this->serverUrl($this->baseUrl());

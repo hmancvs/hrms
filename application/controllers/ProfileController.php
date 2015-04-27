@@ -300,7 +300,7 @@ class ProfileController extends SecureController  {
     	
     	$user = new UserAccount();
     	$user->populate($formvalues['id']);
-    	// debugMessage($user->toArray());
+    	// debugMessage($user->toArray()); exit();
     	
     	try {
     		$user->inviteOne();

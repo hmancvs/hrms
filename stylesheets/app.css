@@ -509,3 +509,20 @@ body.print .hideonprint {
 .tabs > li .fa {
 	margin-right:12px;
 }
+
+.form-control.ordinary, .form-control.datepicker, .form-control.timepicker  {
+	background-color: #eee;
+    cursor: not-allowed;
+    opacity: 1;
+}
+.nav-tabs > li > a {
+	padding-left:30px;
+	padding-right:30px;
+	font-size:18px;
+}
+.chosen-container-multi .chosen-choices li.search-field input[type="text"] {
+	height: 30px;
+}
+.chosen-container-multi .chosen-choices li.search-choice {
+	line-height: 18px;
+}

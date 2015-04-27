@@ -9,6 +9,8 @@ class Shift extends BaseRecord  {
 		
 		$this->setTableName('shift');
 		$this->hasColumn('name', 'string', 255, array('notblank' => true));
+		$this->hasColumn('refno', 'string', 25);
+		$this->hasColumn('description', 'string', 1000);
 		$this->hasColumn('companyid', 'integer', null, array('default' => getCompanyID()));
 		$this->hasColumn('starttime', 'string', 255);
 		$this->hasColumn('endtime', 'string', 255);

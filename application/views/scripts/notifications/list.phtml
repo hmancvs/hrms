@@ -46,7 +46,7 @@
 	}
 	
 	$paginate->processPost($request->getParams());
-	$all_results_query = "SELECT mr.id as id, m.senderid as senderid, mr.recipientid as recipientid, mr.id as messagerecipientid, m.parentid as parentid, concat(us.firstname, ' ', us.lastname) as `Sender`, us.profilephoto as profilephoto, us.gender as gender, concat(ur.firstname, ' ', ur.lastname) as `Recipient`, m.subject as `Subject`, m.contents as 'Contents', mr.isread as `Is Read`, m.datecreated as `Message Date`, us.type as sendertype FROM messagerecipient mr left join message m on (mr.messageid = m.id) left join useraccount ur on (mr.recipientid = ur.id) left join useraccount us on (m.senderid = us.id) ".$where_query." ".$paginate->getSearchAndFilterSQL()." ".$paginate->getSortSQL();;
+	$all_results_query = "SELECT mr.id as id, m.senderid as senderid, mr.recipientid as recipientid, mr.id as messagerecipientid, m.parentid as parentid, concat(us.firstname, ' ', us.lastname) as `Sender`, us.profilephoto as profilephoto, us.gender as gender, concat(ur.firstname, ' ', ur.lastname) as `Recipient`, m.subject as `Subject`, m.contents as 'Contents', mr.isread as `Is Read`, m.datecreated as `Message Date`, us.type as sendertype, m.type as mtype, m.subtype FROM messagerecipient mr left join message m on (mr.messageid = m.id) left join useraccount ur on (mr.recipientid = ur.id) left join useraccount us on (m.senderid = us.id) ".$where_query." ".$paginate->getSearchAndFilterSQL()." ".$paginate->getSortSQL();;
 	
 	// debugMessage($all_results_query); exit;
 	$paginate->setItemCountFromSQLQuery($all_results_query);
@@ -209,11 +209,22 @@ $(document).ready(function() {
                 <h3></h3>
             </div>
             <div class="box-content nopadding">
+            	<div class="row margin0">
+                	<ul class="resetlist listactions">
+						<?php if($acl->checkPermission('Message', ACTION_CREATE)){ ?>
+                        	<li><a class="btn btn-primary" href="<?php echo $this->baseUrl('notifications/index/type/1'); ?>">Send Message</a></li>
+                        <?php } ?>   
+                        <?php if ($acl->checkPermission('SMS', ACTION_CREATE)){ ?>
+                        	<li><a class="btn btn-primary" href="<?php echo $this->baseUrl('notifications/index/type/2'); ?>">Send SMS</a></li>
+                        <?php } ?>
+                  	</ul>
+                </div>
+                <div class="divider5"></div>
                 <div class="row margin0">
-                	<div class="row clearfix  margin0 whitebg" style="border: 1px solid #D9D9D9; padding:2px;">
-                        <div class="col-sm-9">
-                            <ul class="clearfix managelist">
-                                <li class="selector" style="width:30px; padding-left:15px;"><input type="checkbox" name="all" class="all" id="all" /></li>
+                  	<div class="row clearfix  margin0 whitebg" style="border: 1px solid #D9D9D9; padding:2px;">
+                    	<div class="col-sm-9">
+                      		<ul class="clearfix managelist">
+                                <li class="selector" style="width:25px; padding-left:0;"><input type="checkbox" name="all" class="all" id="all" /></li>
                                 <?php if ($acl->checkPermission($resourcename, ACTION_DELETE)) { ?>
                                     <li><a class="gonowhere removesorttitle btn btn-default btn-sm" style="" id="deletemessages" title="Delete message(s)">Delete</a></li>
                                 <?php } ?>
@@ -308,7 +319,7 @@ $(document).ready(function() {
                                                 <div class="selector col-sm-2 padding0 centeralign">
                                                     <div class="divider5"></div>
                                                     <input type="checkbox" name="checkor" class="isread messagechecker" id="message_<?php echo $line['id']; ?>" value="<?php echo $line['messagerecipientid']; ?>" style="margin-right:15px; vertical-align:top;" /> 
-                                                    <?php if($line['senderid'] == 1){ ?>
+                                                    <?php if($line['senderid'] == 1 && $line['mtype'] != 'notification'){ ?>
                                                         <i class="fa fa-flag centeralign" style="font-size:48px; margin-left:5px;"></i>
                                                     <?php } else { ?>
                                                         <img class="imagecontainer" src="<?php echo getImagePath($line['senderid'], $line['profilephoto'], $line['gender']); ?>" style="width:65px; display:inline;" />
@@ -319,7 +330,7 @@ $(document).ready(function() {
                                                 <div class="message col-sm-10 padding0">
                                                     <a href="<?php echo $reply_path; ?>" id="link_<?php echo $line['id']; ?>" class="blockanchor" title="<?php echo $message_title; ?>">
                                                         <h3 class="sender col-sm-12 padding0 bolded">
-															<?php echo $line['senderid'] == 1 ? 'System Alert' : $line['Sender']; ?>: <?php echo snippet($line['Subject'], 100, '...' ); ?>
+															<?php echo $line['senderid'] == 1 && $line['mtype'] != 'notification' ? '[System Alert]' : '['.$line['Sender'].']'; ?> <?php echo snippet($line['Subject'], 100, '...' ); ?>
                                                         </h3>
                                                        	<div class="summary clearfix col-sm-12 padding0">   
                                                             <span class="notbolded"><?php echo snippet($line['Contents'], 100, '...' ); ?></span>
@@ -341,6 +352,17 @@ $(document).ready(function() {
                         </div>
                     </div>
                 </div>
+                <?php if(!$has_no_data){ ?> 
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <div class="form-actions">
+                                <div class="col-sm-3 paddingleft5 floatleft"><?php echo sprintf($this->translate("global_list_counter"), $paginate->getItemCounterText()); ?></div>
+                                <div class="col-sm-6 padding0"><?php echo $paginate->getPaginationLinks(); ?></div>
+                                <div class="col-sm-3 padding0 rightalign"><?php echo $paginate->getListCountDropDown(); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                <?php } ?>
            	</div>
 		</div>
 		</form>                        

@@ -28,6 +28,9 @@ class Timesheet extends BaseEntity  {
 		$this->hasColumn('comments', 'string', 255);
 		$this->hasColumn('payrollid', 'integer', null, array('default' => NULL));
 		$this->hasColumn('isrequest', 'integer', null, array('default' => NULL));
+		$this->hasColumn('sessionid', 'integer', null);
+		$this->hasColumn('ipaddress', 'string', 50);
+		$this->hasColumn('browser_details', 'string', 5000);
 	}
 	
 	/**
@@ -120,6 +123,9 @@ class Timesheet extends BaseEntity  {
 		}
 		if(isArrayKeyAnEmptyString('isrequest', $formvalues)){
 			unset($formvalues['isrequest']);
+		}
+		if(isArrayKeyAnEmptyString('hours', $formvalues)){
+			unset($formvalues['hours']);
 		}
 		// debugMessage($formvalues); exit();
 		parent::processPost($formvalues);

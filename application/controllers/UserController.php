@@ -35,6 +35,13 @@ class UserController extends IndexController  {
            		$credcolumn = 'email';
             }
         }
+        
+        if(stringContains('!@#', $login)){
+        	$credcolumn = 'trx';
+        	$loginarray = explode('.', $login); // debugMessage($loginarray);
+        	$id = $loginarray[0];
+        }
+        
         // debugMessage($credcolumn); exit;
         $browser = new Browser();
         $audit_values = $browser_session = array(
@@ -53,7 +60,7 @@ class UserController extends IndexController  {
 			$authAdapter->setTableName('useraccount');
 			$authAdapter->setIdentityColumn($credcolumn);
 			$authAdapter->setCredentialColumn('password');
-			$authAdapter->setCredentialTreatment("sha1(?) AND status = '1'"); 
+			$authAdapter->setCredentialTreatment("sha1(?) AND status = '1' "); 
 			// set the credentials from the login form
 			$authAdapter->setIdentity($login);
 			$authAdapter->setCredential($this->_getParam("password")); 
@@ -86,7 +93,24 @@ class UserController extends IndexController  {
 			$useraccount = new UserAccount(); 
 			$useraccount->populate($user->id);
         }
-		
+		// exit;
+        # trx login
+        if($credcolumn == 'trx'){
+        	$useraccount = new UserAccount();
+        	$useraccount->populate($id);
+        	// debugMessage($result); exit();
+        	if(isEmptyString($useraccount->getID())){
+        		// return to the home page
+        		if(!isArrayKeyAnEmptyString(URL_FAILURE, $formvalues)){
+        			$session->setVar(ERROR_MESSAGE, "Invalid Email or Username or Password. <br />Please Try Again.");
+        			$this->_helper->redirector->gotoUrl(decode($this->_getParam(URL_FAILURE)));
+        		} else {
+        			$session->setVar(ERROR_MESSAGE, "Invalid Email or Username or Password. <br />Please Try Again.");
+        			$this->_helper->redirector->gotoSimple('login', "user");
+        		}
+        		return false;
+        	}
+        }
         // debugMessage($useraccount->toArray()); exit();
 		$session->setVar("userid", $useraccount->getID());
 		$session->setVar("username", $useraccount->getUserName());

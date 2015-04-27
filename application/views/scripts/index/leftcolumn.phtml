@@ -18,87 +18,130 @@
 	if($istimesheetuser){
 		$mytext = "My ";
 	}
+	
+	$unread_messages = $session->getVar('unread');
+	
 ?>
 <div class="subnav">
-    <div class="subnav-title">
-        <a href="#" class='toggle-subnav'><i class="fa fa-angle-down"></i><span>Quick Links</span> </a>
-    </div>
-    <ul class="subnav-menu"> 
-        <?php if ($acl->checkPermission('Attendance', ACTION_CREATE)) { ?>
-            <li><a class="<?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right">Check In</a>
-            </li>
-        <?php } ?>
-        <?php if ($acl->checkPermission('Timesheets', ACTION_CREATE)) { ?>
-            <li><a class="addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Time" rel="New Timesheet Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('timesheets/attendance'); ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit Timesheet">Add Timesheet</a></li>
-        <?php } ?>
-        <?php if($istimesheetuser) { ?>
-            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->baseUrl('ledger/list'); ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit Request">Request Benefit</a></li>
-        <?php } ?>
-        <?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && !$istimesheetuser) { ?>
-            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>">Add Benefit</a></li>
-        <?php } ?>
-        <?php if ($acl->checkPermission('Benefits', ACTION_APPROVE)) { ?>
-             <li><a class="blockanchor" href="<?php echo $this->baseUrl('ledger/forapproval'); ?>">Requests for Approval</a></li>
-        <?php } ?>
-        <?php if ($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
-            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>">Request Leave</a></li>
-        <?php } ?>
-        <?php if ($acl->checkPermission('User Account', ACTION_CREATE)) { ?>	
-            <li><a class="blockanchor" href="<?php echo $this->baseUrl('profile'); ?>">New Employee</a></li>
-        <?php } ?>
-        
+	<div class="subnav-title ui-sortable-handle">
+		<a class="toggle-subnav" href="#"><i class="fa fa-angle-down"></i> <span>Message Center</span></a>
+	</div>
+	<ul class="subnav-menu">
+    	 <li><a href="<?php echo $this->baseUrl('notifications/list'); ?>">Inbox &nbsp;<span class="label <?php echo $unread_messages == 0 ? 'label-lightgrey' : 'label-lightred'; ?>"><?php echo $unread_messages; ?> </span></a></li>
+         <?php if($acl->checkPermission('Message', ACTION_CREATE)){ ?>
+         	<li><a href="<?php echo $this->baseUrl('notifications/index/type/1'); ?>">Send Message</a></li>
+         <?php } ?>   
+         <?php if ($acl->checkPermission('SMS', ACTION_CREATE)){ ?>
+         	<li><a href="<?php echo $this->baseUrl('notifications/index/type/2'); ?>">Send SMS</a></li>
+         <?php } ?>
     </ul>
 </div>
 <div class="subnav">
 	<div class="subnav-title ui-sortable-handle">
-		<a class="toggle-subnav" href="#">
-			<i class="fa fa-angle-down"></i>
-			<span>Leave Taken</span>
-		</a>
+		<a class="toggle-subnav" href="#"><i class="fa fa-angle-down"></i> <span>Quick Links</span></a>
 	</div>
-	<div class="subnav-content">
-		<div class="pagestats">
-			<span class="left"></span>
-			<span sparkbarcolor="#ff7f66" sparktype="bar" id="balance" class="spark"></span>
-		</div>
-	</div>
+	<ul class="subnav-menu"> 
+        <?php if ($acl->checkPermission('Attendance', ACTION_CREATE) || isADmin() || isCompanyAdmin()) { ?>
+            <li><a class="<?php echo $ischeckin ? 'alert-dialog gonowhere disabled' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Check In" rel="Check In" id="checkin" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" message="Already In!" submittext="Check-In Now" submiticon="arrow-right">Check In</a>
+            </li>
+        <?php } ?>
+		<?php if($ischeckin){ ?>
+            <li><a class="<?php echo $isoverdue ? 'confirm-dialog' : 'addpopup'; ?>" href="<?php echo $this->baseUrl('timesheets/checkin/id/'.encode($checkindetails['id']).'/type/2/userid/'.encode($checkindetails['userid']).'/pgc/true'); ?>"  title="Check Out" rel="Check Out" id="checkout" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Check-Out Now" message="Checkout overdue and has been disabled. Contact Admin or a Supervisor.">Check Out</a>
+            </li>
+        <?php } ?>
+        <?php if ($acl->checkPermission('Timesheets', ACTION_CREATE)) { ?>
+            <li><a class="addpopup" href="<?php echo $this->baseUrl('timesheets/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Time" rel="New Timesheet Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("timesheets/processattendance"); ?>" submittext="Submit">Add Timesheet</a></li>
+        <?php } ?>
+        <?php if ($acl->checkPermission('Benefits', ACTION_CREATE) && (isAdmin() || isCompanyAdmin())) { ?>
+            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/1'); ?>"  title="Add OneTime Benefit" rel="Add OneTime Benefit" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Benefit</a></li>
+            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/index/pgc/true/type/2'); ?>"  title="Add Deduction" rel="Add Deduction" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/create"); ?>" submittext="Save">Add Deduction</a></li>
+        <?php } ?>
+        <?php if($istimesheetuser && !isCompanyAdmin()) { ?>
+            <li><a class="addpopup" href="<?php echo $this->baseUrl('ledger/request/userid/'.encode($session->getVar('userid')).'/pgc/true'); ?>"  title="Request Additional Benefit" rel="New Benefit Request" formtitle="indexform" successurl="<?php echo $this->viewurl; ?>" action="<?php echo $this->baseUrl("ledger/processrequest"); ?>" submittext="Submit">Request Benefit</a></li>
+        <?php } ?>
+      	<?php if($acl->checkPermission('Leave', ACTION_CREATE) && !$acl->checkPermission('Leave', ACTION_APPROVE) && $loggedinuser->isPermanent()) { ?>
+            <li><a class="blockanchor" href="<?php echo $this->baseUrl('leave/index'); ?>">Request Leave</a></li>
+        <?php } ?>
+        <?php if($acl->checkPermission('Payroll', ACTION_LIST)){ ?>
+            <li><a class="blockanchor" href="<?php echo $currentmonthpayrollurl; ?>"><?php echo date('F Y', strtotime($firstdayofcurrentmonth)); ?> Payroll</a></li>
+            <li><a class="blockanchor" href="<?php echo $lastmonthpayrollurl; ?>"><?php echo date('F Y', strtotime($firstdayoflastmonth)); ?> Payroll</a></li>
+        <?php } ?>
+    </ul>
 </div>
-<div class="subnav">
+<div class="subnav" style="margin-bottom:0;">
 	<div class="subnav-title ui-sortable-handle">
-		<a class="toggle-subnav" href="#">
-			<i class="fa fa-angle-down"></i>
-			<span>Leave Available</span>
-		</a>
+		<a class="toggle-subnav" href="#"><i class="fa fa-angle-down"></i> <span>Today's Summary</span></a>
 	</div>
-	<div class="subnav-content">
-		<div class="pagestats">
-			<span class="left"></span>
-			<span sparkbarcolor="#ff7f66" sparktype="bar" id="balance" class="spark"></span>
-		</div>
-	</div>
-</div>
-<div class="subnav">
-    <div class="subnav-title">
-        <a href="#" class='toggle-subnav'>
-            <i class="fa fa-angle-down"></i>
-            <span>Today's Summary</span>
-        </a>
+    <div class="subnav-content">
+        <div class="pagestats">
+            <span class="left">Date:</span>
+            <span class="spark"><?php echo changeMySQLDateToPageFormat(date('Y-m-d')); ?></span>
+        </div>
+        <div class="pagestats">
+            <span class="left">Time In:</span>
+            <span class="spark"><?php echo isEmptyString($checkindetails['timein']) ? '--' : formatTimeCustom($checkindetails['timein']); ?></span>
+        </div>
+        <div class="pagestats">
+            <span class="left">Time Out:</span>
+            <span class="spark"><?php echo isEmptyString($checkindetails['timeout']) ? '--' : formatTimeCustom($checkindetails['timeout']); ?></span>
+        </div>
+        <div class="pagestats">
+            <span class="left">Hours:</span>
+            <span class="spark"><?php echo isEmptyString($checkindetails['hours']) || $checkindetails['hours'] == 0 ? '--' : formatTimeCustom($checkindetails['hours']); ?></span>
+        </div>
     </div>
-    <!--<ul class="subnav-menu">
-    	<li>
-            <a href="#">Time In</a>
-        </li>
-        <li>
-            <a href="#">Time Out</a>
-        </li>
-        <li>
-            <a href="#">Hours Worked</a>
-        </li>
-        <li>
-            <a href="#">Benefits Received</a>
-        </li>
-        <li>
-            <a href="#">Leave Accrued</a>
-        </li>
-    </ul>-->
+</div> 
+<div class="subnav" style="margin-bottom:0; margin-top:0;">
+	<div class="subnav-title ui-sortable-handle">
+		<a class="toggle-subnav" href="#"><i class="fa fa-angle-down"></i> <span>Leave Summary</span></a>
+	</div>
+    <div class="subnav-content">
+        <div class="pagestats">
+            <span class="left" style="width:55%;">Time Accrued:</span>
+            <span class="spark" style="width:45%;"><?php echo formatNumber($totalhrs / getHoursInDay()); ?> Days</span>
+        </div>
+        <div class="pagestats">
+            <span class="left" style="width:55%;">Time Taken:</span>
+            <span class="spark" style="width:45%;"><?php echo formatNumber($takenhrs / getHoursInDay()); ?> Days</span>
+        </div>
+        <div class="pagestats">
+            <span class="left" style="width:55%;">Time Available:</span>
+            <span class="spark" style="width:45%;"><?php echo formatNumber($hoursavailable / getHoursInDay()); ?> Days</span>
+        </div>
+    </div>
 </div>
+   
+<style>
+#left .subnav .subnav-title .toggle-subnav i {
+	left: 2px;
+}
+#left .subnav .subnav-title span {
+	margin-left: 10px;
+}
+.pagestats {
+	display:block;
+	min-height:25px;
+	height:auto;
+}
+.pagestats .spark {
+    display: inline;
+    float: left;
+    text-align: left;
+	color:#999;
+	margin-left: 0;
+}
+.pagestats .left {
+	display: inline;
+    margin-left: 0;
+    text-align: left;
+    width: 40%;
+	margin-top:0;
+	font-size:12px;
+}
+#left .subnav .subnav-menu > li > a {
+	padding:5px 0 5px 18px;
+}
+#left .subnav .subnav-content {
+	padding-right:2px;
+}
+</style>

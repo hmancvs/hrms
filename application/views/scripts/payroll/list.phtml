@@ -2,8 +2,8 @@
 	include APPLICATION_PATH.'/includes/header.php';
 	
 	$session->setVar('toggled', "1");
-	$title = "Payroll Report";
-	$subtitle = 'Payroll Report';
+	$title = "Generate Payroll";
+	$subtitle = 'Payroll Details';
 	$description = '';
 	$result = array(); $has_no_data = false;
 	
@@ -53,11 +53,13 @@
 	if(!isEmptyString($payrollid)){
 		$enddate = $payroll->getEndDate();
 	}
+	$hasmidmonth = false;
 	$middate = $request->middate;
 	if(!isEmptyString($middate)){
 		$middate = changeDateFromPageToMySQLFormat($middate);
+		$hasmidmonth = true;
 	}
-	if(!isEmptyString($payrollid)){
+	if(!isEmptyString($payrollid) && !isEmptyString($payroll->getMidDate())){
 		$middate = $payroll->getMidDate();
 	}
 	$midmonthlabel = date('jS', strtotime($startdate)).'-'.date('jS', strtotime($middate)).' '.date('M', strtotime($startdate));
@@ -66,9 +68,9 @@
 	$isgenerated = false; $updateurl = ""; $iscompleted = false; $all_results_query =  ""; $userids = array();
 	if(!isEmptyString($startdate) && !isEmptyString($enddate)){
 		$isgenerated = true;
-		$subtitle = 'Payroll Report - '.date('F', strtotime($startdate)).' '.date('Y', strtotime($startdate)); // .' <span class="notbolded" style="font-size:12px;">('.$request->startdate.' to '.$request->enddate.')</span>'
+		$subtitle = 'Payroll Details - '.date('F', strtotime($startdate)).' '.date('Y', strtotime($startdate)); // .' <span class="notbolded" style="font-size:12px;">('.$request->startdate.' to '.$request->enddate.')</span>'
 		if($isdaily){
-			$subtitle = 'Payroll Report - '.$request->startdate;
+			$subtitle = 'Payroll Details - '.$request->startdate;
 			$monthendlabel = date('jS', strtotime($startdate)).' '.date('M', strtotime($startdate));
 		}
 		
@@ -122,11 +124,14 @@
 			$updateurl = $payroll->getUrl();
 			$where_query = " WHERE p.payrollid = '".$payrollid."' ";
 			
-			$all_results_query = "SELECT p.*, p.id as payrolldetailid, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position FROM payrolldetail p inner join useraccount as u on p.userid = u.id ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY p.userid ORDER BY name ASC ";
+			$all_results_query = "SELECT p.*, p.id as payrolldetailid, py.startdate, py.middate, py.enddate, p.userid AS id, concat(u.firstname, ' ', u.lastname) as name, u.departmentid, u.position FROM payrolldetail p inner join useraccount as u on p.userid = u.id inner join payroll py on p.payrollid = py.id ".$where_query." ".$paginate->getSearchAndFilterSQL()." GROUP BY p.userid ORDER BY name ASC ";
 			// debugMessage($all_results_query); exit;
 			
 			$conn = Doctrine_Manager::connection(); 
 			$result = $conn->fetchAll($all_results_query); // debugMessage($result);
+			if(!isArrayKeyAnEmptyString('middate', $result)){
+				$hasmidmonth = true;
+			}
 		}
 	}
 	
@@ -293,6 +298,16 @@ $(document).ready(function() {
 	
 	// $('.dataTables_scrollBody, .DTFC_LeftBodyWrapper, .DTFC_LeftBodyLiner').css({'height':'500px'});
 	$('#datatable').css({'min-height':'500px'});
+	
+	// issue payroll payslips via ajax upon completion
+	<?php if(!isEmptyString($payroll->getID()) && $payroll->isCompleted() && $request->issuepayslips == '1' && $session->getVar('issuepayslips') == '1'){ ?>
+		$.get("<?php echo $this->baseUrl('index/issuepayslips/id/'.$payroll->getID()); ?>", {                        
+			cachebuster: new Date().getTime()},                            
+			function(data){                        
+				// alert(data);                        
+			}
+		);
+	<?php } ?>
 });
 </script>
 <style>
@@ -368,7 +383,7 @@ $(document).ready(function() {
                                                 You are about to mark the Payroll for ".$monthendlabel." as Completed.  <br />
                                                 The following processes will take place upon confirmation. <br /><br />
                                                 1. All transactions in this period will be Locked from further updates . <br/>
-                                                2. Generation of Employee Payslips. <br/>
+                                                2. Generation of Payslips and Emailing them. <br/>
                                                 3. Assignment of leave and holiday benefits for the payroll period. <br/>
                                             ";
                                         ?>
@@ -451,7 +466,7 @@ $(document).ready(function() {
 					<div class="col-sm-12">
 						<div class="box box-color box-bordered">
 							<div class="box-title condensed xhideonprint">
-								<h3><i class="fa fa-calendar"></i> Employees</h3>
+								<h3><i class="fa fa-calendar"></i> <?php echo $subtitle; ?></h3>
                                 <div class="actions">
                                 	<?php if ($acl->checkPermission($resource, ACTION_EXPORT) && $isgenerated && !$has_no_data && !$isprint) { ?>
                                         <a class="btn lightgrey btn-xs bluelinks noround" href="<?php echo stripUrl($this->viewurl).'/print/1'; ?>" target="_blank" title="Export to CSV" rel="tooltip"><i class='glyphicon-download_alt'></i> Export</a>
@@ -480,12 +495,12 @@ $(document).ready(function() {
                                                         <th>Days Worked</th>
                                                     <?php } ?>
                                                     <th>Hours Pending <br />Approval</th>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <th>Hours Approved <br />(<?php echo $midmonthlabel; ?>)</th>
                                                     <?php } ?>
                                                     <th>Hours Approved <br />(<?php echo $monthendlabel; ?>)</th>
                                                     <th>Rate (<?php echo getCountryCurrencyCode(); ?>)</th>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <th>Mid Month Gross (<?php echo getCountryCurrencyCode(); ?>) <br />(<?php echo $midmonthlabel; ?>)</th>
                                                     <?php } ?>    
                                                     <th>Basic Salary (<?php echo getCountryCurrencyCode(); ?>)<br />(<?php echo $monthendlabel; ?>)</th>
@@ -527,7 +542,7 @@ $(document).ready(function() {
                                                     
                                                     if(isEmptyString($payrollid)){
                                                         $midquery = "";
-                                                        if($payrolltype == 4){
+                                                        if($payrolltype == 4 && $hasmidmonth){
                                                             $midquery = " SUM(IF(t.status = 3 AND UNIX_TIMESTAMP(t.timesheetdate) <= ".strtotime($middate).", t.hours, 0)) as halfhours, ";
                                                         }
                                                         $query = "SELECT SUM(IF(t.status = 3, t.hours, 0)) as hoursworked, ".$midquery." SUM(IF(t.status = 1, t.hours, 0)) as hourspending, SUM(IF(t.status = 3, 1, 0)) as daysworked from timesheet t where t.userid = '".$employee['id']."' and TO_DAYS(t.timesheetdate) BETWEEN TO_DAYS('".$startdate."') AND TO_DAYS('".$enddate."') ";   
@@ -566,7 +581,7 @@ $(document).ready(function() {
                                                         
                                                         $totcredit = 0; $totdebit = 0; $totaltransport = 0; $nssf = 0;
                                                         $total_leavehrs = '0'; $total_sickhrs = '0'; $totaltaxable = 0; $paysnssf = false; $remitpaye = false;
-                                                        $accrualtype = 1;
+                                                        $accrualtype = 1; $frequency = '';
                                                         if(count($result_recurring) > 0){
                                                             foreach($result_recurring as $benefit){
                                                                 if($benefit['type'] == 1 && $benefit['benefitterms'] == 1){
@@ -810,13 +825,19 @@ $(document).ready(function() {
                                                                 if($benefit['type'] == 2){
                                                                     switch($benefit['leavetypeid']){
                                                                         case 1:
-                                                                            $total_leavehrs = $benefit['accrualvalue']; 
+																			$frequency = $benefit['accrualfrequency'];
+																			if($frequency == 2){
+																				$total_leavehrs = $benefit['accrualvalue'];
+																			}
                                                                             if($benefit['accrualtype'] == 2){
                                                                                 $accrualtype = 2;
                                                                             }
                                                                             break;
                                                                         case 2:
-                                                                            $total_sickhrs = $benefit['accrualvalue']; 
+																			$frequency = $benefit['accrualfrequency'];
+																			if($frequency == 2){
+																				$total_sickhrs = $benefit['accrualvalue']; 
+																			}
                                                                             if($benefit['accrualtype'] == 2){
                                                                                 $accrualtype = 2;
                                                                             }
@@ -886,17 +907,18 @@ $(document).ready(function() {
                                                     }
                                                     
                                                     // mid month hours worked
-                                                    $halfhoursworked = 0;
-                                                    if(!isArrayKeyAnEmptyString('halfhours', $result)){
-                                                        $halfhoursworked = isEmptyString($result['halfhours']) ? 0.00 : $result['halfhours'];
-                                                    }
-                                                    if(!isArrayKeyAnEmptyString('halfhoursworked', $result)){
-                                                        $halfhoursworked = isEmptyString($result['halfhoursworked']) ? 0.00 : $result['halfhoursworked'];
-                                                    }
-													if(!in_array($employee['id'], $ignore_array)){
-	                                                    $total_halfhoursworked += $halfhoursworked;
+													if($hasmidmonth){
+														$halfhoursworked = 0;
+														if(!isArrayKeyAnEmptyString('halfhours', $result)){
+															$halfhoursworked = isEmptyString($result['halfhours']) ? 0.00 : $result['halfhours'];
+														}
+														if(!isArrayKeyAnEmptyString('halfhoursworked', $result)){
+															$halfhoursworked = isEmptyString($result['halfhoursworked']) ? 0.00 : $result['halfhoursworked'];
+														}
+														if(!in_array($employee['id'], $ignore_array)){
+															$total_halfhoursworked += $halfhoursworked;
+														}
 													}
-                                                    
                                                     // total hours worked
                                                     $fullhoursworked = 0;
                                                     if(!isArrayKeyAnEmptyString('hoursworked', $result)){
@@ -912,16 +934,16 @@ $(document).ready(function() {
                                                     // leave accrued
                                                     $leaveaccrued = 0;
                                                     if($result['empstatus'] == 1){
-                                                        if($employee['istimesheetuser'] == 1){
-                                                            $leaveaccrued = formatNumber($fullhoursworked/DEFAULT_REGULAR_LEAVE_HRS, 2);
-                                                        }
-                                                        if(!isArrayKeyAnEmptyString('leavehrs', $result)){
-                                                            if(!isEmptyString($result['leavehrs']) & $result['leavehrs'] > 0){
+														if(!isArrayKeyAnEmptyString('leavehrs', $result)){
+                                                            /*if(!isEmptyString($result['leavehrs']) & $result['leavehrs'] > 0){
                                                                 $leaveaccrued = formatNumber($fullhoursworked/$result['leavehrs'], 2);
                                                                 if($accrualtype == 2){
                                                                     $leaveaccrued = $result['leavehrs'];
                                                                 }
-                                                            }
+                                                            }*/
+                                                        }
+                                                        if($employee['istimesheetuser'] == 1 && $fullhoursworked > 0){
+                                                           $leaveaccrued = formatNumber($fullhoursworked/DEFAULT_REGULAR_LEAVE_HRS, 2);
                                                         }
                                                         if(!isEmptyString($payrollid)){
                                                             $leaveaccrued = $result['leavehrs'];
@@ -931,16 +953,16 @@ $(document).ready(function() {
                                                     // sick leave accrued
                                                     $sickaccrued = 0;
                                                     if($result['empstatus'] == 1){
-                                                        if($employee['istimesheetuser'] == 1){
-                                                            $sickaccrued = formatNumber($fullhoursworked/DEFAULT_SICK_LEAVE_HRS, 2);
-                                                        }
-                                                        if(!isArrayKeyAnEmptyString('sickhrs', $result)){
-                                                            if(!isEmptyString($result['sickhrs']) & $result['sickhrs'] > 0){
+														if(!isArrayKeyAnEmptyString('sickhrs', $result)){
+                                                            /*if(!isEmptyString($result['sickhrs']) & $result['sickhrs'] > 0){
                                                                 $sickaccrued = formatNumber($fullhoursworked/$result['sickhrs'], 2);
                                                                 if($accrualtype == 2){
                                                                     $sickaccrued = $result['sickhrs'];
                                                                 }
-                                                            }
+                                                            }*/
+                                                        }
+                                                        if($employee['istimesheetuser'] == 1 && $fullhoursworked > 0){
+                                                            $sickaccrued = formatNumber($fullhoursworked/DEFAULT_SICK_LEAVE_HRS, 2);
                                                         }
                                                         if(!isEmptyString($payrollid)){
                                                             $sickaccrued = $result['sickhrs'];
@@ -949,19 +971,21 @@ $(document).ready(function() {
                                                     
                                                     // mid month pay
                                                     $midmonthpay = 0; $rate = 0; $gross = 0;
-                                                    if(isEmptyString($payrollid)){
-                                                        if(!isArrayKeyAnEmptyString('rate', $result)){
-                                                            $rate = isEmptyString($result['rate']) ? 0 : $result['rate'];
-                                                            if($ismonthly){
-                                                                if($employee['payrolltype'] == 3 && $employee['istimesheetuser'] == 1){
-                                                                    $midmonthpay = $halfhoursworked * $rate;
-                                                                }
-                                                            }
-                                                        }
-                                                    } else {
-                                                        $rate = $employee['rate'];
-                                                        $midmonthpay = $employee['midgross'];
-                                                    }
+													
+													$rate = isEmptyString($result['rate']) ? 0 : $result['rate'];
+													if(isEmptyString($payrollid)){
+														if(!isArrayKeyAnEmptyString('rate', $result)){
+															if($ismonthly && $hasmidmonth){
+																if($employee['payrolltype'] == 3 && $employee['istimesheetuser'] == 1){
+																	$midmonthpay = $halfhoursworked * $rate;
+																}
+															}
+														}
+													} else {
+														$rate = $employee['rate'];
+														$midmonthpay = $employee['midgross'];
+													}
+													
 													if(!in_array($employee['id'], $ignore_array)){
 	                                                    $total_midmonthpay += $midmonthpay;
 													}
@@ -1143,18 +1167,21 @@ $(document).ready(function() {
 																echo '/ignorelist/'.implode(',', $arrayb4); 
 															?>'; // alert(newurl_afterstrip);
 															
-															
-															var message = '<label class="blockcontainer notbolded">Confirm ignoring transactions. <br /><br /> Click <b>OK</b> to continue, and <b>Cancel</b> to ignore</label>';
-															// confirm popup
-															bootbox.confirm(message, function(confirmed) {
-																if(confirmed){
-																	// alert(newurl_beforestrip+newurl_afterstrip);
-																	window.location.href = newurl_beforestrip+newurl_afterstrip;
-																} else {
-																	bootbox.hideAll();
-																	return false;
-																}
-															});
+															<?php if(isEmptyString($payroll->getID())){ ?>
+																var message = '<label class="blockcontainer notbolded">Confirm ignoring transactions. <br /><br /> Click <b>OK</b> to continue, and <b>Cancel</b> to ignore</label>';
+																// confirm popup
+																bootbox.confirm(message, function(confirmed) {
+																	if(confirmed){
+																		// alert(newurl_beforestrip+newurl_afterstrip);
+																		window.location.href = newurl_beforestrip+newurl_afterstrip;
+																	} else {
+																		bootbox.hideAll();
+																		return false;
+																	}
+																});
+															<?php } else { ?>
+																bootbox.alert('<span class="centeralign blocked">Click Update Report to Proceed</span>');
+															<?php } ?>
 														});
 														
 														$("#addline_<?php echo $employeeid; ?>").click(function(e){
@@ -1169,18 +1196,21 @@ $(document).ready(function() {
 																echo '/ignorelist/'.implode(',', $arrayb4); 
 															?>'; // alert(newurl_afterstrip);
 															
-															
-															var message = '<label class="blockcontainer notbolded">Confirm adding transactions. <br /><br /> Click <b>OK</b> to continue, and <b>Cancel</b> to ignore</label>';
-															// confirm popup
-															bootbox.confirm(message, function(confirmed) {
-																if(confirmed){
-																	// alert(newurl_beforestrip+newurl_afterstrip);
-																	window.location.href = newurl_beforestrip+newurl_afterstrip;
-																} else {
-																	bootbox.hideAll();
-																	return false;
-																}
-															});
+															<?php if(isEmptyString($payroll->getID())){ ?>
+                                                            	var message = '<label class="blockcontainer notbolded">Confirm adding transactions. <br /><br /> Click <b>OK</b> to continue, and <b>Cancel</b> to ignore</label>';
+																// confirm popup
+																bootbox.confirm(message, function(confirmed) {
+																	if(confirmed){
+																		// alert(newurl_beforestrip+newurl_afterstrip);
+																		window.location.href = newurl_beforestrip+newurl_afterstrip;
+																	} else {
+																		bootbox.hideAll();
+																		return false;
+																	}
+																});
+															<?php } else { ?>
+																bootbox.alert('<span class="centeralign blocked">Click Update Report to Proceed</span>');
+															<?php } ?>
 														});
                                                     });
                                                 </script>
@@ -1276,8 +1306,25 @@ $(document).ready(function() {
                                                                     </tr>
                                                                 </tbody>
                                                             </table>
+                                                            <?php if($leaveaccrued > 0 || $sickaccrued > 0){ ?>
+                                                            	<table class="table table-bordered" style="font-size:11px !important; margin-bottom:2px;">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th style="width:25%; text-align:center;">Annual Leave Time Accrued</th>
+                                                                            <th style="width:25%; text-align:center;">Sick Leave Time Accrued</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    	<tr>
+                                                                        	<td style="text-align:center;"><?php echo $leaveaccrued; ?> Hours</td>
+                                                                            <td style="text-align:center;"><?php echo $sickaccrued; ?> Hours</td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                               	</table>
+                                                            <?php } ?>
                                                             <div style="display:block; text-align:center;">
-                                                            	<a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">Print Preview</a>
+                                                            	<a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1/payslipview/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">Print Preview</a>
+                                                                <a href="<?php echo $this->baseUrl('profile/view/id/'.encode($employeeid).'/tab/payment/payrollid/'.$payrolldetailid.'/ref/view/print/1/pgc/1/payslipview/1/pdf/1'); ?>" target="_blank" class="btn btn-primary centeralign hideonprint" style="text-align:center;">PDF</a>
                                                             </div>
                                                         </div>
                                                         <?php } ?>
@@ -1330,12 +1377,12 @@ $(document).ready(function() {
                                                         </td>
                                                     <?php } ?>
                                                     <td class="rightalign" <?php echo $strike; ?>><?php echo formatNumber($hourspending, 2); ?></td>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatNumber($halfhoursworked); ?></td>	
                                                     <?php } ?>    
                                                     <td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatNumber($fullhoursworked); ?></td>	
                                                     <td class="rightalign" <?php echo $strike; ?>><span class="lineblocked"><?php echo formatMoneyOnly($rate); ?></span> <span class="lineblocked" style="width:15px;"><?php echo $rate_type; ?></span></td>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($midmonthpay); ?></td>
                                                     <?php } ?>    
                                                     <td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatMoneyOnly($gross); ?>
@@ -1343,11 +1390,15 @@ $(document).ready(function() {
 															<?php 
                                                                 $hiddenfieldsdata["hourspending_".$employeeid] = formatNumber($hourspending, 2);
                                                                 $hiddenfieldsdata["hourspending_".$employeeid] = formatNumber($hourspending, 2);
-                                                                $hiddenfieldsdata["halfhoursworked_".$employeeid] = formatNumber($halfhoursworked, 2);
+																if($hasmidmonth){
+                                                                	$hiddenfieldsdata["halfhoursworked_".$employeeid] = formatNumber($halfhoursworked, 2);
+																}
                                                                 $hiddenfieldsdata["fullhoursworked_".$employeeid] = formatNumber($fullhoursworked, 2);
                                                                 $hiddenfieldsdata["leavehrs_".$employeeid] = formatNumber($leaveaccrued, 2);
                                                                 $hiddenfieldsdata["sickhrs_".$employeeid] = formatNumber($sickaccrued, 2);
-                                                                $hiddenfieldsdata["midgross_".$employeeid] = formatMoneyOnly($midmonthpay);
+																if($hasmidmonth){
+                                                                	$hiddenfieldsdata["midgross_".$employeeid] = formatMoneyOnly($midmonthpay);
+																}
                                                                 $hiddenfieldsdata["endgross_".$employeeid] = formatMoneyOnly($gross);
                                                                 
                                                                 $hiddenfieldsdata["nssf_".$employeeid] = formatMoneyOnly($nssf);
@@ -1376,7 +1427,7 @@ $(document).ready(function() {
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatMoneyOnly($otherdeductions); ?></td>
                                                         <td class="rightalign bolded" <?php echo $strike; ?>><?php echo formatMoneyOnly($netpayout); ?></td>
                                                         <?php if(!$isprint){ ?>
-                                                        <td <?php echo $strike; ?> style="text-align:center;"><a class="xalert-dialog gonowhere payslip_<?php echo $employeeid; ?>" id="alert_<?php echo $employeeid; ?>" title=" Payslip Details">Preview</a>
+                                                        	<td <?php echo $strike; ?> style="text-align:center;"><a class="xalert-dialog gonowhere payslip_<?php echo $employeeid; ?>" id="alert_<?php echo $employeeid; ?>" title=" Payslip Details">Preview</a>
                                                         <?php } ?>
                                                         </td>
                                                         <td class="rightalign" <?php echo $strike; ?>><?php echo formatNumber($leaveaccrued); ?></td>
@@ -1394,12 +1445,12 @@ $(document).ready(function() {
                                                         <td></td>
                                                     <?php } ?>
                                                     <td class="rightalign"><?php echo formatNumber($total_hourspending); ?></td>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <td class="rightalign"><?php echo formatNumber($total_halfhoursworked); ?></td>
                                                     <?php } ?>
                                                     <td class="rightalign"><?php echo formatNumber($total_fullhoursworked); ?></td>	
                                                     <td></td>
-                                                    <?php if($ismonthly){ ?>
+                                                    <?php if($ismonthly && $hasmidmonth){ ?>
                                                         <td class="rightalign"><?php echo formatMoneyOnly($total_midmonthpay); ?></td>
                                                     <?php } ?>
                                                     <td class="rightalign"><?php echo formatMoneyOnly($total_gross); ?></td>

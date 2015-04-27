@@ -1,7 +1,7 @@
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailheader.phtml'); ?>
 
-Dear <?php echo $this->firstname; ?>, <br /><br />
+<p>Dear <?php echo $this->firstname; ?>,</p>
 
-"<?php echo $this->emailcontent; ?>"<br /><br />
+<?php echo $this->emailcontent; ?>
 
 <?php include(APPLICATION_PATH.'/views/scripts/email/emailfooter.phtml'); ?>

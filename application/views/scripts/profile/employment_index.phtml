@@ -120,7 +120,7 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_startdate_label'); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                            <label class="col-sm-5 control-label"><?php echo $this->translate('profile_startdate_label'); ?>: <?php //echo $this->translate("global_required_field_marker"); ?></label>
                             <div class="col-sm-7">
                                 <input type="text" class="form-control input-sm datefield readonly datepick width100 ordinary" name="startdate" id="startdate" value="<?php echo isEmptyString($user->getStartDate()) ? '' : date('m/d/Y', strtotime($user->getStartDate())); ?>" />
                                 <div id="startdate_error"></div>
@@ -203,19 +203,25 @@
                         <div class="form-group">
                             <label class="col-sm-3 control-label"><?php echo $this->translate('profile_shift_label'); ?>:</label>
                             <div class="col-sm-9">
-                                <?php
-                                    $allvalues = getWorkShifts();
-                                    $dropdown = new Zend_Form_Element_Select('shift',
-                                                        array(
-                                                            'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
-                                                            'view' => new Zend_View(),
-                                                            'decorators' => array('ViewHelper'),
-                                                            'class' => array('form-control','input-sm','width250')
-                                                        )
-                                    );  
-                                    $dropdown->setValue($user->getShift()); 
-                                    echo $dropdown->render();
-                                ?><div id="shift_error"></div>
+                            	<?php if(isEmptyString($user->getID())){ ?>
+									<?php
+                                        $allvalues = getWorkShifts();
+                                        $dropdown = new Zend_Form_Element_Select('shift',
+                                                            array(
+                                                                'multiOptions' => array_merge_maintain_keys(array('' => '<Select One>'), $allvalues),
+                                                                'view' => new Zend_View(),
+                                                                'decorators' => array('ViewHelper'),
+                                                                'class' => array('form-control','input-sm','width250')
+                                                            )
+                                        );  
+                                        $dropdown->setValue($user->getShift()); 
+                                        echo $dropdown->render();
+                                    ?><div id="shift_error"></div>
+                                    <input type="hidden" name="shift_old" id="shift_old" value="<?php echo $user->getShift(); ?>" />
+                             	<?php } else { ?>
+                                	<input type="hidden" name="shift" id="shift" value="<?php echo $user->getShift(); ?>" />
+                                    <?php echo getWorkShifts($user->getShift(), true); ?> &nbsp; <a href="<?php echo $this->baseUrl('config/shifts/tab/schedules/userid/'.$user->getID()); ?>" class="btn btn-primary btn-xs" target="_blank">Update Shift</a>
+                                <?php } ?>
                             </div>
                         </div>
                         <div class="form-group">

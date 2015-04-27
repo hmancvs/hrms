@@ -27,8 +27,7 @@
 		$user->setselfregistered(1);
 	}
 	
-	// $user->sendProfileInvitationNotification();
-	// exit;
+	// debugMessage('> '.$this->domain);
 	
 	// any errors occured in processing
 	if ($sessionhaserror) {
@@ -126,6 +125,41 @@ $(document).ready(function() {
 	$('input.password').bind('copy paste', function (e) {
 	   e.preventDefault();
 	});
+	
+	//when button is clicked  
+	$('#check_c_username_availability').click(function(){ 
+		check2_user_availability();  
+	});
+	$('#c_username').change(function(){ 
+		check2_user_availability();  
+	});  
+	$('#c_username').keyup(function(){
+		this.value = this.value.toLowerCase();
+	});
+	
+	//function to check c_username availability  
+	function check2_user_availability(){  
+		//get the c_username
+		var checking_html = 'Checking availability...';   
+		var c_username = $('#c_username').val();  
+		if(!isEmptyString(c_username) && c_username.length >= 3 && c_username.length <= 15 && isAlpha(c_username)){
+			// alert('passed');
+			$('#c_username_availability_result').html(checking_html); 
+			//use ajax to run the check  
+			$.post("<?php echo $this->baseUrl('signup/checkcompanyusername'); ?>", { username: c_username},  
+				function(result){  
+					//if the result is 1  
+					// alert(result); // return false;
+					if(result == 'exists'){  
+						//show that the c_username is available
+						$('#c_username_availability_result').html(c_username + ' is NOT available!').addClass('alert').addClass('alert-danger').removeClass('alert-success'); 
+					} else {  
+						//show that the c_username is NOT available  
+						$('#c_username_availability_result').html(c_username + ' is available').addClass('alert').addClass('alert-success').removeClass('alert-danger');
+					}  
+			});   
+		}
+	}
 		
 	//when button is clicked  
 	$('#check_username_availability').click(function(){ 
@@ -222,6 +256,23 @@ $(document).ready(function() {
                                 <input type="text" class="form-control width300" id="companyname" name="companyname" value="<?php echo $user->getCompany()->getName(); ?>" /><div id="companyname_error"></div>
                             </div>
                         </div>
+                        <?php if($this->domain == 'hrmagic.ug'){ ?>
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Url/<?php echo $this->translate("profile_username_label"); ?>: <?php echo $this->translate("global_required_field_marker"); ?></label>
+                                <div class="col-sm-8">
+                                    <div class="input-group lineblocked">
+                                        <input type="text" class="form-control width150 inline" placeholder="" id="c_username" name="c_username" value="<?php echo $user->getCompany()->getUserName(); ?>" />
+                                        <div class="input-group-btn floatleft">
+                                            <button type="button" class="btn">.hrmagic.ug</button>
+                                        </div>
+                                    </div>
+                                    <a class="btn btn-primary btn-sm gonowhere inline" id='check_c_username_availability' style="margin-top:-30px; display:inline-block;" title="Check Availability">Check</a>
+                                    
+                                    <div id="c_username_availability_result" style="margin-top:4px"></div>
+                                    <div id="c_username_error"></div>
+                                </div>
+                            </div>
+                        <?php } ?>
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Industry Sector:</label>
                             <div class="col-sm-6">
@@ -284,7 +335,7 @@ $(document).ready(function() {
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="col-sm-4 control-label"><?php echo $this->translate("profile_username_label"); ?>: <?php echo isEmptyString($user->getID()) ? '' : $this->translate("global_required_field_marker"); ?></label>
+                        <label class="col-sm-4 control-label">Login <?php echo $this->translate("profile_username_label"); ?>: <?php echo isEmptyString($user->getID()) ? '' : $this->translate("global_required_field_marker"); ?></label>
                         <div class="col-sm-8">
                             <input type="text" class="form-control width225 inline" id="username" name="username" value="<?php echo $user->getUserName(); ?>" /> <a class="btn btn-default gonowhere inline" id='check_username_availability' style="margin-top:2px;" title="Check Availability">Check</a>
                             

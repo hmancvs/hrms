@@ -27,6 +27,7 @@ class UserAccount extends BaseEntity {
 		$this->hasColumn('email2', 'string', 50);
 		$this->hasColumn('phone', 'string', 15);
 		$this->hasColumn('phone2', 'string', 15);
+		$this->hasColumn('ext', 'string', 15);
 		$this->hasColumn('phone_isactivated', 'integer', null, array('default' => '0'));
 		$this->hasColumn('phone_actkey', 'string', 15);
 		$this->hasColumn('username', 'string', 15); // only required during activation
@@ -560,11 +561,11 @@ class UserAccount extends BaseEntity {
 			$totcash = countCashBenefits(); // debugMessage($totcash.' <<');
 			$tottime = countTimeBenefits();  // debugMessage($tottime.' <<');
 			
-			$benefitsarray[1]['benefitid'] = $formvalues['benefitid_1'];
-			$benefitsarray[1]['amount'] = $formvalues['rate'];
-			$benefitsarray[1]['accrualfrequency'] = $formvalues['ratetype'];
+			$benefitsarray[md5(1)]['benefitid'] = $formvalues['benefitid_1'];
+			$benefitsarray[md5(1)]['amount'] = isArrayKeyAnEmptyString('rate', $formvalues) ? "0" : $formvalues['rate'];
+			$benefitsarray[md5(1)]['accrualfrequency'] = $formvalues['ratetype'];
 			if(!isArrayKeyAnEmptyString('id_1', $formvalues)){
-				$benefitsarray[1]['id'] = $formvalues['id_1'];
+				$benefitsarray[md5(1)]['id'] = $formvalues['id_1'];
 			}
 			
 			$counter = 0;
@@ -572,20 +573,20 @@ class UserAccount extends BaseEntity {
 				if(!isArrayKeyAnEmptyString('amount_'.$i, $formvalues)){
 					if($formvalues['amount_'.$i] > 0){
 						if(!isArrayKeyAnEmptyString('id_'.$i, $formvalues)){
-							$benefitsarray[$i]['id'] = $formvalues['id_'.$i];
+							$benefitsarray[md5($i)]['id'] = $formvalues['id_'.$i];
 						}
-						$benefitsarray[$i]['type'] = 1;
-						$benefitsarray[$i]['benefitid'] = $formvalues['benefitid_'.$i];
-						$benefitsarray[$i]['amount'] = $formvalues['amount_'.$i];
-						$benefitsarray[$i]['benefitfrequency'] = $formvalues['benefitfrequency_'.$i];
-						$benefitsarray[$i]['benefitterms'] = $formvalues['benefitterms_'.$i];
-						$benefitsarray[$i]['accrualtype'] = NULL;
-						$benefitsarray[$i]['accrualfrequency'] = NULL;
-						$benefitsarray[$i]['accrualvalue'] = NULL;
+						$benefitsarray[md5($i)]['type'] = 1;
+						$benefitsarray[md5($i)]['benefitid'] = $formvalues['benefitid_'.$i];
+						$benefitsarray[md5($i)]['amount'] = $formvalues['amount_'.$i];
+						$benefitsarray[md5($i)]['benefitfrequency'] = $formvalues['benefitfrequency_'.$i];
+						$benefitsarray[md5($i)]['benefitterms'] = $formvalues['benefitterms_'.$i];
+						$benefitsarray[md5($i)]['accrualtype'] = NULL;
+						$benefitsarray[md5($i)]['accrualfrequency'] = NULL;
+						$benefitsarray[md5($i)]['accrualvalue'] = NULL;
 						if(!isArrayKeyAnEmptyString('istaxable_'.$i, $formvalues)){
-							$benefitsarray[$i]['istaxable'] = $formvalues['istaxable_'.$i];
+							$benefitsarray[md5($i)]['istaxable'] = $formvalues['istaxable_'.$i];
 						} else {
-							$benefitsarray[$i]['istaxable'] = 0;
+							$benefitsarray[md5($i)]['istaxable'] = 0;
 						}
 						$counter++;
 					}
@@ -597,18 +598,18 @@ class UserAccount extends BaseEntity {
 					// debugMessage($formvalues['accrualvalue_'.$x]);
 					if($formvalues['accrualvalue_'.$x] > 0){
 						if(!isArrayKeyAnEmptyString('id_'.$x, $formvalues)){
-							$benefitsarray[$x]['id'] = $formvalues['id_'.$x];
+							$benefitsarray[md5($x)]['id'] = $formvalues['id_'.$x];
 						}
 						if(!isArrayKeyAnEmptyString('accrualfrequency_'.$x, $formvalues)){
-							$benefitsarray[$x]['accrualfrequency'] = $formvalues['accrualfrequency_'.$x];
+							$benefitsarray[md5($x)]['accrualfrequency'] = $formvalues['accrualfrequency_'.$x];
 						}
-						$benefitsarray[$x]['type'] = 2;
-						$benefitsarray[$x]['leavetypeid'] = $formvalues['leavetypeid_'.$x];
-						$benefitsarray[$x]['accrualtype'] = $formvalues['accrualtype_'.$x];
-						$benefitsarray[$x]['accrualvalue'] = $formvalues['accrualvalue_'.$x];
-						$benefitsarray[$x]['amount'] = NULL;
-						$benefitsarray[$x]['benefitfrequency'] = NULL;
-						$benefitsarray[$x]['benefitterms'] = NULL;
+						$benefitsarray[md5($x)]['type'] = 2;
+						$benefitsarray[md5($x)]['leavetypeid'] = $formvalues['leavetypeid_'.$x];
+						$benefitsarray[md5($x)]['accrualtype'] = $formvalues['accrualtype_'.$x];
+						$benefitsarray[md5($x)]['accrualvalue'] = $formvalues['accrualvalue_'.$x];
+						$benefitsarray[md5($x)]['amount'] = NULL;
+						$benefitsarray[md5($x)]['benefitfrequency'] = NULL;
+						$benefitsarray[md5($x)]['benefitterms'] = NULL;
 						$counter++;
 					}
 				}
@@ -630,6 +631,9 @@ class UserAccount extends BaseEntity {
 				$formvalues["company"]["createdby"] = NULL;
 				$formvalues["company"]["datecreated"] = DEFAULT_DATETIME;
 				$formvalues["company"]["email"] = $formvalues["email"];
+				if(!isArrayKeyAnEmptyString('c_username', $formvalues)){
+					$formvalues["company"]["username"] = $formvalues['c_username'];
+				}
 			}
 		}
 		
@@ -725,6 +729,23 @@ class UserAccount extends BaseEntity {
 				$this->inviteViaEmail();
 			}
 			
+			# check if shift has been defined 
+			if(!isEmptyString($this->getShift())){
+				$shift_data = array(
+					"userid" => $this->getID(),
+					"sessionid" => $this->getShift(),
+					"startdate" => date('Y-m-d', strtotime($this->getDateCreated())),
+					"status" => 1,
+					"dateadded" => DEFAULT_DATETIME,
+					"addedbyid" => $session->getVar('userid')
+				);
+				$shift = new ShiftSchedule();
+				$shift->processPost($shift_data);
+				$shift->save();
+				/* debugMessage($shift->toArray());
+				debugMessage('errors are '.$shift->getErrorStackAsString()); */
+			}
+			
 			# add log to audit trail
 			$view = new Zend_View();
 			$controller = $this->getController();
@@ -770,23 +791,27 @@ class UserAccount extends BaseEntity {
 		$session = SessionWrapper::getInstance();
 		# check if user is being invited during update
 		if($this->getIsBeingInvited() == 1){
-	 		$this->inviteViaEmail();
-	 		
-	 		# add log to audit trail
-	 		$view = new Zend_View();
-	 		$url = $view->serverUrl($view->baseUrl('profile/view/id/'.encode($this->getID())));
-	 		 
-	 		$browser = new Browser();
-	 		$audit_values = $session->getVar('browseraudit');
-	 		$audit_values['module'] = '1';
-	 		$audit_values['usecase'] = '1.15';
-	 		$audit_values['transactiontype'] = USER_INVITE;
-	 		$audit_values['status'] = "Y";
-	 		$audit_values['userid'] = $session->getVar('userid');
-	 		$audit_values['transactiondetails'] = "User <a href='".$url."' class='blockanchor'>".$this->getName()."</a> Invited via Email ";
-	 		$audit_values['url'] = $url;
-	 		// debugMessage($audit_values);
-	 		$this->notify(new sfEvent($this, USER_INVITE, $audit_values));
+			if(isEmptyString($this->getEmail())){
+				$session->setVar('warningmessage', "Activation not sent. No email available on profile");
+			} else {
+		 		$this->inviteViaEmail();
+		 		
+		 		# add log to audit trail
+		 		$view = new Zend_View();
+		 		$url = $view->serverUrl($view->baseUrl('profile/view/id/'.encode($this->getID())));
+		 		 
+		 		$browser = new Browser();
+		 		$audit_values = $session->getVar('browseraudit');
+		 		$audit_values['module'] = '1';
+		 		$audit_values['usecase'] = '1.15';
+		 		$audit_values['transactiontype'] = USER_INVITE;
+		 		$audit_values['status'] = "Y";
+		 		$audit_values['userid'] = $session->getVar('userid');
+		 		$audit_values['transactiondetails'] = "User <a href='".$url."' class='blockanchor'>".$this->getName()."</a> Invited via Email ";
+		 		$audit_values['url'] = $url;
+		 		// debugMessage($audit_values);
+		 		$this->notify(new sfEvent($this, USER_INVITE, $audit_values));
+			}
         }
 		
         if($savetoaudit){
@@ -854,9 +879,9 @@ class UserAccount extends BaseEntity {
 		$template->assign('invitelink', $viewurl);
 		$contents = "";
 		if($this->isCompanyAdmin()){
-			$contents = '<p>Your company <b>'.$this->getCompany()->getName().'</b> has been successfully setup on <b>'.getAppName().'</b> and you have been invited by <b>'.$this->getInvitedBy()->getName().'</b> to activate your <b>'.getTrialDays().' day</b> free trial account.</p>
+			$contents = '<p>Your company <b>'.$this->getCompany()->getName().'</b> has been successfully setup on <b>'.getDefaultAppName().'</b> and you have been invited by <b>'.$this->getInvitedBy()->getName().'</b> to activate your <b>'.getTrialDays().' day</b> free trial account.</p>
 	
-			<p><b>'.getAppName().'</b> is an online state of the art Human Resource application that automates almost ALL your company HR needs. All the way from Employee management, benefits, attendance and timesheets, leave time, payroll and many other HR functions.</p>';
+			<p><b>'.getDefaultAppName().'</b> is an online state of the art Human Resource application that automates almost ALL your company HR needs. All the way from Employee management, benefits, attendance and timesheets, leave time, payroll and many other HR functions.</p>';
 		} else {
 			$contents = '<p>You have been invited by <b>'.$this->getCompany()->getName().'</b> to activate your Employee HR account.</p>';
 		}
@@ -877,10 +902,14 @@ class UserAccount extends BaseEntity {
 		$mail->setBodyHtml($template->render('invitenotification.phtml'));
 		// debugMessage($template->render('invitenotification.phtml')); exit();
 	
-		try {
-			$mail->send();
-		} catch (Exception $e) {
-			$session->setVar("warningmessage", 'Email notification not sent! '.$e->getMessage());
+		if(isEmptyString($this->getEmail())){
+			$session->setVar('warningmessage', "Invitation not sent. No email available on profile");
+		} else {
+			try {
+				$mail->send();
+			} catch (Exception $e) {
+				$session->setVar("warningmessage", 'Email notification not sent! '.$e->getMessage());
+			}
 		}
 	
 		$mail->clearRecipients();
@@ -974,14 +1003,18 @@ class UserAccount extends BaseEntity {
 		$html = $template->render('signupnotification.phtml');
 		$mail->setBodyHtml($html);
 		// debugMessage($html); // exit();
-
-		try {
-			$mail->send();
-			$session->setVar("invitesuccess", 'Email sent to '.$this->getEmail());
-		} catch (Exception $e) {
-			$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			
+		if(isEmptyString($this->getEmail())){
+			$session->setVar('warningmessage', "Invitation not sent. No email available on profile");
+		} else {
+			try {
+				$mail->send();
+				$session->setVar("invitesuccess", 'Email sent to '.$this->getEmail());
+			} catch (Exception $e) {
+				$session->setVar(ERROR_MESSAGE, 'Email notification not sent! '.$e->getMessage());
+			}
 		}
-
+		
 		$mail->clearRecipients();
 		$mail->clearSubject();
 		$mail->setBodyHtml('');
@@ -1245,10 +1278,17 @@ class UserAccount extends BaseEntity {
 	}
 	# invite one user to join. already existing persons
 	function inviteOne() {
+		$session = SessionWrapper::getInstance();
 		$this->setDateInvited(date('Y-m-d'));
 		$this->setIsInvited('1');
 		$this->setHasAcceptedInvite('0');
-
+		
+		if($this->isCompanyAdmin()){
+			$this->getCompany()->setDateInvited(date('Y-m-d'));
+			$this->getCompany()->setIsInvited('1');
+			$this->getCompany()->setHasAcceptedInvite('0');
+			$this->getCompany()->setInvitedbyid($session->getVar('userid'));
+		}
 		// debugMessage($this->toArray()); exit();
 		$this->save();
 
@@ -1941,6 +1981,12 @@ class UserAccount extends BaseEntity {
 	}
 	function allowEmailForLeaveApproval(){
 		return $this->getemailon_leave_approvalcompleted() == '1' ? true : false;
+	}
+	function allowEmailForPayslip(){
+		return $this->getemailon_payslip_completed() == '1' ? true : false;
+	}
+	function allowEmailForPrivateMessage(){
+		return $this->getemailon_directmessage_recieved() == '1' ? true : false;
 	}
 }
 ?>
